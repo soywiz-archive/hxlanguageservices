@@ -60,7 +60,7 @@ class Tokenizer {
         for (i in 0...identChars.length) idents[identChars.charCodeAt(i)] = true;
     }
 
-    public function token() {
+    public function token():Token {
         var t = tokens.pop();
         if (t != null) {
             tokenMin = t.min;
@@ -75,7 +75,7 @@ class Tokenizer {
         return t;
     }
 
-    function _token() {
+    function _token():Token {
         var char;
         if (this.char < 0)
             char = readChar();
@@ -190,7 +190,7 @@ class Tokenizer {
                             char = readChar();
                             if (!idents[char]) {
                                 this.char = char;
-                                return TId(id);
+                                return Token.TId(id);
                             }
                             id += String.fromCharCode(char);
                         }

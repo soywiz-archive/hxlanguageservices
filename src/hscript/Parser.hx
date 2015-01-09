@@ -21,8 +21,6 @@ class Parser {
     private var completion:CompletionContext;
 
     public function new() {
-        errors = new ErrorContext();
-        completion = new CompletionContext(errors);
         var priorities = [
         ["%"],
         ["*", "/"],
@@ -56,13 +54,19 @@ class Parser {
 
     public function parse(s:haxe.io.Input) {
         tokenizer = new Tokenizer(s);
+        errors = new ErrorContext();
+        completion = new CompletionContext(tokenizer, errors);
+
         var a = new Array();
-        while (true) {
-            var tk = token();
-            if (tk == TEof) break;
-            push(tk);
-            a.push(parseFullExpr());
-        }
+
+        completion.pushContext(function() {
+            while (true) {
+                var tk = token();
+                if (tk == TEof) break;
+                push(tk);
+                a.push(parseFullExpr());
+            }
+        });
         return if (a.length == 1) a[0] else mk(EBlock(a), 0);
     }
 
@@ -73,7 +77,7 @@ class Parser {
 
     private function push(t:Token) return tokenizer.push(t);
 
-    private function token() return tokenizer.token();
+    private function token():Token return tokenizer.token();
 
     inline function ensure(tk) {
         var t = token();
@@ -114,6 +118,21 @@ class Parser {
             if (isBlock(e)) push(tk); else unexpected(tk);
         }
         return e;
+    }
+
+    public function completionsAt(index:Int):Array<{ name:String, type:CompletionType }> {
+        var out = [];
+        for (segment in completion.segments) {
+            if (index >= segment.start && index <= segment.end) {
+                switch (segment.gettype()) {
+                    case CompletionType.Object(items):
+                        out = out.concat(items);
+                    default:
+                }
+                return out;
+            }
+        }
+        return [];
     }
 
     function parseObject(p1) {
@@ -197,13 +216,14 @@ class Parser {
                         push(tk);
                 }
                 var a = new Array();
-                while (true) {
-                    a.push(parseFullExpr());
-                    tk = token();
-                    if (tk == TBrClose)
-                        break;
-                    push(tk);
-                }
+                completion.pushContext(function() {
+                    while (true) {
+                        a.push(parseFullExpr());
+                        tk = token();
+                        if (tk == TBrClose) break;
+                        push(tk);
+                    }
+                });
                 return mk(EBlock(a), p1);
             case TOp(op):
                 if (unops.exists(op)) return makeUnop(op, parseExpr());
@@ -275,7 +295,7 @@ class Parser {
         }
     }
 
-    function parseStructure(id):Expr {
+    function parseStructure(id:String):Expr {
         var p1 = tokenizer.tokenMin;
         return switch( id ) {
             case "if":
@@ -533,6 +553,11 @@ class Parser {
             case TDot:
                 tk = token();
                 var field = null;
+
+
+                var tp = completion.getType(e1, completion.scope);
+                completion.segments.push(new CompletionSegment(tokenizer.tokenMax, tokenizer.tokenMax, function() return tp));
+
                 switch(tk) {
                     case TId(id): field = id;
                     default: unexpected(tk);
@@ -697,9 +722,25 @@ enum CompletionType {
     Int;
     Float;
     String;
-    Object(items:Array<{ name:String, type:CompletionType }>);
+    Object(items:Array<CompletionEntry>);
     Array(type:CompletionType);
     Function(args:Array<CompletionType>, ret:CompletionType);
+}
+
+typedef CompletionEntry = { name:String, type:CompletionType };
+
+class CompletionSegment {
+    public var start:Int;
+    public var end:Int;
+    public var gettype:Void -> CompletionType;
+
+    public function new(start:Int, end:Int, gettype:Void -> CompletionType) {
+        this.start = start;
+        this.end = end;
+        this.gettype = gettype;
+    }
+
+    public function toString() return 'CompletionSegment($start-$end, ${gettype()})';
 }
 
 class Scope<TKey : String, TValue> {
@@ -726,6 +767,15 @@ class Scope<TKey : String, TValue> {
 
     public function set(key:TKey, value:TValue) return map.set(key, value);
 
+    public function keys(?out:Array<String>):Array<String> {
+        if (out == null) out = [];
+        for (key in map.keys()) {
+            if (out.indexOf(key) < 0) out.push(key);
+        }
+        if (parent != null) parent.keys(out);
+        return out;
+    }
+
     public function toString() {
         return 'Scope(${[for (key in map.keys()) key]}, $parent)';
     }
@@ -750,11 +800,15 @@ class Scope2<TKey : String, TValue> {
 
 typedef CompletionScope = Scope<String, CompletionVariable>;
 
+
 class CompletionContext {
     public var scope = new CompletionScope();
+    private var tokenizer:Tokenizer;
     private var errors:ErrorContext;
+    public var segments:Array<CompletionSegment> = [];
 
-    public function new(errors:ErrorContext) {
+    public function new(tokenizer:Tokenizer, errors:ErrorContext) {
+        this.tokenizer = tokenizer;
         this.errors = errors;
         scope.set("true", new CompletionVariable("true", CompletionType.Bool));
         scope.set("false", new CompletionVariable("false", CompletionType.Bool));
@@ -805,12 +859,23 @@ class CompletionContext {
     }
     */
 
+
     public function pushContext(callback: Void -> Void) {
         //trace('push scope');
+        var startPos = tokenizer.tokenMax;
         scope = new CompletionScope(scope);
         var output = scope;
         callback();
         scope = scope.parent;
+
+        var endPos = tokenizer.tokenMin;
+
+        segments.push(new CompletionSegment(startPos, endPos, function() {
+            var keys = output.keys();
+            keys.sort(StringUtils.compare);
+            return CompletionType.Object([for (key in keys) { name: key, type: output.get(key).type }]);
+        }));
+
         //trace('pop scope');
         return output;
     }
@@ -912,6 +977,23 @@ class CompletionContext {
         if (e != null) v.addReference(Reference.Declaration(e));
         scope.set(ident, v);
         return v;
+    }
+}
+
+class CompletionTypeUtils {
+    static public function toString(ct:CompletionType) {
+        switch (ct) {
+            case CompletionType.Array(ct): return 'Array<' + toString(ct) + '>';
+            case CompletionType.Bool: return 'Bool';
+            case CompletionType.Float: return 'Float';
+            case CompletionType.Int: return 'Int';
+            case CompletionType.String: return 'String';
+            case CompletionType.Dynamic: return 'Dynamic';
+            case CompletionType.Object(items):
+                return '{' + [for (item in items) item.name + ':' + toString(item.type)].join(',') + '}';
+            default: return '???';
+        }
+        return '$ct';
     }
 }
 

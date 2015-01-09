@@ -1,5 +1,7 @@
 package ;
 
+import hscript.StringUtils;
+import hscript.Parser.CompletionTypeUtils;
 import haxe.PosInfos;
 import hscript.Expr.Error;
 import hscript.Expr.ErrorDef;
@@ -31,8 +33,26 @@ class Test1 extends haxe.unit.TestCase {
 	private function assertParserErrors(x:String, v:Dynamic,  ?c : PosInfos) {
 		var p = new hscript.Parser();
 		var program = p.parseString(x);
-		assertEquals(p.errors.errors.toString(), v.toString(), c);
+		assertEquals(v.toString(), p.errors.errors.toString(), c);
 		return p.errors;
+	}
+
+	private function assertCompletion(x:String, v:Array<String>,  ?c : PosInfos) {
+		var index = x.indexOf('###');
+		x = StringTools.replace(x, '###', '');
+		var p = new hscript.Parser();
+		var program = p.parseString(x);
+		assertEquals(v.join(','), [for (completion in p.completionsAt(index)) completion.name + ':' + CompletionTypeUtils.toString(completion.type)].toString(), c);
+		return p.errors;
+	}
+
+	private function assertCompletion2(x:String, v:Array<String>,  ?c : PosInfos) {
+		var v2 = v.slice(0, v.length);
+		v2.push('false:Bool');
+		v2.push('true:Bool');
+		v2.push('null:Dynamic');
+		v2.sort(StringUtils.compare);
+		assertCompletion(x, v2, c);
 	}
 
 	public function testExec() {
@@ -44,7 +64,6 @@ class Test1 extends haxe.unit.TestCase {
 		assertExec("- 123",-123);
 		assertExec("1.546",1.546);
 		assertExec(".545",.545);
-		/*
 		assertExec("'bla'","bla");
 		assertExec("null",null);
 		assertExec("true",true);
@@ -66,6 +85,7 @@ class Test1 extends haxe.unit.TestCase {
 		assertExec("3 /"+"* 2\n *"+"/ + 5",8);
 		assertExec("[55,66,77][1]",66);
 		assertExec("var a = [55]; a[0] *= 2; a[0]",110);
+		/*
 		assertExec("x",55,{ x : 55 });
 		assertExec("var y = 33; y",33);
 		assertExec("{ 1; 2; 3; }",3);
@@ -124,8 +144,29 @@ class Test1 extends haxe.unit.TestCase {
 
 		assertParserErrors(
 			'var a = true; var b = 1; var z = a + b;',
-			[]
-			//[new Error(ErrorDef.EInvalidOp('Unsupported op2 Float + Bool'), 47, 55)]
+			[new Error(ErrorDef.EInvalidOp('Unsupported op2 Bool + Int'), 33, 37)]
+		);
+	}
+
+	public function testCompletion() {
+		assertCompletion(
+			'var z = {a:1};var sum=0;for (item in [z,z,z]) sum += item.###a; sum;',
+			['a:Int']
+		);
+
+		assertCompletion2(
+			'var z = {a:1};var sum=0;for (item in [z,z,z]) sum += item.a; ###',
+			['sum:Int','z:{a:Int}']
+		);
+
+		assertCompletion2(
+			'var z = 1; { var x = 1; ### }',
+			['x:Int', 'z:Int']
+		);
+
+		assertCompletion2(
+			'var z = 1; { var x = 1; } ###',
+			['z:Int']
 		);
 	}
 }
