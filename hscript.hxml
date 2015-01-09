@@ -1,0 +1,4 @@
+-cp src
+-main Test
+-dce no
+-js out.js
