@@ -13,6 +13,7 @@ class Test {
 	}
 
 	static function main() {
+		/*
 		test("0",0);
 		test("0xFF", 255);
 		test("0xBFFFFFFF",0xBFFFFFFF);
@@ -39,7 +40,7 @@ class Test {
 		test("3 * 2 + 5",11);
 		test("3 * (2 + 5)",21);
 		test("3 * 2 // + 5 \n + 6",12);
-		test("3 /* 2\n */ + 5",8);
+		test("3 /"+"* 2\n *"+"/ + 5",8);
 		test("[55,66,77][1]",66);
 		test("var a = [55]; a[0] *= 2; a[0]",110);
 		test("x",55,{ x : 55 });
@@ -75,7 +76,12 @@ class Test {
 		test("1 + 2 == 3", true);
 		test("-2 == 3 - 5", true);
 		//test("[for (n in 0 ... 3) n * n]", [0, 1, 4]);
-		test("var n = 7; n", 7);
+		*/
+		//test("var n = {a:7}; n.a", 7);
+		//test("var n = 7; n = 7; n.toInt", 7);
+		//test('var n = {a:7,b:"hello"}; n.a', 7);
+		//test('var n = [7,8,9]; n.indexOf(8)', 1);
+		test('function test() { return {a:1}; }; test().a', 1);
 		trace("Done");
 	}
 

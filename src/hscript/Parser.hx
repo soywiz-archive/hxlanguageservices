@@ -13,19 +13,20 @@ class Parser {
 // implementation
     var uid:Int = 0;
     private var tokenizer:Tokenizer;
+    private var completion = new CompletionContext();
 
     public function new() {
         var priorities = [
-            ["%"],
-            ["*", "/"],
-            ["+", "-"],
-            ["<<", ">>", ">>>"],
-            ["|", "&", "^"],
-            ["==", "!=", ">", "<", ">=", "<="],
-            ["..."],
-            ["&&"],
-            ["||"],
-            ["=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "|=", "&=", "^="],
+        ["%"],
+        ["*", "/"],
+        ["+", "-"],
+        ["<<", ">>", ">>>"],
+        ["|", "&", "^"],
+        ["==", "!=", ">", "<", ">=", "<="],
+        ["..."],
+        ["&&"],
+        ["||"],
+        ["=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "|=", "&=", "^="],
         ];
         opPriority = new Map();
         opRightAssoc = new Map();
@@ -64,6 +65,7 @@ class Parser {
     }
 
     private function push(t:Token) return tokenizer.push(t);
+
     private function token() return tokenizer.token();
 
     inline function ensure(tk) {
@@ -141,10 +143,13 @@ class Parser {
         switch( tk ) {
             case TId(id):
                 var e = parseStructure(id);
-                if (e == null) e = mk(EIdent(id));
+                if (e == null) {
+                    e = mk(EIdent(id));
+                    completion.getLocal(id).addReference(Reference.Read(e));
+                }
                 return parseExprNext(e);
             case TConst(c): return parseExprNext(mk(EConst(c)));
-            case TPOpen:
+            case Token.TPOpen:
                 var e = parseExpr();
                 ensure(TPClose);
                 return parseExprNext(mk(EParent(e), p1, tokenizer.tokenMax));
@@ -206,9 +211,9 @@ class Parser {
                         case EFor(_), EWhile(_):
                             var tmp = "__a_" + (uid++);
                             var e = mk(EBlock([
-                            mk(EVar(tmp, null, mk(EArrayDecl([]), p1)), p1),
-                            mapCompr(tmp, a[0]),
-                            mk(EIdent(tmp), p1),
+                                mk(EVar(tmp, null, mk(EArrayDecl([]), p1)), p1),
+                                mapCompr(tmp, a[0]),
+                                mk(EIdent(tmp), p1),
                             ]), p1);
                             return parseExprNext(e);
                         default:
@@ -242,15 +247,17 @@ class Parser {
     function makeBinop(op, e1, e) {
         return switch( expr(e) ) {
             case EBinop(op2, e2, e3):
-                if (opPriority.get(op) <= opPriority.get(op2) && !opRightAssoc.exists(op))
+                if (opPriority.get(op) <= opPriority.get(op2) && !opRightAssoc.exists(op)) {
                     mk(EBinop(op2, makeBinop(op, e1, e2), e3), pmin(e1), pmax(e3));
-                else
+                } else {
                     mk(EBinop(op, e1, e), pmin(e1), pmax(e));
+                }
             case ETernary(e2, e3, e4):
-                if (opRightAssoc.exists(op))
+                if (opRightAssoc.exists(op)) {
                     mk(EBinop(op, e1, e), pmin(e1), pmax(e));
-                else
+                } else {
                     mk(ETernary(makeBinop(op, e1, e2), e3, e4), pmin(e1), pmax(e));
+                }
             default:
                 mk(EBinop(op, e1, e), pmin(e1), pmax(e));
         }
@@ -269,18 +276,18 @@ class Parser {
                     semic = true;
                     tk = token();
                 }
-                if (Type.enumEq(tk, TId("else")))
+                if (Type.enumEq(tk, TId("else"))) {
                     e2 = parseExpr();
-                else {
+                } else {
                     push(tk);
                     if (semic) push(TSemicolon);
                 }
                 mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenizer.tokenMax : pmax(e2));
             case "var":
                 var tk = token();
-                var ident = null;
+                var ident:String = null;
                 switch(tk) {
-                    case TId(id): ident = id;
+                    case Token.TId(id): ident = id;
                     default: unexpected(tk);
                 }
                 tk = token();
@@ -290,10 +297,12 @@ class Parser {
                     tk = token();
                 }
                 var e = null;
-                if (Type.enumEq(tk, TOp("=")))
+                if (Type.enumEq(tk, TOp("="))) {
                     e = parseExpr();
-                else
+                } else {
                     push(tk);
+                }
+                completion.addLocal(ident, t, e);
                 mk(EVar(ident, t, e), p1, (e == null) ? tokenizer.tokenMax : pmax(e));
             case "while":
                 var econd = parseExpr();
@@ -357,12 +366,15 @@ class Parser {
                 }
                 var ret = null;
                 tk = token();
-                if (tk != TDoubleDot)
+                if (tk != TDoubleDot) {
                     push(tk);
-                else
+                } else {
                     ret = parseType();
+                }
                 var body = parseExpr();
-                mk(EFunction(args, body, name, ret), p1, pmax(body));
+                var expr = mk(EFunction(args, body, name, ret), p1, pmax(body));
+                completion.addLocal(name, ret, expr);
+                expr;
             case "return":
                 var tk = token();
                 push(tk);
@@ -503,6 +515,7 @@ class Parser {
                     case TId(id): field = id;
                     default: unexpected(tk);
                 }
+                trace('Completion at dot:' + completion.getType(e1));
                 return parseExprNext(mk(EField(e1, field), pmin(e1)));
             case TPOpen:
                 return parseExprNext(mk(ECall(e1, parseExprList(TPClose)), pmin(e1)));
@@ -627,5 +640,96 @@ class Parser {
         }
         return args;
     }
-
 }
+
+class CompletionVariable {
+    public var name:String;
+    public var expr:Expr;
+    public var references:Array<Reference> = [];
+
+    public function new(name:String, expr:Expr) {
+        this.name = name;
+        this.expr = expr;
+    }
+
+    public function addReference(ref:Reference):Void {
+        references.push(ref);
+        trace('reference $name $ref');
+    }
+}
+
+enum Reference {
+    Declaration(e:Expr);
+    Write(e:Expr);
+    Read(e:Expr);
+}
+
+enum CompletionType {
+    Unknown;
+    Dynamic;
+    Int;
+    Float;
+    String;
+    Object(items:Array<{ name:String, type:CompletionType }>);
+    Array(type:CompletionType);
+    Function(args:Array<CompletionType>, ret:CompletionType);
+}
+
+class CompletionContext {
+    var locals = new Map<String, CompletionVariable>();
+
+    public function new() {
+    }
+
+    public function getLocal(name:String):CompletionVariable {
+        if (!locals.exists(name)) throw 'Can\'t find local "$name"';
+        return locals.get(name);
+    }
+
+    public function unificateTypes(types:Array<CompletionType>):CompletionType {
+        if (types.length == 0) return CompletionType.Dynamic;
+        return types[0];
+    }
+
+    public function getType(e:Expr):CompletionType {
+        switch (e.e) {
+            case ExprDef.EIdent(v):
+                return getType(getLocal(v).expr);
+            case ExprDef.EConst(CInt(_)): return CompletionType.Int;
+            case ExprDef.EConst(CString(_)): return CompletionType.String;
+            case ExprDef.EBlock(exprs):
+                return getType(exprs[exprs.length - 1]);
+            case ExprDef.EReturn(e):
+                return getType(e);
+            case ExprDef.EFunction(args, e, name, ret):
+                return CompletionType.Function(
+                    [for (arg in args) CompletionType.Unknown],
+                    getType(e)
+                );
+            case ExprDef.ECall(e, params):
+                var type = getType(e);
+                switch (getType(e)) {
+                    case CompletionType.Function(args, ret): return ret;
+                    case CompletionType.Dynamic: return CompletionType.Dynamic;
+                    default:
+                }
+                return CompletionType.Unknown;
+            case ExprDef.EArrayDecl(exprs):
+                return CompletionType.Array(unificateTypes([for (expr in exprs) getType(expr)]));
+            case ExprDef.EObject(parts):
+                return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e) } ]);
+            default:
+                throw 'Unhandled expression ${e.e}';
+        }
+        trace(e);
+        return CompletionType.Unknown;
+    }
+
+    public function addLocal(ident:String, t:CType, e:Expr):CompletionVariable {
+        var v = new CompletionVariable(ident, e);
+        v.addReference(Reference.Declaration(e));
+        locals.set(ident, v);
+        return v;
+    }
+}
+

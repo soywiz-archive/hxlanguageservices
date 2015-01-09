@@ -57,6 +57,8 @@ class Error {
         this.pmin = pmin;
         this.pmax = pmax;
     }
+
+    public function toString() return 'Error($e, $pmin, $pmax)';
 }
 enum ErrorDef {
     EInvalidChar( c:Int );

@@ -132,11 +132,11 @@ class Tokenizer {
                                 return Token.TConst((exp > 0) ? Const.CFloat(n * 10 / exp) : ((i == n) ? Const.CInt(i) : Const.CFloat(n)));
                         }
                     }
-                case 59: return Token.TSemicolon;
-                case 40: return Token.TPOpen;
-                case 41: return Token.TPClose;
-                case 44: return Token.TComma;
-                case 46:
+                case ';'.code: return Token.TSemicolon;
+                case '('.code: return Token.TPOpen;
+                case ')'.code: return Token.TPClose;
+                case ','.code: return Token.TComma;
+                case '.'.code:
                     char = readChar();
                     switch( char ) {
                         case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
@@ -162,14 +162,14 @@ class Tokenizer {
                             this.char = char;
                             return Token.TDot;
                     }
-                case 123: return Token.TBrOpen;
-                case 125: return Token.TBrClose;
-                case 91: return Token.TBkOpen;
-                case 93: return Token.TBkClose;
-                case 39: return Token.TConst(Const.CString(readString(39)));
-                case 34: return Token.TConst(Const.CString(readString(34)));
-                case 63: return Token.TQuestion;
-                case 58: return Token.TDoubleDot;
+                case '{'.code: return Token.TBrOpen;
+                case '}'.code: return Token.TBrClose;
+                case '['.code: return Token.TBkOpen;
+                case ']'.code: return Token.TBkClose;
+                case "'".code: return Token.TConst(Const.CString(readString(39)));
+                case '"'.code: return Token.TConst(Const.CString(readString(34)));
+                case '?'.code: return Token.TQuestion;
+                case ':'.code: return Token.TDoubleDot;
                 default:
                     if (ops[char]) {
                         var op = String.fromCharCode(char);
