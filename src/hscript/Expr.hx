@@ -72,6 +72,7 @@ enum ErrorDef {
     EUnexpected( s:String );
     EUnterminatedString;
     EUnterminatedComment;
+    EUnknown( v:String );
     EUnknownVariable( v:String );
     EInvalidIterator( v:String );
     EInvalidOp( op:String );

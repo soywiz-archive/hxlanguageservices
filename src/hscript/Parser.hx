@@ -3,6 +3,10 @@ import hscript.Expr;
 
 import hscript.Tokenizer.Token;
 
+class ErrorContext {
+    public var errors = new Array<Error>();
+}
+
 class Parser {
 
 // config / variables
@@ -13,9 +17,12 @@ class Parser {
 // implementation
     var uid:Int = 0;
     private var tokenizer:Tokenizer;
-    private var completion = new CompletionContext();
+    public var errors:ErrorContext;
+    private var completion:CompletionContext;
 
     public function new() {
+        errors = new ErrorContext();
+        completion = new CompletionContext(errors);
         var priorities = [
         ["%"],
         ["*", "/"],
@@ -137,19 +144,19 @@ class Parser {
         return parseExprNext(mk(EObject(fl), p1));
     }
 
-    function parseExpr() {
+    function parseExpr():Expr {
         var tk = token();
         var p1 = tokenizer.tokenMin;
         switch( tk ) {
             case TId(id):
-                var e = parseStructure(id);
+                var e:Expr = parseStructure(id);
                 if (e == null) {
                     e = mk(EIdent(id));
                     var local = completion.scope.get(id);
                     if (local != null) {
                         local.addReference(Reference.Read(e));
                     } else {
-                        trace('Can\'t find "$id"');
+                        errors.errors.push(new Error(ErrorDef.EUnknownVariable('Can\'t find "$id"'), e.pmin, e.pmax));
                     }
                 }
                 return parseExprNext(e);
@@ -268,7 +275,7 @@ class Parser {
         }
     }
 
-    function parseStructure(id) {
+    function parseStructure(id):Expr {
         var p1 = tokenizer.tokenMin;
         return switch( id ) {
             case "if":
@@ -342,7 +349,7 @@ class Parser {
                     default: push(tk);
                 }
                 ensure(TPOpen);
-                var args = new Array();
+                var args:Array<Argument> = [];
                 tk = token();
                 if (tk != TPClose) {
                     var done = false;
@@ -382,6 +389,9 @@ class Parser {
                 }
                 var body:Expr = null;
                 var bodyScope = completion.pushContext(function() {
+                    for (arg in args) {
+                        completion.addLocal(arg.name, arg.t, null, completion.ctypeToCompletionType(arg.t));
+                    }
                     body = parseExpr();
                 });
                 var expr = mk(EFunction(args, body, name, ret), p1, pmax(body));
@@ -683,6 +693,7 @@ enum Reference {
 enum CompletionType {
     Unknown;
     Dynamic;
+    Bool;
     Int;
     Float;
     String;
@@ -741,8 +752,13 @@ typedef CompletionScope = Scope<String, CompletionVariable>;
 
 class CompletionContext {
     public var scope = new CompletionScope();
+    private var errors:ErrorContext;
 
-    public function new() {
+    public function new(errors:ErrorContext) {
+        this.errors = errors;
+        scope.set("true", new CompletionVariable("true", CompletionType.Bool));
+        scope.set("false", new CompletionVariable("false", CompletionType.Bool));
+        scope.set("null", new CompletionVariable("null", CompletionType.Dynamic));
     }
 
     public function hasField(type:CompletionType, field:String):Bool {
@@ -765,6 +781,18 @@ class CompletionContext {
 
         }
         return CompletionType.Unknown;
+    }
+
+    public function ctypeToCompletionType(type:CType):CompletionType {
+        if (type == null) return CompletionType.Dynamic;
+        switch (type) {
+            case CType.CTPath(["Int"], null): return CompletionType.Int;
+            case CType.CTPath(["Float"], null): return CompletionType.Float;
+            case CType.CTPath(["Bool"], null): return CompletionType.Bool;
+            default:
+        }
+        throw 'Not implemented $type';
+        return null;
     }
 
 /*
@@ -812,6 +840,39 @@ class CompletionContext {
             case ExprDef.EConst(CString(_)): return CompletionType.String;
             case ExprDef.EBlock(exprs): return getType(exprs[exprs.length - 1], scope);
             case ExprDef.EReturn(e): return getType(e, scope);
+            case ExprDef.EBinop(op, left, right):
+                var ltype = getType(left, scope);
+                var rtype = getType(right, scope);
+                switch (op) {
+                    case '==':
+                        if (ltype != rtype) errors.errors.push(new Error(ErrorDef.EInvalidOp("Disctinct types"), e.pmin, e.pmax));
+                        return CompletionType.Bool;
+                    case '+':
+                        if (Std.is(ltype, CompletionType.Bool) || Std.is(rtype, CompletionType.Bool)) {
+                            errors.errors.push(new Error(ErrorDef.EInvalidOp("Cannot add bool"), e.pmin, e.pmax));
+                        }
+                        switch ([ltype, rtype]) {
+                            case [CompletionType.Int, CompletionType.Int]: return CompletionType.Int;
+                            case [CompletionType.Int, CompletionType.Float]: return CompletionType.Float;
+                            case [CompletionType.Int, CompletionType.String]: return CompletionType.String;
+                            case [CompletionType.Float, CompletionType.Int]: return CompletionType.Float;
+                            case [CompletionType.Float, CompletionType.Float]: return CompletionType.Float;
+                            case [CompletionType.Float, CompletionType.String]: return CompletionType.String;
+                            case [CompletionType.String, CompletionType.Int]: return CompletionType.String;
+                            case [CompletionType.String, CompletionType.Float]: return CompletionType.String;
+                            case [CompletionType.String, CompletionType.String]: return CompletionType.String;
+                            case [_, CompletionType.Dynamic]: return CompletionType.Dynamic;
+                            case [CompletionType.Dynamic, _]: return CompletionType.Dynamic;
+                            default:
+                                errors.errors.push(new Error(ErrorDef.EInvalidOp('Unsupported op2 $ltype $op $rtype'), e.pmin, e.pmax));
+                                return CompletionType.Dynamic;
+                        }
+                        ltype;
+                    default:
+                        throw 'Unsupported operator $op';
+                }
+                throw 'Unsupported type with $op';
+                return ltype;
             case ExprDef.EFunction(args, e, name, ret):
                 return CompletionType.Function(
                     [for (arg in args) CompletionType.Unknown],
@@ -836,19 +897,19 @@ class CompletionContext {
     }
 
     public function addLocal(ident:String, t:CType, e:Expr, ?type:CompletionType, ?exprScope:CompletionScope):CompletionVariable {
+        if (exprScope == null) exprScope = this.scope;
         if (type == null) {
-            type = try {
-                getType(e, exprScope);
-            } catch (e:Dynamic) {
-                trace(exprScope.exists('demo'));
-                trace(exprScope);
-                trace('Error: $e');
-                CompletionType.Unknown;
+            if (e != null) {
+                type = try {
+                    getType(e, exprScope);
+                } catch (e:Dynamic) {
+                    errors.errors.push(new Error(ErrorDef.EUnknown('Error:$e'), e.pmin, e.pmax));
+                    CompletionType.Unknown;
+                }
             }
         }
-        if (exprScope == null) exprScope = this.scope;
         var v = new CompletionVariable(ident, type);
-        v.addReference(Reference.Declaration(e));
+        if (e != null) v.addReference(Reference.Declaration(e));
         scope.set(ident, v);
         return v;
     }
