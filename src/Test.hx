@@ -168,5 +168,16 @@ class Test1 extends haxe.unit.TestCase {
 			'var z = 1; { var x = 1; } ###',
 			['z:Int']
 		);
+
+		// @TODO: Fixme! should be test:Int -> Float -> String -> Void
+		assertCompletion2(
+			'var c:Bool = false; function test(a:Int, b:Float, c:String) { ### }',
+			['a:Int', 'b:Float', 'c:String', 'test:Unknown -> Unknown -> Unknown -> {}']
+		);
+
+		assertCompletion2(
+			'var c:Bool = false; function test(a:Int, b:Float, c:String) { } ###',
+			['c:Bool', 'test:Unknown -> Unknown -> Unknown -> {}']
+		);
 	}
 }

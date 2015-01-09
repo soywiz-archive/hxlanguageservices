@@ -843,6 +843,7 @@ class CompletionContext {
             case CType.CTPath(["Int"], null): return CompletionType.Int;
             case CType.CTPath(["Float"], null): return CompletionType.Float;
             case CType.CTPath(["Bool"], null): return CompletionType.Bool;
+            case CType.CTPath(["String"], null): return CompletionType.String;
             default:
         }
         throw 'Not implemented $type';
@@ -991,7 +992,9 @@ class CompletionTypeUtils {
             case CompletionType.Dynamic: return 'Dynamic';
             case CompletionType.Object(items):
                 return '{' + [for (item in items) item.name + ':' + toString(item.type)].join(',') + '}';
-            default: return '???';
+            case CompletionType.Function(args, ret):
+                return [for (arg in args) toString(arg)].concat([toString(ret)]).join(' -> ');
+            default:
         }
         return '$ct';
     }
