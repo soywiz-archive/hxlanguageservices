@@ -47,6 +47,13 @@ enum CType {
     CTParent( t:CType );
 }
 
+class Error2 {
+    public var message:String;
+
+    public function new(message:String) { this.message = message; }
+    public function toString() return 'Error($message)';
+}
+
 class Error {
     public var e:ErrorDef;
     public var pmin:Int;

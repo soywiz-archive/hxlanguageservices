@@ -81,7 +81,10 @@ class Test {
 		//test("var n = 7; n = 7; n.toInt", 7);
 		//test('var n = {a:7,b:"hello"}; n.a', 7);
 		//test('var n = [7,8,9]; n.indexOf(8)', 1);
-		test('function test() { return {a:1}; }; test().a', 1);
+		//test('function test() { return {a:1}; }; test().a', 1);
+		//test('function test2() { var demo = {a:1,b:{c:3}}; return demo; }; function test() { var demo = test2(); return demo; }; test().b.c', 3);
+		//test('for (item in [{a:1},{a:2}]) item.a', 3);
+		test('var z = {a:1};var sum=0;for (item in [z,z,z]) sum += item.a; sum;', 3);
 		trace("Done");
 	}
 

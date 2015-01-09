@@ -145,7 +145,12 @@ class Parser {
                 var e = parseStructure(id);
                 if (e == null) {
                     e = mk(EIdent(id));
-                    completion.getLocal(id).addReference(Reference.Read(e));
+                    var local = completion.scope.get(id);
+                    if (local != null) {
+                        local.addReference(Reference.Read(e));
+                    } else {
+                        trace('Can\'t find "$id"');
+                    }
                 }
                 return parseExprNext(e);
             case TConst(c): return parseExprNext(mk(EConst(c)));
@@ -311,7 +316,7 @@ class Parser {
             case "for":
                 ensure(TPOpen);
                 var tk = token();
-                var vname = null;
+                var vname:String = null;
                 switch( tk ) {
                     case TId(id): vname = id;
                     default: unexpected(tk);
@@ -320,7 +325,11 @@ class Parser {
                 if (!Type.enumEq(tk, TId("in"))) unexpected(tk);
                 var eiter = parseExpr();
                 ensure(TPClose);
-                var e = parseExpr();
+                var e:Expr = null;
+                var forContext = completion.pushContext(function() {
+                    completion.addLocal(vname, null, eiter, completion.getElementType(eiter, completion.scope));
+                    e = parseExpr();
+                });
                 mk(EFor(vname, eiter, e), p1, pmax(e));
             case "break": mk(EBreak);
             case "continue": mk(EContinue);
@@ -371,9 +380,12 @@ class Parser {
                 } else {
                     ret = parseType();
                 }
-                var body = parseExpr();
+                var body:Expr = null;
+                var bodyScope = completion.pushContext(function() {
+                    body = parseExpr();
+                });
                 var expr = mk(EFunction(args, body, name, ret), p1, pmax(body));
-                completion.addLocal(name, ret, expr);
+                completion.addLocal(name, ret, expr, bodyScope);
                 expr;
             case "return":
                 var tk = token();
@@ -515,7 +527,11 @@ class Parser {
                     case TId(id): field = id;
                     default: unexpected(tk);
                 }
-                trace('Completion at dot:' + completion.getType(e1));
+                var exprType = completion.getType(e1, completion.scope);
+                if (!completion.hasField(exprType, field)) {
+                    trace('Expression $e1 doesn\'t contain field $field');
+                    trace('type:' + exprType);
+                }
                 return parseExprNext(mk(EField(e1, field), pmin(e1)));
             case TPOpen:
                 return parseExprNext(mk(ECall(e1, parseExprList(TPClose)), pmin(e1)));
@@ -644,17 +660,17 @@ class Parser {
 
 class CompletionVariable {
     public var name:String;
-    public var expr:Expr;
+    public var type:CompletionType;
     public var references:Array<Reference> = [];
 
-    public function new(name:String, expr:Expr) {
+    public function new(name:String, type:CompletionType) {
         this.name = name;
-        this.expr = expr;
+        this.type = type;
     }
 
     public function addReference(ref:Reference):Void {
         references.push(ref);
-        trace('reference $name $ref');
+        //trace('reference $name $ref');
     }
 }
 
@@ -675,15 +691,100 @@ enum CompletionType {
     Function(args:Array<CompletionType>, ret:CompletionType);
 }
 
-class CompletionContext {
-    var locals = new Map<String, CompletionVariable>();
+class Scope<TKey : String, TValue> {
+    public var parent:Scope<TKey, TValue>;
+    private var map:Map<String, TValue>;
+
+    public function new(?parent:Scope<TKey, TValue>) {
+        this.parent = parent;
+        this.map = new Map<String, TValue>();
+    }
+
+    public function exists(key:TKey):Bool {
+        if (map.exists(key)) return true;
+        if (parent != null) return parent.exists(key);
+        return false;
+    }
+
+    public function get(key:TKey):TValue {
+        if (map.exists(key)) return map.get(key);
+        if (parent != null) return parent.get(key);
+        //throw new Error2('Can\'t find "$key"');
+        return null;
+    }
+
+    public function set(key:TKey, value:TValue) return map.set(key, value);
+
+    public function toString() {
+        return 'Scope(${[for (key in map.keys()) key]}, $parent)';
+    }
+}
+
+class Scope2<TKey : String, TValue> {
+    public var scope = new Scope<TKey, TValue>();
 
     public function new() {
     }
 
+    //public function exists(key:TKey) return scope.exists(key);
+    //public function get(key:TKey) return scope.get(key);
+    //public function set(key:TKey, value:TValue) return scope.set(key, value);
+    public function push(callback: Void -> Void) {
+        var oldscope = scope = new Scope<TKey, TValue>(scope);
+        callback();
+        scope = scope.parent;
+        return oldscope;
+    }
+}
+
+typedef CompletionScope = Scope<String, CompletionVariable>;
+
+class CompletionContext {
+    public var scope = new CompletionScope();
+
+    public function new() {
+    }
+
+    public function hasField(type:CompletionType, field:String):Bool {
+        switch (type) {
+            case CompletionType.Dynamic: return true;
+            case CompletionType.Object(items):
+                for (item in items) if (item.name == field) return true;
+            default:
+
+        }
+        return false;
+    }
+
+    public function getFieldType(type:CompletionType, field:String):CompletionType {
+        switch (type) {
+            case CompletionType.Dynamic: return CompletionType.Dynamic;
+            case CompletionType.Object(items):
+                for (item in items) if (item.name == field) return item.type;
+            default:
+
+        }
+        return CompletionType.Unknown;
+    }
+
+/*
     public function getLocal(name:String):CompletionVariable {
-        if (!locals.exists(name)) throw 'Can\'t find local "$name"';
-        return locals.get(name);
+        if (!scope.exists(name)) {
+            trace(scope);
+            throw 'Can\'t find local "$name"';
+        }
+        return scope.get(name);
+    }
+    */
+
+    public function pushContext(callback: Void -> Void) {
+        //trace('push scope');
+        scope = new CompletionScope(scope);
+        var output = scope;
+        callback();
+        scope = scope.parent;
+        //trace('pop scope');
+        return output;
     }
 
     public function unificateTypes(types:Array<CompletionType>):CompletionType {
@@ -691,33 +792,42 @@ class CompletionContext {
         return types[0];
     }
 
-    public function getType(e:Expr):CompletionType {
+    public function getElementType(e:Expr, scope:CompletionScope):CompletionType {
+        var result = getType(e, scope);
+        switch (result) {
+            case CompletionType.Array(type): return type;
+            default:
+        }
+        return CompletionType.Unknown;
+    }
+
+    public function getType(e:Expr, scope:CompletionScope):CompletionType {
         switch (e.e) {
             case ExprDef.EIdent(v):
-                return getType(getLocal(v).expr);
+                var local = scope.get(v);
+                return (local != null) ? local.type : CompletionType.Dynamic;
             case ExprDef.EConst(CInt(_)): return CompletionType.Int;
+            case ExprDef.EField(expr, field):
+                return getFieldType(getType(expr, scope), field);
             case ExprDef.EConst(CString(_)): return CompletionType.String;
-            case ExprDef.EBlock(exprs):
-                return getType(exprs[exprs.length - 1]);
-            case ExprDef.EReturn(e):
-                return getType(e);
+            case ExprDef.EBlock(exprs): return getType(exprs[exprs.length - 1], scope);
+            case ExprDef.EReturn(e): return getType(e, scope);
             case ExprDef.EFunction(args, e, name, ret):
                 return CompletionType.Function(
                     [for (arg in args) CompletionType.Unknown],
-                    getType(e)
+                    getType(e, scope)
                 );
             case ExprDef.ECall(e, params):
-                var type = getType(e);
-                switch (getType(e)) {
+                switch (getType(e, scope)) {
                     case CompletionType.Function(args, ret): return ret;
                     case CompletionType.Dynamic: return CompletionType.Dynamic;
                     default:
                 }
                 return CompletionType.Unknown;
             case ExprDef.EArrayDecl(exprs):
-                return CompletionType.Array(unificateTypes([for (expr in exprs) getType(expr)]));
+                return CompletionType.Array(unificateTypes([for (expr in exprs) getType(expr, scope)]));
             case ExprDef.EObject(parts):
-                return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e) } ]);
+                return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e, scope) } ]);
             default:
                 throw 'Unhandled expression ${e.e}';
         }
@@ -725,10 +835,21 @@ class CompletionContext {
         return CompletionType.Unknown;
     }
 
-    public function addLocal(ident:String, t:CType, e:Expr):CompletionVariable {
-        var v = new CompletionVariable(ident, e);
+    public function addLocal(ident:String, t:CType, e:Expr, ?type:CompletionType, ?exprScope:CompletionScope):CompletionVariable {
+        if (type == null) {
+            type = try {
+                getType(e, exprScope);
+            } catch (e:Dynamic) {
+                trace(exprScope.exists('demo'));
+                trace(exprScope);
+                trace('Error: $e');
+                CompletionType.Unknown;
+            }
+        }
+        if (exprScope == null) exprScope = this.scope;
+        var v = new CompletionVariable(ident, type);
         v.addReference(Reference.Declaration(e));
-        locals.set(ident, v);
+        scope.set(ident, v);
         return v;
     }
 }
