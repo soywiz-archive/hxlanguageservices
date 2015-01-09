@@ -1,9 +1,9 @@
-package hscript;
+package haxe.languageservices.parser;
 
 import haxe.io.Input;
-import hscript.Expr.Const;
-import hscript.Expr.Error;
-import hscript.Expr.ErrorDef;
+import haxe.languageservices.parser.Expr.Const;
+import haxe.languageservices.parser.Expr.Error;
+import haxe.languageservices.parser.Expr.ErrorDef;
 
 enum Token {
     TEof;

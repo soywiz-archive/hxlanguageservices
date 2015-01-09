@@ -1,4 +1,4 @@
-package hscript;
+package haxe.languageservices.util;
 
 class StringUtils {
     static public function compare(a : String, b : String) : Int {

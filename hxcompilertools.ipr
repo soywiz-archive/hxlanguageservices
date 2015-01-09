@@ -27,6 +27,9 @@
     <option name="SKIP_IMPORT_STATEMENTS" value="false" />
   </component>
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false" />
+  <component name="EntryPointsManager">
+    <entry_points version="2.0" />
+  </component>
   <component name="HaxeProjectSettings" defines="" />
   <component name="IdProvider" IDEtalkID="C1F2728C8BBE1FF3CD92E9E36DE96670" />
   <component name="Palette2">

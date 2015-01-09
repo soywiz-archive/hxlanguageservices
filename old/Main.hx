@@ -1,4 +1,4 @@
-package ;
+package
 
 import Main.NonTerminal;
 class Main {

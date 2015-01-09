@@ -1,4 +1,4 @@
-package hscript;
+package haxe.languageservices.parser;
 
 enum Const {
     CInt( v:Int );
