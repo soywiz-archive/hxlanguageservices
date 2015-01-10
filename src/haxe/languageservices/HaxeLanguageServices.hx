@@ -4,6 +4,7 @@ import haxe.languageservices.util.Vfs;
 import haxe.languageservices.parser.TypeContext;
 import haxe.languageservices.parser.Completion.CompletionEntry;
 import haxe.languageservices.parser.Completion.CompletionList;
+import haxe.languageservices.parser.Completion.CCompletion;
 import haxe.languageservices.parser.Errors.ErrorContext;
 import haxe.languageservices.parser.Parser;
 
