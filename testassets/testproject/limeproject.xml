@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+    <!-- http://www.openfl.org/documentation/command-line-tools/project-files/xml-format/ -->
+    <meta title="Lime Test" package="com.soywiz.test" version="1.0.1" company="soywiz" />
+
+    <app main="com.soywiz.test.Main" file="TestMain" path="bin" />
+
+    <window background="#000000" fps="60" />
+    <window width="1280" height="720" unless="mobile" />
+    <window orientation="landscape" vsync="false" antialiasing="0" if="cpp" />
+    <window depth-buffer="true" stencil-buffer="true" />
+    <window require-shaders="true" hardware="true" depth-buffer="true" />
+    
+    <set name="haxe3" />
+    <set name="test1" if="cpp" />
+    <set name="test3" unless="cpp" />
+    <set name="test1b" unless="invalid" />
+    <set name="test2" if="invalid" />
+    <set name="test1c" if="test1b" />
+    <include path="include.xml" />
+
+    <source path="src" />
+    <source path="test" />
+
+    <haxelib name="cairo" version="0.0.2" />
+
+    <assets path="assets" rename="assets" include="*.png|*.json|*.bin|*.pswf|*.ogg|*.opus|*.fnt" />
+
+    <haxeflag name="-D next=1" />
+</project>

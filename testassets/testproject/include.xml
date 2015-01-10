@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+    <set name="include1" if="test1" />
+</project>

@@ -1,4 +1,5 @@
 package haxe.languageservices.sdk;
+import haxe.languageservices.util.PathUtils;
 import haxe.languageservices.util.Vfs;
 import haxe.languageservices.sdk.HaxeLibraryVersion;
 import haxe.languageservices.util.FileSystem2;
@@ -51,6 +52,8 @@ class HaxeLibraryVersion {
         }
         return out;
     }
+    
+    public function getFullClassPath() return PathUtils.combine(path, classPath);
 
     public function toString() return 'HaxeLibraryVersion($name:$version)';
 }

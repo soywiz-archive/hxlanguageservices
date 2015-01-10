@@ -36,6 +36,7 @@ class HaxeLibrary {
     
     public function getVersion(version:String):HaxeLibraryVersion {
         version = version.trim();
+        if (version == '') return currentVersion;
         return new HaxeLibraryVersion(this, normalizeVersion(version), path + '/' + denormalizeVersion(version));
     }
     

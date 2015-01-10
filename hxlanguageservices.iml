@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="HAXE_MODULE" version="4">
+  <component name="HaxeModuleSettingsStorage">
+    <option name="outputFolder" value="$MODULE_DIR$/out/production/hxlanguageservices" />
+  </component>
   <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/out/production/hxlanguageservices" />
     <exclude-output />
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Haxe 3.1.3" jdkType="Haxe toolkit" />
     <orderEntry type="sourceFolder" forTests="false" />
