@@ -899,8 +899,7 @@ class Parser {
             case TDot:
                 tk = token();
                 var field = null;
-
-
+                
                 var tp = completion.scope.getType(e1);
                 completion.scope.createChild()
                     .setBounds(tokenizer.tokenMax, tokenizer.tokenMax)
@@ -912,7 +911,7 @@ class Parser {
                     default: unexpected(tk, 'identifier');
                 }
                 var exprType = completion.scope.getType(e1);
-                if (!CompletionTypeUtils.hasField(exprType, field)) {
+                if (!CompletionTypeUtils.hasField(typeContext, exprType, field)) {
                     trace('Expression $e1 doesn\'t contain field $field');
                     trace('type:' + exprType);
                 }

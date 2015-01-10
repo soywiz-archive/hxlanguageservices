@@ -1,5 +1,6 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.TypeContext;
 import haxe.languageservices.parser.TypeContext.TypeClass;
 import haxe.languageservices.parser.TypeContext.TypeType;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
@@ -350,11 +351,19 @@ class CompletionContext {
 }
 
 class CompletionTypeUtils {
-    static public function hasField(type:CompletionType, field:String):Bool {
+    static public function hasField(typeContext:TypeContext, type:CompletionType, field:String):Bool {
         switch (type) {
             case CompletionType.Dynamic: return true;
             case CompletionType.Object(items):
                 for (item in items) if (item.name == field) return true;
+            case CompletionType.Type2(fqName):
+                var type = typeContext.getTypeFq(fqName);
+                trace('type:$fqName');
+                trace('members:${type.members}');
+                for (member in type.members) {
+                    trace(member);
+                    if (member.name == field) return true;
+                }
             default:
 
         }

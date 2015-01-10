@@ -17,6 +17,16 @@ class TypeContext {
         return packag;
     }
 
+    public function getPackage2(chunks:Array<String>):TypePackage {
+        return getPackage(chunks.join('.'));
+    }
+
+    public function getTypeFq(fqName:String):TypeType {
+        var items = fqName.split('.');
+        var typeName = items.pop();
+        return getPackage2(items).getClass(typeName, null);
+    }
+    
     public function getAllClasses(?out:Array<TypeType>):Array<TypeType> {
         if (out == null) out = [];
         for (packag in packages) packag.getClasses(out);

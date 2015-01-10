@@ -40,6 +40,7 @@ class TestFileCompletion extends TestCase {
         assertCompletion('class Test { public function test() { } ### }', [], ['this:Test']);
         assertCompletion('class Test { public function test<T>(a:T) { ### } }', ['a:T', 'T:TypeParam'], []);
         assertCompletion('class Test { function demo() { var a = 7; ### } private var z = "Test"; }', ['a:Int', 'z:String'], []);
+        //assertCompletion('class Demo { function demo() { var a = 7; this.###z; } private var z = "Test"; }', ['z:String', 'demo:Function'], []);
     }
 
     private function assertCompletion(x:String, has:Array<String>, nohas:Array<String>,  ?c : PosInfos) {
