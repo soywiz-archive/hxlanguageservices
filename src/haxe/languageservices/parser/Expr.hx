@@ -69,10 +69,12 @@ enum StmDef {
 typedef Argument = { name:String, ?t : CType, ?opt : Bool };
 
 enum CType {
+    CTInvalid;
     CTPath( path:Array<String>, ?params:Array<CType> );
     CTFun( args:Array<CType>, ret:CType );
     CTAnon( fields:Array<{ name:String, t:CType }> );
     CTParent( t:CType );
+    CTTypeParam;
 }
 
 class Error2 {

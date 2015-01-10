@@ -1,5 +1,8 @@
 package ;
 
+import haxe.languageservices.parser.Completion.CompletionType;
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
+import haxe.languageservices.util.ArrayUtils;
 import haxe.languageservices.parser.Parser;
 import haxe.PosInfos;
 import haxe.unit.TestCase;
@@ -24,6 +27,28 @@ class TestFileCompletion extends TestCase {
         assertTypes('class Test<T:Int> {}', '[TypeClass(Test<T:Int>)]');
         assertTypes('class Test<T:(Int,String)> {}', '[TypeClass(Test<T:(Int,String)>)]');
         //assertNoError('package com.Test;');
+    }
+
+    public function testCompletion() {
+        assertCompletion('class Test<T1, T2> { ### }', ['T1:TypeParam', 'T2:TypeParam'], []);
+        assertCompletion('class Test<T1, T2> { } ###', [], ['T1:TypeParam', 'T2:TypeParam']);
+    }
+
+    private function assertCompletion(x:String, has:Array<String>, nohas:Array<String>,  ?c : PosInfos) {
+        var index = x.indexOf('###');
+        x = StringTools.replace(x, '###', '');
+        var p = new Parser();
+        var program = p.parseFileString(x);
+        for (e in p.errors.errors) trace('Error:$e');
+        var list = [for (i in p.completionsAt(index).items) i.name + ':' + CompletionTypeUtils.toString(i.type)];
+        if (!ArrayUtils.containsAll(list, has)) {
+            assertEquals('', 'List ${list} doesn\'t contain ${has}');
+        }
+        if (ArrayUtils.containsAny(list, nohas)) {
+            assertEquals('', 'List ${list} contains some of ${nohas}');
+        }
+        assertTrue(true);
+        return p.errors;
     }
 
     private function assertTypes(x:String, test:String, ?c : PosInfos) {

@@ -126,7 +126,11 @@ class Parser {
                         var type = typeContext.getPackage(packageName.join('.')).getClass(typedefName, TypeTypedef);
                         type.typeParams = parseTypeParametersWithDiamonds();
                         ensure(Token.TOp('='));
-                        var ttype = parseType();
+                        var ttype:CType = null;
+                        completion.pushContext(function(c:CompletionScope) {
+                            for (p in type.typeParams) c.addLocal(p.name, CType.CTTypeParam, null);
+                            ttype = parseType();
+                        });
                         var ctype = CompletionTypeUtils.fromCType(ttype);
                         ensure(Token.TSemicolon);
                         cast(type, TypeTypedef).setTargetType(ctype);
@@ -147,9 +151,20 @@ class Parser {
 
                         type.typeParams = parseTypeParametersWithDiamonds();
 
-                        ensure(Token.TBrOpen);
-                        parseClassElements();
-                        ensure(Token.TBrClose);
+                        completion.pushContext(function(c:CompletionScope) {
+                            ensure(Token.TBrOpen);
+                            for (p in type.typeParams) {
+                                c.addLocal(p.name, CType.CTTypeParam, null, CompletionTypeUtils.fromCType(CType.CTTypeParam));
+                            }
+                            /*
+                            c.addLocal('public', CType.CTInvalid, null, CompletionType.Keyword);
+                            c.addLocal('private', CType.CTInvalid, null, CompletionType.Keyword);
+                            c.addLocal('var', CType.CTInvalid, null, CompletionType.Keyword);
+                            c.addLocal('function', CType.CTInvalid, null, CompletionType.Keyword);
+                            */
+                            parseClassElements();
+                            ensure(Token.TBrClose);
+                        });
 
                         parts.push(mkStm(StmDef.EClass(packageName, className, type.typeParams), p1, tokenizer.tokenMax));
                     }
@@ -175,7 +190,7 @@ class Parser {
             default:
                 push(tk);
         }
-        return null;
+        return [];
     }
     
     private function parseTypeParameters():TypeParameters {

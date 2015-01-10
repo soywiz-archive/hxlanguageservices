@@ -20,4 +20,16 @@ class ArrayUtils {
     static private function compare(a:Dynamic, b:Dynamic):Int {
         return if ( a < b ) -1 else if ( a > b ) 1 else 0;
     }
+
+    static public function contains<T>(array:Array<T>, item:T) return array.indexOf(item) >= 0;
+
+    static public function containsAll<T>(a:Array<T>, sub:Array<T>) {
+        for (i in sub) if (!contains(a, i)) return false;
+        return true;
+    }
+
+    static public function containsAny<T>(a:Array<T>, sub:Array<T>) {
+        for (i in sub) if (contains(a, i)) return true;
+        return false;
+    }
 }

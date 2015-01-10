@@ -47,12 +47,14 @@ typedef CompletionArgument = {
 
 enum CompletionType {
     Unknown;
+    Keyword;
     Dynamic;
     Void;
     Bool;
     Int;
     Float;
     String;
+    TypeParam;
     Object(items:Array<CompletionEntry>);
     Array(type:CompletionType);
     Function(type:String, name:String, args:Array<CompletionArgument>, ret:CompletionType);
@@ -370,6 +372,7 @@ class CompletionTypeUtils {
             case CType.CTPath(["Float"], null): return CompletionType.Float;
             case CType.CTPath(["Bool"], null): return CompletionType.Bool;
             case CType.CTPath(["String"], null): return CompletionType.String;
+            case CType.CTTypeParam: return CompletionType.TypeParam;
             default:
         }
         throw 'Not implemented $type';
