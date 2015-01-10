@@ -19,6 +19,8 @@ import haxe.languageservices.parser.Expr.Expr;
 import haxe.languageservices.parser.Expr.ExprDef;
 import haxe.languageservices.parser.Expr.Stm;
 import haxe.languageservices.parser.Expr.StmDef;
+import haxe.languageservices.parser.Expr.TypeParameter;
+import haxe.languageservices.parser.Expr.TypeParameters;
 import haxe.languageservices.parser.Errors.ErrorContext;
 
 import haxe.languageservices.parser.Tokenizer.Token;
@@ -121,12 +123,13 @@ class Parser {
                     if (typedefName == null) {
 
                     } else {
-                        var typedeff = typeContext.getPackage(packageName.join('.')).getClass(typedefName, TypeTypedef);
+                        var type = typeContext.getPackage(packageName.join('.')).getClass(typedefName, TypeTypedef);
+                        type.typeParams = parseTypeParametersWithDiamonds();
                         ensure(Token.TOp('='));
                         var ttype = parseType();
                         var ctype = CompletionTypeUtils.fromCType(ttype);
                         ensure(Token.TSemicolon);
-                        cast(typedeff, TypeTypedef).setTargetType(ctype);
+                        cast(type, TypeTypedef).setTargetType(ctype);
 
                         parts.push(mkStm(StmDef.ETypedef(packageName, typedefName), p1, tokenizer.tokenMax));
                     }
@@ -136,24 +139,19 @@ class Parser {
                     if (className == null) {
                     
                     } else {
-                        var clazz = typeContext.getPackage(packageName.join('.')).getClass(className, TypeClass);
+                        var type = typeContext.getPackage(packageName.join('.')).getClass(className, TypeClass);
 
                         if (!StringUtils.isFirstUpper(className)) {
                             errors.add(new Error(ErrorDef.EUnknown("Class name must be capitalized"), tokenizer.tokenMin, tokenizer.tokenMax));
                         }
-                        var tk = token();
-                        switch (tk) {
-                            case Token.TOp('<'):
-                                parseTypeParameters();
-                                ensure(Token.TOp('>'));
-                            default:
-                                push(tk);
-                        }
+
+                        type.typeParams = parseTypeParametersWithDiamonds();
+
                         ensure(Token.TBrOpen);
                         parseClassElements();
                         ensure(Token.TBrClose);
 
-                        parts.push(mkStm(StmDef.EClass(packageName, className), p1, tokenizer.tokenMax));
+                        parts.push(mkStm(StmDef.EClass(packageName, className, type.typeParams), p1, tokenizer.tokenMax));
                     }
 
                 case Token.TEof:
@@ -167,10 +165,68 @@ class Parser {
         return mkStm(StmDef.EFile(parts), p0);
     }
     
-    private function parseTypeParameters() {
+    private function parseTypeParametersWithDiamonds():TypeParameters {
+        var tk = token();
+        switch (tk) {
+            case Token.TOp('<'):
+                var typeParameters = parseTypeParameters();
+                ensure(Token.TOp('>'));
+                return typeParameters;
+            default:
+                push(tk);
+        }
+        return null;
+    }
+    
+    private function parseTypeParameters():TypeParameters {
+        var params = new TypeParameters();
+        while (true) {
+            var param = parseTypeParameter();
+            if (param == null) break;
+            params.push(param);
+            var tk = token();
+            switch (tk) {
+                case Token.TComma:
+                default:
+                    push(tk);
+                    break;
+            }
+        }
+        return params;
     }
 
-    private function parseTypeParametersConstraints() {
+    private function parseTypeParameter():TypeParameter {
+        var tk = token();
+        switch (tk) {
+            case Token.TId(name):
+                tk = token();
+                var constraints:Array<CType> = null;
+                switch (tk) {
+                    case Token.TDoubleDot:
+                        constraints = parseTypeParameterConstraints();
+                    default:
+                        push(tk);
+                }
+                return { name: name, constraints: constraints };
+            default:
+                push(tk);
+        }
+        return null;
+    }
+
+    private function parseTypeParameterConstraints():Array<CType> {
+        var tk = token();
+        switch (tk) {
+            case Token.TPOpen:
+                var types = parseTypeList();
+                ensure(Token.TPClose);
+                return types;
+            case Token.TId(name):
+                push(tk);
+                return [parseType()];
+            default:
+        }
+        return null;
     }
 
     private function parseClassElements() {
@@ -804,6 +860,17 @@ class Parser {
                 return e1;
         }
     }
+    
+    function parseTypeList():Array<CType> {
+        var types = new Array<CType>();
+        while (true) {
+            var type = parseType();
+            if (type == null) break;
+            types.push(type);
+            if (!check(Token.TComma)) break;
+        }
+        return types;
+    }
 
     function parseType():CType {
         var t = token();
@@ -837,8 +904,9 @@ class Parser {
                                 }
                                 unexpected(t, ", or >");
                             }
-                        } else
+                        } else {
                             push(t);
+                        }
                     default:
                         push(t);
                 }

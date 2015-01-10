@@ -1,5 +1,8 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.Completion.CompletionType;
+import haxe.macro.Expr.TypeParam;
+import Array;
 enum Const {
     CInt( v:Int );
     CFloat( f:Float );
@@ -48,11 +51,18 @@ enum ExprDef {
     ESwitch( e:Expr, cases:Array<{ values:Array<Expr>, expr:Expr }>, ?defaultExpr:Expr);
 }
 
+typedef TypeParameter = {
+    name:String,
+    constraints:Array<CType>
+}
+
+typedef TypeParameters = Array<TypeParameter>;
+
 enum StmDef {
     EPackage(parts: Array<String>);
     EImport(parts: Array<String>);
     ETypedef(packageName:Array<String>, name:String);
-    EClass(packageName:Array<String>, name:String);
+    EClass(packageName:Array<String>, name:String, params:TypeParameters);
     EFile(chunks: Array<Stm>);
 }
 

@@ -19,6 +19,10 @@ class TestFileCompletion extends TestCase {
         assertTypes('package ; class T1{} class T2{}', '[TypeClass(T1),TypeClass(T2)]');
         assertTypes('package a.b.c; class T1{} class T2{}', '[TypeClass(a.b.c.T1),TypeClass(a.b.c.T2)]');
         assertTypes('typedef Int2 = Int;', '[TypeTypedef(Int2->Int)]');
+        assertTypes('typedef Int2<T> = Int;', '[TypeTypedef(Int2<T>->Int)]');
+        assertTypes('class Test<T> {}', '[TypeClass(Test<T>)]');
+        assertTypes('class Test<T:Int> {}', '[TypeClass(Test<T:Int>)]');
+        assertTypes('class Test<T:(Int,String)> {}', '[TypeClass(Test<T:(Int,String)>)]');
         //assertNoError('package com.Test;');
     }
 

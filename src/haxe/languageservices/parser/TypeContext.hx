@@ -1,6 +1,10 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.Expr.TypeParameter;
+import haxe.languageservices.parser.Expr.TypeParameters;
+import haxe.languageservices.parser.Expr.CType;
 import haxe.languageservices.parser.Completion.CompletionType;
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 class TypeContext {
     public var packages = new Map<String, TypePackage>();
 
@@ -53,31 +57,50 @@ class TypeType {
     public var fqName:String;
     public var imports = new Array<TypeType>();
     public var members = new Array<TypeMember>();
+    public var typeParams = new TypeParameters();
 
     public function new(packag:TypePackage, name:String) {
         this.packag = packag;
         this.name = name;
         this.fqName = (packag.name.length > 0) ? (packag.name + '.' + name) : name;
     }
+    
+    private function getDescription() {
+        function getParamTypeString(p:TypeParameter):String {
+            function getConstraints(p:Array<CType>):String {
+                if (p == null || p.length == 0) return '';
+                if (p.length == 1) return ':' + CompletionTypeUtils.fromCType(p[0]);
+                return ':(' + [for (n in p) '' + CompletionTypeUtils.fromCType(n)].join(',') + ')';
+            }
 
-    public function toString() return 'TypeType($fqName)';
+            return p.name + getConstraints(p.constraints);
+        }
+    
+        if (typeParams != null && typeParams.length > 0) {
+            return '$fqName<' + [for (p in typeParams) getParamTypeString(p)].join(',') + '>';
+        } else {
+            return fqName;
+        }
+    }
+
+    public function toString() return 'TypeType(${this.getDescription()})';
 }
 
 class TypeClass extends TypeType {
-    override public function toString() return 'TypeClass($fqName)';
+    override public function toString() return 'TypeClass(${this.getDescription()})';
 }
 
 class TypeEnum extends TypeType {
-    override public function toString() return 'TypeEnum($fqName)';
+    override public function toString() return 'TypeEnum(${this.getDescription()})';
 }
 
 class TypeAbstract extends TypeType {
-    override public function toString() return 'TypeAbstract($fqName)';
+    override public function toString() return 'TypeAbstract(${this.getDescription()})';
 }
 
 class TypeTypedef extends TypeType {
     public var targetType:CompletionType;
-    override public function toString() return 'TypeTypedef($fqName->$targetType)';
+    override public function toString() return 'TypeTypedef(${this.getDescription()}->$targetType)';
     public function setTargetType(targetType:CompletionType) {
         this.targetType = targetType;
     }
