@@ -12,6 +12,8 @@ import haxe.languageservices.parser.Expr.CType;
 import haxe.languageservices.parser.Expr.ErrorDef;
 import haxe.languageservices.parser.Expr.Argument;
 import haxe.languageservices.parser.Expr.Error;
+import haxe.languageservices.parser.Expr.Expr;
+import haxe.languageservices.parser.Expr.ExprDef;
 import haxe.languageservices.parser.Errors.ErrorContext;
 
 import haxe.languageservices.parser.Tokenizer.Token;
@@ -139,7 +141,7 @@ class Parser {
     }
     
     public function callCompletionAt(index:Int):CCompletion {
-        return CCompletion.CallCompletion('', '', [], { type: CompletionType.Unknown }, 1);
+        return completion.root.locateIndex(index).callCompletion;
     }
 
     public function completionsAt(index:Int):CompletionList {
@@ -202,7 +204,7 @@ class Parser {
                 var e = parseExpr();
                 ensure(TPClose);
                 return parseExprNext(mk(EParent(e), p1, tokenizer.tokenMax));
-            case TBrOpen:
+            case Token.TBrOpen:
                 tk = token();
                 switch( tk ) {
                     case TBrClose:
@@ -575,7 +577,7 @@ class Parser {
 
                 var tp = completion.scope.getType(e1);
                 completion.scope.createChild()
-                    .setStartEnd(tokenizer.tokenMax, tokenizer.tokenMax)
+                    .setBounds(tokenizer.tokenMax, tokenizer.tokenMax)
                     .setCompletionType(tp)
                 ;
 
@@ -590,7 +592,20 @@ class Parser {
                 }
                 return parseExprNext(mk(EField(e1, field), pmin(e1)));
             case TPOpen:
-                return parseExprNext(mk(ECall(e1, parseExprList(TPClose)), pmin(e1)));
+                var args = parseExprList(TPClose);
+                
+                var type = completion.scope.getType(e1);
+                switch (type) {
+                    case CompletionType.Function(type, name, targs, tret):
+                        for (aindex in 0 ... args.length) {
+                            var arg = args[aindex];
+                            completion.scope.createChild().setBounds(arg.pmin, arg.pmax).setCallCompletion(
+                                CCompletion.CallCompletion(type, name, targs, { type: tret }, aindex)
+                            );
+                        }
+                    default:
+                }
+                return parseExprNext(mk(ECall(e1, args), pmin(e1)));
             case TBkOpen:
                 var e2 = parseExpr();
                 ensure(TBkClose);
@@ -695,7 +710,7 @@ class Parser {
         }
     }
 
-    function parseExprList(etk) {
+    function parseExprList(etk:Token):Array<Expr> {
         var args = [];
         var tk = token();
         if (tk == etk) return args;
@@ -703,7 +718,7 @@ class Parser {
         while (true) {
             args.push(parseExpr());
             tk = token();
-            switch( tk ) {
+            switch (tk) {
                 case TComma:
                 default:
                     if (tk == etk) break;

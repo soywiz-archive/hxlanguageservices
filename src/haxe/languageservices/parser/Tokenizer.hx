@@ -10,15 +10,15 @@ enum Token {
     TConst( c:Const );
     TId( s:String );
     TOp( s:String );
-    TPOpen;
-    TPClose;
-    TBrOpen;
-    TBrClose;
+    TPOpen; // (
+    TPClose; // )
+    TBrOpen; // {
+    TBrClose; // }
     TDot;
     TComma;
     TSemicolon;
-    TBkOpen;
-    TBkClose;
+    TBkOpen; // [
+    TBkClose; // ]
     TQuestion;
     TDoubleDot;
 }

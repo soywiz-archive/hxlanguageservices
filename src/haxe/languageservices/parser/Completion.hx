@@ -1,5 +1,6 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.util.ArrayUtils;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
@@ -37,23 +38,25 @@ enum Reference {
     Read(e:Expr);
 }
 
+typedef CompletionArgument = {
+    name: String,
+    type: CompletionType,
+    ?optional: Bool,
+    ?doc: String
+};
+
 enum CompletionType {
     Unknown;
     Dynamic;
+    Void;
     Bool;
     Int;
     Float;
     String;
     Object(items:Array<CompletionEntry>);
     Array(type:CompletionType);
-    Function(args:Array<CompletionType>, ret:CompletionType);
+    Function(type:String, name:String, args:Array<CompletionArgument>, ret:CompletionType);
 }
-
-typedef CallArgument = {
-    name: String,
-    type: CompletionType,
-    ?doc: String,
-};
 
 typedef CallReturn = {
     type: CompletionType,
@@ -61,7 +64,7 @@ typedef CallReturn = {
 };
 
 enum CCompletion {
-    CallCompletion(baseType:String, name:String, args:Array<CallArgument>, ret:CallReturn, argIndex:Int, ?doc:String);
+    CallCompletion(baseType:String, name:String, args:Array<CompletionArgument>, ret:CallReturn, argIndex:Int, ?doc:String);
 }
 
 class CompletionList {
@@ -131,9 +134,16 @@ class CompletionScope {
         if (parent != null)parent.children.push(this);
     }
     
-    public function setStartEnd(start:Int, end:Int):CompletionScope {
+    public function setBounds(start:Int, end:Int):CompletionScope {
         this.start = start;
         this.end = end;
+        return this;
+    }
+    
+    public var callCompletion:CCompletion;
+    
+    public function setCallCompletion(c:CCompletion):CompletionScope {
+        this.callCompletion = c;
         return this;
     }
     
@@ -228,13 +238,23 @@ class CompletionScope {
                 throw 'Unsupported type with $op';
                 return ltype;
             case ExprDef.EFunction(args, e, name, ret):
-                return CompletionType.Function(
-                    [for (arg in args) CompletionType.Unknown],
-                    getType(e)
+                var rtype = switch (e.e) {
+                    case ExprDef.EObject(fl) if (fl.length == 0):
+                        CompletionType.Void;
+                    default:
+                        getType(e);
+                }
+                //trace('FUNCTION!!!!' + e);
+                //trace('type:' + rtype);
+                var f = CompletionType.Function(
+                    '<anonymous>', name,
+                    [for (arg in args) { name: arg.name, type: CompletionTypeUtils.fromCType(arg.t), optional: arg.opt }],
+                    rtype
                 );
+                return f;
             case ExprDef.ECall(e, params):
                 switch (getType(e)) {
-                    case CompletionType.Function(args, ret): return ret;
+                    case CompletionType.Function(type, name, args, ret): return ret;
                     case CompletionType.Dynamic: return CompletionType.Dynamic;
                     default:
                 }
@@ -366,8 +386,8 @@ class CompletionTypeUtils {
             case CompletionType.Dynamic: return 'Dynamic';
             case CompletionType.Object(items):
                 return '{' + [for (item in items) item.name + ':' + toString(item.type)].join(',') + '}';
-            case CompletionType.Function(args, ret):
-                return [for (arg in args) toString(arg)].concat([toString(ret)]).join(' -> ');
+            case CompletionType.Function(type, name, args, ret):
+                return [for (arg in args) toString(arg.type)].concat([toString(ret)]).join(' -> ');
             default:
         }
         return '$ct';
