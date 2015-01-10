@@ -32,4 +32,8 @@ class ArrayUtils {
         for (i in sub) if (contains(a, i)) return true;
         return false;
     }
+
+    static public function pushOnce<T>(array:Array<T>, value:T) {
+        if (!contains(array, value)) array.push(value);
+    }
 }

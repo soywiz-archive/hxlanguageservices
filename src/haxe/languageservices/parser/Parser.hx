@@ -1,5 +1,7 @@
 package haxe.languageservices.parser;
 import haxe.languageservices.parser.TypeContext.TypeClass;
+import haxe.languageservices.parser.TypeContext.TypeType;
+import haxe.languageservices.parser.TypeContext.TypeField;
 import haxe.languageservices.parser.TypeContext.TypeTypedef;
 import haxe.languageservices.util.StringUtils;
 import haxe.io.Input;
@@ -127,7 +129,7 @@ class Parser {
                         type.typeParams = parseTypeParametersWithDiamonds();
                         ensure(Token.TOp('='));
                         var ttype:CType = null;
-                        completion.pushContext(function(c:CompletionScope) {
+                        completion.pushScope(function(c:CompletionScope) {
                             for (p in type.typeParams) c.addLocal(p.name, CType.CTTypeParam, null);
                             ttype = parseType();
                         });
@@ -137,7 +139,7 @@ class Parser {
 
                         parts.push(mkStm(StmDef.ETypedef(packageName, typedefName), p1, tokenizer.tokenMax));
                     }
-                case Token.TId("class"):
+                case Token.TId('class'):
                     typeCount++;
                     var className = parseIdentifier();
                     if (className == null) {
@@ -151,18 +153,16 @@ class Parser {
 
                         type.typeParams = parseTypeParametersWithDiamonds();
 
-                        completion.pushContext(function(c:CompletionScope) {
+                        completion.pushScope(function(c:CompletionScope) {
                             ensure(Token.TBrOpen);
                             for (p in type.typeParams) {
                                 c.addLocal(p.name, CType.CTTypeParam, null, CompletionTypeUtils.fromCType(CType.CTTypeParam));
                             }
-                            /*
-                            c.addLocal('public', CType.CTInvalid, null, CompletionType.Keyword);
-                            c.addLocal('private', CType.CTInvalid, null, CompletionType.Keyword);
-                            c.addLocal('var', CType.CTInvalid, null, CompletionType.Keyword);
-                            c.addLocal('function', CType.CTInvalid, null, CompletionType.Keyword);
-                            */
-                            parseClassElements();
+                            c.addKeyword('public');
+                            c.addKeyword('private');
+                            c.addKeyword('var');
+                            c.addKeyword('function');
+                            parseClassElements(type);
                             ensure(Token.TBrClose);
                         });
 
@@ -244,14 +244,14 @@ class Parser {
         return null;
     }
 
-    private function parseClassElements() {
+    private function parseClassElements(type:TypeType) {
         while (true) {
-            var r = parseClassElement();
+            var r = parseClassElement(type);
             if (r == null) break;
         }
     }
 
-    private function parseClassElement() {
+    private function parseClassElement(type:TypeType) {
         var modifier:String = null;
         var isStatic = false;
         while (true) {
@@ -268,9 +268,41 @@ class Parser {
                     if (isStatic == true) unexpected(tk, 'already has the static modifier');
                     isStatic = true;
                 case Token.TId('var'):
-                    var varName = parseIdentifier();
+                    var name = parseIdentifier();
+                    var ctype = parseOptionalTypeWithDoubleDot();
+                    var value:Expr = null;
+                    var valueType:CompletionType = null;
+                    if (check(Token.TOp('='))) {
+                        value = parseExpr();
+                        valueType = completion.scope.getType(value);
+                        if (ctype != null) {
+                            if (!CompletionTypeUtils.canAssign(CompletionTypeUtils.fromCType(ctype), valueType)) {
+                                errors.add(new Error(ErrorDef.EInvalidOp("Can't assign expression to type"), value.pmin, value.pmax));
+                                valueType = CompletionTypeUtils.fromCType(ctype);
+                            }
+                        }
+                    }
                     ensure(Token.TSemicolon);
+                    completion.scope.addLocal(name, ctype, null, valueType);
+                    type.members.push(new TypeField(name));
                     break;
+                case Token.TId('function'):
+                    var name = parseIdentifier();
+                    var ptypes = parseTypeParametersWithDiamonds();
+                    var body:Expr = null;
+                    completion.pushScope(function(c:CompletionScope) {
+                        for (ptype in ptypes) c.addLocal(ptype.name, null, null, CompletionType.TypeParam);
+                        ensure(Token.TPOpen);
+                        var args = parseArgumentsDecl();
+                        ensure(Token.TPClose);
+                        completion.pushScope(function(c:CompletionScope) {
+                            c.addLocal('this', null, null, CompletionType.Type2(type.fqName));
+                            for (arg in args) {
+                                c.addLocal(arg.name, arg.type, null, CompletionTypeUtils.fromCType(arg.type));
+                            }
+                            body = parseExpr();
+                        });
+                    });
                 case Token.TBrClose:
                     push(tk);
                     break;
@@ -278,6 +310,44 @@ class Parser {
                     unexpected(tk, 'field info');
                     break;
             }
+        }
+        return null;
+    }
+    
+    private function parseCommaList<T>(itemReader:Void -> T):Array<T> {
+        var items = new Array<T>();
+        while (true) {
+            var item = itemReader();
+            if (item == null) break;
+            items.push(item);
+            if (!check(Token.TComma)) break;
+        }
+        return items;
+    }
+    
+    private function parseArgumentsDecl(): Array<{ name: String, type: CType }> {
+        return parseCommaList(parseArgumentDecl);
+    }
+
+    private function parseArgumentDecl(): { name: String, type: CType } {
+        var tk = token();
+        switch (tk) {
+            case Token.TId(name):
+                var type = parseOptionalTypeWithDoubleDot();
+                return { name: name, type: type };
+            default:
+                push(tk);
+        }
+        return null;
+    }
+
+    private function parseOptionalTypeWithDoubleDot():CType {
+        var tk = token();
+        switch (tk) {
+            case Token.TDoubleDot:
+                return parseType();
+            default:
+                push(tk);
         }
         return null;
     }
@@ -322,7 +392,7 @@ class Parser {
     public function parseExpressions() {
         var a:Array<Expr> = [];
 
-        completion.pushContext(function(c) {
+        completion.pushScope(function(c) {
             while (true) {
                 var tk = token();
                 if (tk == TEof) break;
@@ -349,11 +419,12 @@ class Parser {
 
     inline function check(tk:Token) {
         var t = token();
-        if (t != tk) {
+
+        if (Type.enumEq(t, tk)) {
+            return true;
+        } else {
             push(t);
             return false;
-        } else {
-            return true;
         }
     }
 
@@ -495,7 +566,7 @@ class Parser {
                         push(tk);
                 }
                 var a = new Array();
-                completion.pushContext(function(c) {
+                completion.pushScope(function(c) {
                     while (true) {
                         a.push(parseFullExpr());
                         tk = token();
@@ -628,7 +699,7 @@ class Parser {
                 var eiter = parseExpr();
                 ensure(TPClose);
                 var e:Expr = null;
-                var forContext = completion.pushContext(function(scope:CompletionScope) {
+                var forContext = completion.pushScope(function(scope:CompletionScope) {
                     scope.addLocal(vname, null, eiter, scope.getElementType(eiter));
                     e = parseExpr();
                 });
@@ -683,7 +754,7 @@ class Parser {
                     ret = parseType();
                 }
                 var body:Expr = null;
-                var bodyScope = completion.pushContext(function(scope:CompletionScope) {
+                var bodyScope = completion.pushScope(function(scope:CompletionScope) {
                     for (arg in args) {
                         scope.addLocal(arg.name, arg.t, null, CompletionTypeUtils.fromCType(arg.t));
                     }

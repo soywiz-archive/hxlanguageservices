@@ -1,5 +1,7 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.TypeContext.TypeClass;
+import haxe.languageservices.parser.TypeContext.TypeType;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.util.ArrayUtils;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
@@ -56,6 +58,7 @@ enum CompletionType {
     String;
     TypeParam;
     Object(items:Array<CompletionEntry>);
+    Type2(fqName:String);
     Array(type:CompletionType);
     Function(type:String, name:String, args:Array<CompletionArgument>, ret:CompletionType);
 }
@@ -128,6 +131,7 @@ class CompletionScope {
     public var children:Array<CompletionScope> = [];
     public var context:CompletionContext;
     private var scope:Scope<String, CompletionVariable>;
+    private var keywords = new Array<String>();
 
     public function new(context:CompletionContext, ?parent:CompletionScope) {
         this.context = context;
@@ -274,6 +278,10 @@ class CompletionScope {
     }
     
     public function containsIndex(index:Int) return index >= start && index <= end;
+    
+    public function addKeyword(name:String) {
+        ArrayUtils.pushOnce(keywords, name);
+    }
 
     public function addLocal(ident:String, t:CType, e:Expr, ?type:CompletionType, ?exprScope:CompletionScope):CompletionVariable {
         if (exprScope == null) exprScope = this;
@@ -285,6 +293,8 @@ class CompletionScope {
                     context.errors.add(new Error(ErrorDef.EUnknown('Error:$e'), e.pmin, e.pmax));
                     CompletionType.Unknown;
                 }
+            } else {
+                type = CompletionTypeUtils.fromCType(t);
             }
         }
         var v = new CompletionVariable(ident, type);
@@ -301,7 +311,9 @@ class CompletionScope {
     public function getCompletionType():CompletionType {
         if (_completionType != null) return _completionType;
         var keys = ArrayUtils.sorted(scope.keys());
-        return CompletionType.Object([for (key in keys) { name: key, type: getLocal(key).type }]);
+        var locals = [for (key in keys) { name: key, type: getLocal(key).type }];
+        var keywords = [for (key in this.keywords) { name: key, type: CompletionType.Keyword }];
+        return CompletionType.Object(locals.concat(keywords));
     }
 }
 
@@ -320,7 +332,7 @@ class CompletionContext {
         scope.set("null", new CompletionVariable("null", CompletionType.Dynamic));
     }
     
-    public function pushContext(callback: CompletionScope -> Void):CompletionScope {
+    public function pushScope(callback: CompletionScope -> Void):CompletionScope {
 //trace('push scope');
         var old = this.scope;
         var output = this.scope = scope.createChild();
@@ -349,6 +361,10 @@ class CompletionTypeUtils {
         return false;
     }
 
+    static public function canAssign(dst:CompletionType, src:CompletionType) {
+        return Type.enumEq(dst, src);
+    }
+
     static public function unificateTypes(types:Array<CompletionType>):CompletionType {
         if (types.length == 0) return CompletionType.Dynamic;
         return types[0];
@@ -372,6 +388,7 @@ class CompletionTypeUtils {
             case CType.CTPath(["Float"], null): return CompletionType.Float;
             case CType.CTPath(["Bool"], null): return CompletionType.Bool;
             case CType.CTPath(["String"], null): return CompletionType.String;
+            case CType.CTPath(path, params): return CompletionType.Type2(path.join('.'));
             case CType.CTTypeParam: return CompletionType.TypeParam;
             default:
         }
@@ -383,9 +400,13 @@ class CompletionTypeUtils {
         switch (ct) {
             case CompletionType.Array(ct): return 'Array<' + toString(ct) + '>';
             case CompletionType.Bool: return 'Bool';
+            case CompletionType.Void: return 'Void';
+            case CompletionType.Keyword: return 'Keyword';
+            case CompletionType.TypeParam: return 'TypeParam';
             case CompletionType.Float: return 'Float';
             case CompletionType.Int: return 'Int';
             case CompletionType.String: return 'String';
+            case CompletionType.Type2(fqName): return '$fqName';
             case CompletionType.Dynamic: return 'Dynamic';
             case CompletionType.Object(items):
                 return '{' + [for (item in items) item.name + ':' + toString(item.type)].join(',') + '}';
@@ -393,7 +414,7 @@ class CompletionTypeUtils {
                 return [for (arg in args) toString(arg.type)].concat([toString(ret)]).join(' -> ');
             default:
         }
-        return '$ct';
+        return '???$ct';
     }
 }
 

@@ -110,6 +110,10 @@ class TypeMember {
     public var visibility:String;
     public var isStatic:Bool;
     public var name:String;
+
+    public function new(name:String) {
+        this.name = name;
+    }
 }
 
 class TypeField extends TypeMember {

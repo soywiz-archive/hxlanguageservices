@@ -15,6 +15,7 @@ class TestFileCompletion extends TestCase {
         assertTypes('import com.test.Test;', '[]');
         assertTypes('class Test {}', '[TypeClass(Test)]');
         assertTypes('class Test { var test; }', '[TypeClass(Test)]');
+        assertTypes('class Test { var test:Int; }', '[TypeClass(Test)]');
         assertTypes('class Test { public var test; }', '[TypeClass(Test)]');
         assertTypes('class Test { static private var test; }', '[TypeClass(Test)]');
         assertTypes('class Test { private static var test; }', '[TypeClass(Test)]');
@@ -32,6 +33,13 @@ class TestFileCompletion extends TestCase {
     public function testCompletion() {
         assertCompletion('class Test<T1, T2> { ### }', ['T1:TypeParam', 'T2:TypeParam'], []);
         assertCompletion('class Test<T1, T2> { } ###', [], ['T1:TypeParam', 'T2:TypeParam']);
+        assertCompletion('class Test<T1, T2> { }', [], ['T1:TypeParam', 'T2:TypeParam']);
+        assertCompletion('class Test { public var demo:Int; ### }', ['demo:Int'], []);
+        assertCompletion('class Test { public var demo:Int; } ###', [], ['demo:Int']);
+        assertCompletion('class Test { public function test() { ### } }', ['this:Test'], []);
+        assertCompletion('class Test { public function test() { } ### }', [], ['this:Test']);
+        assertCompletion('class Test { public function test<T>(a:T) { ### } }', ['a:T', 'T:TypeParam'], []);
+        assertCompletion('class Test { function demo() { var a = 7; ### } private var z = "Test"; }', ['a:Int', 'z:String'], []);
     }
 
     private function assertCompletion(x:String, has:Array<String>, nohas:Array<String>,  ?c : PosInfos) {
@@ -42,10 +50,10 @@ class TestFileCompletion extends TestCase {
         for (e in p.errors.errors) trace('Error:$e');
         var list = [for (i in p.completionsAt(index).items) i.name + ':' + CompletionTypeUtils.toString(i.type)];
         if (!ArrayUtils.containsAll(list, has)) {
-            assertEquals('', 'List ${list} doesn\'t contain ${has}');
+            assertEquals('List ${list} doesn\'t contain ${has}', '--');
         }
         if (ArrayUtils.containsAny(list, nohas)) {
-            assertEquals('', 'List ${list} contains some of ${nohas}');
+            assertEquals('List ${list} contains some of ${nohas}', '--');
         }
         assertTrue(true);
         return p.errors;
