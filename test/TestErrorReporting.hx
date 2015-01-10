@@ -15,7 +15,6 @@ class TestErrorReporting extends TestCase {
             'var z = {a:1};var sum=0;for (item in [z,z,z]) sum += test2.a; sum;',
             [new Error(ErrorDef.EUnknownVariable('Can\'t find "test2"'), 53, 57)]
         );
-//var z = 1.5 + 1;
 
         assertParserErrors(
             'function test(a:Int, b:Float, c) { return a + b + c; }',

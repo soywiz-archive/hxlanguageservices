@@ -1,4 +1,7 @@
 package haxe.languageservices.parser;
+import haxe.languageservices.parser.TypeContext.TypeClass;
+import haxe.languageservices.parser.TypeContext.TypeTypedef;
+import haxe.languageservices.util.StringUtils;
 import haxe.io.Input;
 import haxe.languageservices.parser.Completion.CompletionContext;
 import haxe.languageservices.parser.Completion.CompletionScope;
@@ -14,6 +17,8 @@ import haxe.languageservices.parser.Expr.Argument;
 import haxe.languageservices.parser.Expr.Error;
 import haxe.languageservices.parser.Expr.Expr;
 import haxe.languageservices.parser.Expr.ExprDef;
+import haxe.languageservices.parser.Expr.Stm;
+import haxe.languageservices.parser.Expr.StmDef;
 import haxe.languageservices.parser.Errors.ErrorContext;
 
 import haxe.languageservices.parser.Tokenizer.Token;
@@ -27,12 +32,13 @@ class Parser {
 
 // implementation
     var uid:Int = 0;
-    private var typeContext:TypeContext;
+    public var typeContext:TypeContext;
     private var tokenizer:Tokenizer;
     public var errors:ErrorContext;
     private var completion:CompletionContext;
     
     public function new(?typeContext:TypeContext) {
+        if (typeContext == null) typeContext = new TypeContext();
         this.typeContext = typeContext;
         var priorities = [
         ["%"],
@@ -60,20 +66,186 @@ class Parser {
         }
     }
 
-    public function parseExpressionsString(s:String) {
-        setInputString(s);
+    public function parseExpressionsString(s:String, ?path:String) {
+        setInputString(s, path);
         return parseExpressions();
     }
+
+    public function parseFileString(s:String, ?path:String) {
+        setInputString(s, path);
+        return parseHaxeFile();
+    }
     
-    public function setInput(s:Input):Void {
-        uid = 0;
-        tokenizer = new Tokenizer(s);
-        errors = new ErrorContext();
-        completion = new CompletionContext(tokenizer, errors);
+    public function parseHaxeFile():Stm {
+        return parseTopLevel();
+    }
+    
+    private function isValidPackagePath(path:Array<String>) {
+        for (i in path) if (!StringUtils.isLowerCase(i)) return false;
+        return true;
+    }
+    
+    private function parseTopLevel():Stm {
+        var p0 = tokenizer.tokenMin;
+        var parts = new Array<Stm>();
+        var packageName = new Array<String>();
+        var imports = new Array<Array<String>>();
+        var importCount = 0;
+        var typeCount = 0;
+        while (true) {
+            var p1 = tokenizer.tokenMin;
+            var tk = token();
+            switch (tk) {
+                case Token.TId("package"):
+                    if (importCount != 0 || typeCount != 0) {
+                        errors.add(new Error(ErrorDef.EUnknown("Package must appear at the beggining of the file"), p1, tokenizer.tokenMax));
+                    }
+                    packageName = parseFullyQualifiedName();
+                    if (!isValidPackagePath(packageName)) {
+                        errors.add(new Error(ErrorDef.EUnknown("Package name must be all lower case"), p1, tokenizer.tokenMax));
+                    }
+                    ensure(Token.TSemicolon);
+                    parts.push(mkStm(StmDef.EPackage(packageName), p1, tokenizer.tokenMax));
+                case Token.TId("import"):
+                    importCount++;
+                    if (typeCount != 0) {
+                        errors.add(new Error(ErrorDef.EUnknown("Package must appear at the beggining of the file"), p1, tokenizer.tokenMax));
+                    }
+                    var fqname = parseFullyQualifiedName();
+                    ensure(Token.TSemicolon);
+                    parts.push(mkStm(StmDef.EImport(fqname), p1, tokenizer.tokenMax));
+                    imports.push(fqname);
+                case Token.TId("typedef"):
+                    typeCount++;
+                    var typedefName = parseIdentifier();
+                    if (typedefName == null) {
+
+                    } else {
+                        var typedeff = typeContext.getPackage(packageName.join('.')).getClass(typedefName, TypeTypedef);
+                        ensure(Token.TOp('='));
+                        var ttype = parseType();
+                        var ctype = CompletionTypeUtils.fromCType(ttype);
+                        ensure(Token.TSemicolon);
+                        cast(typedeff, TypeTypedef).setTargetType(ctype);
+
+                        parts.push(mkStm(StmDef.ETypedef(packageName, typedefName), p1, tokenizer.tokenMax));
+                    }
+                case Token.TId("class"):
+                    typeCount++;
+                    var className = parseIdentifier();
+                    if (className == null) {
+                    
+                    } else {
+                        var clazz = typeContext.getPackage(packageName.join('.')).getClass(className, TypeClass);
+
+                        if (!StringUtils.isFirstUpper(className)) {
+                            errors.add(new Error(ErrorDef.EUnknown("Class name must be capitalized"), tokenizer.tokenMin, tokenizer.tokenMax));
+                        }
+                        var tk = token();
+                        switch (tk) {
+                            case Token.TOp('<'):
+                                parseTypeParameters();
+                                ensure(Token.TOp('>'));
+                            default:
+                                push(tk);
+                        }
+                        ensure(Token.TBrOpen);
+                        parseClassElements();
+                        ensure(Token.TBrClose);
+
+                        parts.push(mkStm(StmDef.EClass(packageName, className), p1, tokenizer.tokenMax));
+                    }
+
+                case Token.TEof:
+                    break;
+                default:
+                    unexpected(tk, 'Expected eof, package, import or class');
+                    push(tk);
+                    break;
+            }
+        }
+        return mkStm(StmDef.EFile(parts), p0);
+    }
+    
+    private function parseTypeParameters() {
     }
 
-    public function setInputString(s:String):Void {
-        setInput(new haxe.io.StringInput(s));
+    private function parseTypeParametersConstraints() {
+    }
+
+    private function parseClassElements() {
+        while (true) {
+            var r = parseClassElement();
+            if (r == null) break;
+        }
+    }
+
+    private function parseClassElement() {
+        var modifier:String = null;
+        var isStatic = false;
+        while (true) {
+            var tk = token();
+            switch (tk) {
+                case Token.TId('public'), Token.TId('private'):
+                    if (modifier != null) unexpected(tk, 'already has a modifier');
+                    modifier = switch (tk) {
+                        case Token.TId('public'): "public";
+                        case Token.TId('private'): "public";
+                        default: null;
+                    }
+                case Token.TId('static'):
+                    if (isStatic == true) unexpected(tk, 'already has the static modifier');
+                    isStatic = true;
+                case Token.TId('var'):
+                    var varName = parseIdentifier();
+                    ensure(Token.TSemicolon);
+                    break;
+                case Token.TBrClose:
+                    push(tk);
+                    break;
+                default:
+                    unexpected(tk, 'field info');
+                    break;
+            }
+        }
+        return null;
+    }
+
+    private function parseIdentifier():String {
+        var tk = token();
+        var ident:String = null;
+        switch(tk) {
+            case Token.TId(id): ident = id;
+            default: unexpected(tk, "identifier");
+        }
+        return ident;
+    }
+
+    private function parseFullyQualifiedName():Array<String> {
+        var chunks = new Array<String>();
+        while (true) {
+            var tk = token();
+            switch (tk) {
+                case Token.TId(name):
+                    chunks.push(name);
+                    if (!check(Token.TDot)) break;
+                default:
+                    push(tk);
+                    break;
+            }
+        }
+        return chunks;
+    }
+
+    public function setInput(s:Input, ?path:String):Void {
+        this.uid = 0;
+        this.tokenizer = new Tokenizer(s, path);
+        this.errors = new ErrorContext();
+        this.completion = new CompletionContext(tokenizer, errors);
+    }
+
+    public function setInputString(s:String, ?path:String):Void {
+        setInput(new haxe.io.StringInput(s), path);
     }
 
     public function parseExpressions() {
@@ -90,8 +262,8 @@ class Parser {
         return if (a.length == 1) a[0] else mk(EBlock(a), 0);
     }
 
-    function unexpected(tk:Token):Dynamic {
-        tokenizer.error(EUnexpected(tokenizer.tokenString(tk)), tokenizer.tokenMin, tokenizer.tokenMax);
+    function unexpected(tk:Token, expected:String):Dynamic {
+        tokenizer.error(EUnexpected('expected:' + expected + ', found:' + tokenizer.tokenString(tk) + ""), tokenizer.tokenMin, tokenizer.tokenMax);
         return null;
     }
 
@@ -99,9 +271,19 @@ class Parser {
 
     private function token():Token return tokenizer.token();
 
-    inline function ensure(tk) {
+    inline function ensure(tk:Token) {
         var t = token();
-        if (t != tk) unexpected(t);
+        if ('' + t != '' + tk) unexpected(t, tokenizer.tokenString(tk));
+    }
+
+    inline function check(tk:Token) {
+        var t = token();
+        if (t != tk) {
+            push(t);
+            return false;
+        } else {
+            return true;
+        }
     }
 
     inline function expr(e:Expr) return e.e;
@@ -110,7 +292,13 @@ class Parser {
 
     inline function pmax(e:Expr) return e.pmax;
 
-    inline function mk(e, ?pmin, ?pmax):Expr {
+    inline function mk(e:ExprDef, ?pmin:Int, ?pmax:Int):Expr {
+        if (pmin == null) pmin = tokenizer.tokenMin;
+        if (pmax == null) pmax = tokenizer.tokenMax;
+        return { e : e, pmin : pmin, pmax : pmax };
+    }
+
+    inline function mkStm(e:StmDef, ?pmin:Int, ?pmax:Int):Stm {
         if (pmin == null) pmin = tokenizer.tokenMin;
         if (pmax == null) pmax = tokenizer.tokenMax;
         return { e : e, pmin : pmin, pmax : pmax };
@@ -135,7 +323,7 @@ class Parser {
         var e = parseExpr();
         var tk = token();
         if (tk != TSemicolon && tk != TEof) {
-            if (isBlock(e)) push(tk); else unexpected(tk);
+            if (isBlock(e)) push(tk); else unexpected(tk, 'block');
         }
         return e;
     }
@@ -166,10 +354,10 @@ class Parser {
                 case TConst(c):
                     switch( c ) {
                         case CString(s): id = s;
-                        default: unexpected(tk);
+                        default: unexpected(tk, 'string');
                     }
                 case TBrClose: break;
-                default: unexpected(tk);
+                default: unexpected(tk, 'identifier, const or }');
             }
             ensure(TDoubleDot);
             fl.push({ name : id, e : parseExpr() });
@@ -177,7 +365,7 @@ class Parser {
             switch( tk ) {
                 case TBrClose: break;
                 case TComma:
-                default: unexpected(tk);
+                default: unexpected(tk, '} or ,');
             }
         }
         return parseExprNext(mk(EObject(fl), p1));
@@ -247,7 +435,7 @@ class Parser {
                 return mk(EBlock(a), p1);
             case TOp(op):
                 if (unops.exists(op)) return makeUnop(op, parseExpr());
-                return unexpected(tk);
+                return unexpected(tk, 'unary operator');
             case Token.TBkOpen: // [
                 var a = new Array();
                 tk = token();
@@ -272,7 +460,7 @@ class Parser {
                     }
                 return parseExprNext(mk(EArrayDecl(a), p1));
             default:
-                return unexpected(tk);
+                return unexpected(tk, '----');
         }
     }
 
@@ -336,12 +524,8 @@ class Parser {
                 }
                 mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenizer.tokenMax : pmax(e2));
             case "var":
-                var tk = token();
-                var ident:String = null;
-                switch(tk) {
-                    case Token.TId(id): ident = id;
-                    default: unexpected(tk);
-                }
+                var tk:Token;
+                var ident:String = parseIdentifier();
                 tk = token();
                 var t = null;
                 if (tk == TDoubleDot) {
@@ -366,10 +550,10 @@ class Parser {
                 var vname:String = null;
                 switch( tk ) {
                     case TId(id): vname = id;
-                    default: unexpected(tk);
+                    default: unexpected(tk, 'identifier');
                 }
                 tk = token();
-                if (!Type.enumEq(tk, TId("in"))) unexpected(tk);
+                if (!Type.enumEq(tk, TId("in"))) unexpected(tk, 'in');
                 var eiter = parseExpr();
                 ensure(TPClose);
                 var e:Expr = null;
@@ -380,7 +564,7 @@ class Parser {
                 mk(EFor(vname, eiter, e), p1, pmax(e));
             case "break": mk(EBreak);
             case "continue": mk(EContinue);
-            case "else": unexpected(TId(id));
+            case "else": unexpected(TId(id), '--');
             case "function":
                 var tk = token();
                 var name = null;
@@ -403,7 +587,7 @@ class Parser {
                         }
                         switch( tk ) {
                             case TId(id): name = id;
-                            default: unexpected(tk);
+                            default: unexpected(tk, 'identifier');
                         }
                         tk = token();
                         var arg:Argument = { name : name };
@@ -414,9 +598,9 @@ class Parser {
                             tk = token();
                         }
                         switch( tk ) {
-                            case TComma: tk = token();
-                            case TPClose: done = true;
-                            default: unexpected(tk);
+                            case Token.TComma: tk = token();
+                            case Token.TPClose: done = true;
+                            default: unexpected(tk, 'comma or )');
                         }
                     }
                 }
@@ -447,22 +631,22 @@ class Parser {
                 var tk = token();
                 switch( tk ) {
                     case TId(id): a.push(id);
-                    default: unexpected(tk);
+                    default: unexpected(tk, 'identifier');
                 }
                 var next = true;
                 while (next) {
                     tk = token();
                     switch( tk ) {
-                        case TDot:
+                        case Token.TDot:
                             tk = token();
                             switch(tk) {
                                 case TId(id): a.push(id);
-                                default: unexpected(tk);
+                                default: unexpected(tk, 'identifier');
                             }
-                        case TPOpen:
+                        case Token.TPOpen:
                             next = false;
                         default:
-                            unexpected(tk);
+                            unexpected(tk, '. or (');
                     }
                 }
                 var args = parseExprList(TPClose);
@@ -473,12 +657,12 @@ class Parser {
             case "try":
                 var e = parseExpr();
                 var tk = token();
-                if (!Type.enumEq(tk, TId("catch"))) unexpected(tk);
+                if (!Type.enumEq(tk, TId("catch"))) unexpected(tk, 'catch');
                 ensure(TPOpen);
                 tk = token();
                 var vname = switch( tk ) {
                     case TId(id): id;
-                    default: unexpected(tk);
+                    default: unexpected(tk, 'identifier');
                 }
                 ensure(TDoubleDot);
                 var t = null;
@@ -506,7 +690,7 @@ class Parser {
                                     case TDoubleDot:
                                         break;
                                     default:
-                                        unexpected(tk);
+                                        unexpected(tk, ', or :');
                                 }
                             }
                             var exprs = [];
@@ -527,7 +711,7 @@ class Parser {
                             else
                                 mk(EBlock(exprs), pmin(exprs[0]), pmax(exprs[exprs.length - 1]));
                         case TId("default"):
-                            if (def != null) unexpected(tk);
+                            if (def != null) unexpected(tk, 'default already specified');
                             ensure(TDoubleDot);
                             var exprs = [];
                             while (true) {
@@ -549,7 +733,7 @@ class Parser {
                         case TBrClose:
                             break;
                         default:
-                            unexpected(tk);
+                            unexpected(tk, 'case or default or }');
                     }
                 }
                 mk(ESwitch(e, cases, def), p1, tokenizer.tokenMax);
@@ -583,7 +767,7 @@ class Parser {
 
                 switch(tk) {
                     case TId(id): field = id;
-                    default: unexpected(tk);
+                    default: unexpected(tk, 'identifier');
                 }
                 var exprType = completion.scope.getType(e1);
                 if (!CompletionTypeUtils.hasField(exprType, field)) {
@@ -635,7 +819,7 @@ class Parser {
                         case TId(v):
                             path.push(v);
                         default:
-                            unexpected(t);
+                            unexpected(t, "identifier");
                     }
                 }
                 var params = null;
@@ -651,7 +835,7 @@ class Parser {
                                     case TOp(op): if (op == ">") break;
                                     default:
                                 }
-                                unexpected(t);
+                                unexpected(t, ", or >");
                             }
                         } else
                             push(t);
@@ -659,32 +843,32 @@ class Parser {
                         push(t);
                 }
                 return parseTypeNext(CTPath(path, params));
-            case TPOpen:
+            case Token.TPOpen:
                 var t = parseType();
                 ensure(TPClose);
                 return parseTypeNext(CTParent(t));
-            case TBrOpen:
+            case Token.TBrOpen:
                 var fields = [];
                 while (true) {
                     t = token();
                     switch( t ) {
-                        case TBrClose: break;
-                        case TId(name):
+                        case Token.TBrClose: break;
+                        case Token.TId(name):
                             ensure(TDoubleDot);
                             fields.push({ name : name, t : parseType() });
                             t = token();
                             switch( t ) {
-                                case TComma:
-                                case TBrClose: break;
-                                default: unexpected(t);
+                                case Token.TComma:
+                                case Token.TBrClose: break;
+                                default: unexpected(t, ', or }');
                             }
                         default:
-                            unexpected(t);
+                            unexpected(t, 'identifier or }');
                     }
                 }
                 return parseTypeNext(CTAnon(fields));
             default:
-                return unexpected(t);
+                return unexpected(t, 'identifier or [ or {');
         }
     }
 
@@ -722,7 +906,7 @@ class Parser {
                 case TComma:
                 default:
                     if (tk == etk) break;
-                    unexpected(tk);
+                    unexpected(tk, ',');
             }
         }
         return args;

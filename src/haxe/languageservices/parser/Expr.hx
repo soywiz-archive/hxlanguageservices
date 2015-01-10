@@ -6,8 +6,18 @@ enum Const {
     CString( s:String );
 }
 
+typedef EPos = {
+    var pmin:Int;
+    var pmax:Int;
+}
+
 typedef Expr = {
     var e:ExprDef;
+    var pmin:Int;
+    var pmax:Int;
+}
+typedef Stm = {
+    var e:StmDef;
     var pmin:Int;
     var pmax:Int;
 }
@@ -36,6 +46,14 @@ enum ExprDef {
     EObject( fl:Array<{ name:String, e:Expr }> );
     ETernary( cond:Expr, e1:Expr, e2:Expr );
     ESwitch( e:Expr, cases:Array<{ values:Array<Expr>, expr:Expr }>, ?defaultExpr:Expr);
+}
+
+enum StmDef {
+    EPackage(parts: Array<String>);
+    EImport(parts: Array<String>);
+    ETypedef(packageName:Array<String>, name:String);
+    EClass(packageName:Array<String>, name:String);
+    EFile(chunks: Array<Stm>);
 }
 
 typedef Argument = { name:String, ?t : CType, ?opt : Bool };

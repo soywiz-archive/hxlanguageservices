@@ -6,6 +6,7 @@ class Test {
 		r.add(new TestInterp());
 		r.add(new TestErrorReporting());
 		r.add(new TestProject());
+		r.add(new TestFileCompletion());
 		r.add(new TestLanguageServices());
 		r.add(new TestCompletion());
 		r.run();

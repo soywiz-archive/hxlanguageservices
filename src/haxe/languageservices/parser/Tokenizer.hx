@@ -7,20 +7,20 @@ import haxe.languageservices.parser.Expr.ErrorDef;
 
 enum Token {
     TEof;
-    TConst( c:Const );
-    TId( s:String );
-    TOp( s:String );
+    TConst(c:Const);
+    TId(s:String);
+    TOp(s:String);
     TPOpen; // (
     TPClose; // )
     TBrOpen; // {
     TBrClose; // }
-    TDot;
-    TComma;
-    TSemicolon;
+    TDot; // .
+    TComma; // ,
+    TSemicolon; // ;
     TBkOpen; // [
     TBkClose; // ]
-    TQuestion;
-    TDoubleDot;
+    TQuestion; // ?
+    TDoubleDot; // :
 }
 
 typedef TokenDef = {
@@ -41,17 +41,19 @@ class Tokenizer {
     var char:Int;
     var ops:Array<Bool>;
     var idents:Array<Bool>;
+    var path:String;
 
-    public function new(s:Input) {
-        line = 1;
-        ops = [];
-        idents = [];
-        readPos = 0;
-        tokenMin = oldTokenMin = 0;
-        tokenMax = oldTokenMax = 0;
-        tokens = new List();
-        char = -1;
-        input = s;
+    public function new(input:Input, ?path:String) {
+        this.line = 1;
+        this.ops = [];
+        this.idents = [];
+        this.readPos = 0;
+        this.tokenMin = oldTokenMin = 0;
+        this.tokenMax = oldTokenMax = 0;
+        this.tokens = new List();
+        this.char = -1;
+        this.input = input;
+        this.path = path;
 
         var opChars = "+*/-=!><&|^%~";
         var identChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
