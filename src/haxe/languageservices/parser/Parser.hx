@@ -3,6 +3,7 @@ import haxe.languageservices.parser.TypeContext.TypeClass;
 import haxe.languageservices.parser.TypeContext.TypeType;
 import haxe.languageservices.parser.TypeContext.TypeField;
 import haxe.languageservices.parser.TypeContext.TypeTypedef;
+import haxe.languageservices.parser.TypeContext.TypeMethod;
 import haxe.languageservices.util.StringUtils;
 import haxe.io.Input;
 import haxe.languageservices.parser.Completion.CompletionContext;
@@ -72,7 +73,7 @@ class Parser {
 
     public function parseExpressionsString(s:String, ?path:String) {
         setInputString(s, path);
-        return parseExpressions();
+        return parseExpressionsFile();
     }
 
     public function parseFileString(s:String, ?path:String) {
@@ -80,8 +81,16 @@ class Parser {
         return parseHaxeFile();
     }
     
+    public function parseExpressionsFile() {
+        var result = parseExpressions();
+        runAfterChecks();
+        return result;
+    }
+    
     public function parseHaxeFile():Stm {
-        return parseTopLevel();
+        var result = parseTopLevel();
+        runAfterChecks();
+        return result;
     }
     
     private function isValidPackagePath(path:Array<String>) {
@@ -254,6 +263,7 @@ class Parser {
     private function parseClassElement(type:TypeType) {
         var modifier:String = null;
         var isStatic = false;
+        var isInline = false;
         while (true) {
             var tk = token();
             switch (tk) {
@@ -267,6 +277,9 @@ class Parser {
                 case Token.TId('static'):
                     if (isStatic == true) unexpected(tk, 'already has the static modifier');
                     isStatic = true;
+                case Token.TId('inline'):
+                    if (isInline == true) unexpected(tk, 'already has the inline modifier');
+                    isInline = true;
                 case Token.TId('var'):
                     var name = parseIdentifier();
                     var ctype = parseOptionalTypeWithDoubleDot();
@@ -284,25 +297,37 @@ class Parser {
                     }
                     ensure(Token.TSemicolon);
                     completion.scope.addLocal(name, ctype, null, valueType);
-                    type.members.push(new TypeField(name));
+                    type.members.push(new TypeField(name, valueType));
                     break;
                 case Token.TId('function'):
                     var name = parseIdentifier();
                     var ptypes = parseTypeParametersWithDiamonds();
                     var body:Expr = null;
+                    var bodyType:CompletionType = null;
+                    var funcType:CompletionType = null;
                     completion.pushScope(function(c:CompletionScope) {
                         for (ptype in ptypes) c.addLocal(ptype.name, null, null, CompletionType.TypeParam);
                         ensure(Token.TPOpen);
                         var args = parseArgumentsDecl();
                         ensure(Token.TPClose);
+                        var rettype = parseOptionalTypeWithDoubleDot();
                         completion.pushScope(function(c:CompletionScope) {
                             c.addLocal('this', null, null, CompletionType.Type2(type.fqName));
                             for (arg in args) {
                                 c.addLocal(arg.name, arg.type, null, CompletionTypeUtils.fromCType(arg.type));
                             }
                             body = parseExpr();
+                            bodyType = c.getType(body);
+                            funcType = CompletionType.Function(
+                                type.fqName,
+                                name,
+                                [for (arg in args) { name: arg.name, type: CompletionTypeUtils.fromCType(arg.type) }],
+                                bodyType
+                            ); 
                         });
                     });
+                    
+                    type.members.push(new TypeMethod(name, funcType));
                 case Token.TBrClose:
                     push(tk);
                     break;
@@ -382,7 +407,7 @@ class Parser {
         this.uid = 0;
         this.tokenizer = new Tokenizer(s, path);
         this.errors = new ErrorContext();
-        this.completion = new CompletionContext(tokenizer, errors);
+        this.completion = new CompletionContext(tokenizer, errors, typeContext);
     }
 
     public function setInputString(s:String, ?path:String):Void {
@@ -883,6 +908,12 @@ class Parser {
                 null;
         }
     }
+    
+    private var afterChecks = new Array<Void -> Void>();
+    
+    private function runAfterChecks() {
+        for (check in afterChecks) check();
+    }
 
     function parseExprNext(e1:Expr) {
         var tk = token();
@@ -900,10 +931,10 @@ class Parser {
                 tk = token();
                 var field = null;
                 
-                var tp = completion.scope.getType(e1);
-                completion.scope.createChild()
+                var scope2 = completion.scope;
+                scope2.createChild()
                     .setBounds(tokenizer.tokenMax, tokenizer.tokenMax)
-                    .setCompletionType(tp)
+                    .setCompletionTypeGen(function() return scope2.getType(e1))
                 ;
 
                 switch(tk) {
@@ -911,10 +942,12 @@ class Parser {
                     default: unexpected(tk, 'identifier');
                 }
                 var exprType = completion.scope.getType(e1);
-                if (!CompletionTypeUtils.hasField(typeContext, exprType, field)) {
-                    trace('Expression $e1 doesn\'t contain field $field');
-                    trace('type:' + exprType);
-                }
+                afterChecks.push(function() {
+                    if (!CompletionTypeUtils.hasField(typeContext, exprType, field)) {
+                        trace('Expression $e1 doesn\'t contain field $field');
+                        trace('type:' + exprType);
+                    }
+                });
                 return parseExprNext(mk(EField(e1, field), pmin(e1)));
             case TPOpen:
                 var args = parseExprList(TPClose);

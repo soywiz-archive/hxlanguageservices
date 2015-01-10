@@ -27,7 +27,7 @@ class TypeContext {
         return getPackage2(items).getClass(typeName, null);
     }
     
-    public function getAllClasses(?out:Array<TypeType>):Array<TypeType> {
+    public function getAllTypes(?out:Array<TypeType>):Array<TypeType> {
         if (out == null) out = [];
         for (packag in packages) packag.getClasses(out);
         return out;
@@ -62,6 +62,8 @@ class TypePackage {
 }
 
 class TypeType {
+    static private var lastUid = 0;
+    public var uid = lastUid++;
     public var packag:TypePackage;
     public var name:String;
     public var fqName:String;
@@ -120,9 +122,11 @@ class TypeMember {
     public var visibility:String;
     public var isStatic:Bool;
     public var name:String;
+    public var type:CompletionType;
 
-    public function new(name:String) {
+    public function new(name:String, type:CompletionType) {
         this.name = name;
+        this.type = type;
     }
 }
 

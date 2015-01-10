@@ -27,10 +27,12 @@ class TestFileCompletion extends TestCase {
         assertTypes('class Test<T> {}', '[TypeClass(Test<T>)]');
         assertTypes('class Test<T:Int> {}', '[TypeClass(Test<T:Int>)]');
         assertTypes('class Test<T:(Int,String)> {}', '[TypeClass(Test<T:(Int,String)>)]');
-        //assertNoError('package com.Test;');
+        assertTypes('class Test { public function demo(a:Int, b:String) { } }', '[TypeClass(Test)]');
+        assertTypes('class Test { public function demo(a:Int, b:String):Int { } }', '[TypeClass(Test)]');
     }
 
     public function testCompletion() {
+        assertCompletion('class Test { public inline function test() { ### } }', [], []);
         assertCompletion('class Test<T1, T2> { ### }', ['T1:TypeParam', 'T2:TypeParam'], []);
         assertCompletion('class Test<T1, T2> { } ###', [], ['T1:TypeParam', 'T2:TypeParam']);
         assertCompletion('class Test<T1, T2> { }', [], ['T1:TypeParam', 'T2:TypeParam']);
@@ -40,7 +42,8 @@ class TestFileCompletion extends TestCase {
         assertCompletion('class Test { public function test() { } ### }', [], ['this:Test']);
         assertCompletion('class Test { public function test<T>(a:T) { ### } }', ['a:T', 'T:TypeParam'], []);
         assertCompletion('class Test { function demo() { var a = 7; ### } private var z = "Test"; }', ['a:Int', 'z:String'], []);
-        //assertCompletion('class Demo { function demo() { var a = 7; this.###z; } private var z = "Test"; }', ['z:String', 'demo:Function'], []);
+        assertCompletion('class Demo { function demo() { var a = 7; this.###z; return 7; } private var z = "Test"; }', ['z:String', 'demo:Void -> Int'], []);
+        //assertCompletion('class Demo { function demo<T>(v:T) { this.###demo(v); return 7; }  }', ['z:String', 'demo:Void -> Int'], []);
     }
 
     private function assertCompletion(x:String, has:Array<String>, nohas:Array<String>,  ?c : PosInfos) {
@@ -51,6 +54,8 @@ class TestFileCompletion extends TestCase {
         for (e in p.errors.errors) trace('Error:$e');
         var list = [for (i in p.completionsAt(index).items) i.name + ':' + CompletionTypeUtils.toString(i.type)];
         if (!ArrayUtils.containsAll(list, has)) {
+            trace([for (type in p.typeContext.getAllTypes()) type.uid]);
+            trace([for (type in p.typeContext.getAllTypes()) type.members]);
             assertEquals('List ${list} doesn\'t contain ${has}', '--');
         }
         if (ArrayUtils.containsAny(list, nohas)) {
@@ -65,7 +70,7 @@ class TestFileCompletion extends TestCase {
         var program = p.parseFileString(x);
         for (e in p.errors.errors) trace('Error:$e');
         assertEquals(0, p.errors.errors.length);
-        assertEquals('' + test, '' + p.typeContext.getAllClasses());
+        assertEquals('' + test, '' + p.typeContext.getAllTypes());
         return p.errors;
     }
 }

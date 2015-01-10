@@ -1,5 +1,6 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.parser.TypeContext;
 import haxe.languageservices.parser.TypeContext.TypeClass;
 import haxe.languageservices.parser.TypeContext.TypeType;
@@ -154,12 +155,12 @@ class CompletionScope {
         return this;
     }
     
-    private var _completionType:CompletionType = null;
-    public function setCompletionType(ct:CompletionType):CompletionScope {
-        this._completionType = ct;
+    private var _completionTypeGen:Void -> CompletionType = null;
+    public function setCompletionTypeGen(ct:Void -> CompletionType):CompletionScope {
+        this._completionTypeGen = ct;
         return this;
     }
-    
+
     public function createChild():CompletionScope return new CompletionScope(context, this);
 
     public function set(name:String, v:CompletionVariable) {
@@ -271,6 +272,8 @@ class CompletionScope {
                 return CompletionType.Array(CompletionTypeUtils.unificateTypes([for (expr in exprs) getType(expr)]));
             case ExprDef.EObject(parts):
                 return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e) } ]);
+            case ExprDef.EVar(n, t, e):
+                return CompletionTypeUtils.fromCType(t);
             default:
                 throw 'Unhandled expression ${e.e}';
         }
@@ -310,7 +313,9 @@ class CompletionScope {
     }
 
     public function getCompletionType():CompletionType {
-        if (_completionType != null) return _completionType;
+        if (_completionTypeGen != null) {
+            return CompletionTypeUtils.toObject(context.typeContext, _completionTypeGen());
+        }
         var keys = ArrayUtils.sorted(scope.keys());
         var locals = [for (key in keys) { name: key, type: getLocal(key).type }];
         var keywords = [for (key in this.keywords) { name: key, type: CompletionType.Keyword }];
@@ -323,10 +328,12 @@ class CompletionContext {
     public var scope:CompletionScope;
     public var tokenizer:Tokenizer;
     public var errors:ErrorContext;
+    public var typeContext:TypeContext;
 
-    public function new(tokenizer:Tokenizer, errors:ErrorContext) {
+    public function new(tokenizer:Tokenizer, errors:ErrorContext, typeContext:TypeContext) {
         this.tokenizer = tokenizer;
         this.errors = errors;
+        this.typeContext = typeContext;
         this.scope = this.root = new CompletionScope(this);
         scope.set("true", new CompletionVariable("true", CompletionType.Bool));
         scope.set("false", new CompletionVariable("false", CompletionType.Bool));
@@ -358,16 +365,26 @@ class CompletionTypeUtils {
                 for (item in items) if (item.name == field) return true;
             case CompletionType.Type2(fqName):
                 var type = typeContext.getTypeFq(fqName);
-                trace('type:$fqName');
-                trace('members:${type.members}');
+                //trace('type:$type:${type.uid}');
+                //trace('members:${type.members}');
                 for (member in type.members) {
-                    trace(member);
+                    //trace(member);
                     if (member.name == field) return true;
                 }
             default:
 
         }
         return false;
+    }
+
+    static public function toObject(typeContext:TypeContext, type:CompletionType):CompletionType {
+        switch (type) {
+            case CompletionType.Object(items): return type;
+            case CompletionType.Type2(fqName):
+                var type2 = typeContext.getTypeFq(fqName);
+                return CompletionType.Object([for (member in type2.members) { name: member.name, type: member.type }]);
+            default: return CompletionType.Object([]);
+        }
     }
 
     static public function canAssign(dst:CompletionType, src:CompletionType) {
@@ -406,6 +423,7 @@ class CompletionTypeUtils {
     }
 
     static public function toString(ct:CompletionType) {
+        if (ct == null) return '???Null';
         switch (ct) {
             case CompletionType.Array(ct): return 'Array<' + toString(ct) + '>';
             case CompletionType.Bool: return 'Bool';
@@ -420,6 +438,7 @@ class CompletionTypeUtils {
             case CompletionType.Object(items):
                 return '{' + [for (item in items) item.name + ':' + toString(item.type)].join(',') + '}';
             case CompletionType.Function(type, name, args, ret):
+                if (args.length == 0) return 'Void -> ' + toString(ret);
                 return [for (arg in args) toString(arg.type)].concat([toString(ret)]).join(' -> ');
             default:
         }
