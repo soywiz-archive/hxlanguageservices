@@ -24,13 +24,22 @@ class HaxeSdk {
         if (!match.match(changes)) throw "Can't detect version";
         return match.matched(0);
     }
+    
+    public var libraries(get, null):Map<String, HaxeLibrary>;
+    private var _libraries:Map<String, HaxeLibrary>;
 
-    public function getLibraries():Map<String, HaxeLibrary> {
-        var out = new Map<String, HaxeLibrary>();
-        for (libpath in FileSystem2.listFiles('$path/lib')) {
-            var library = new HaxeLibrary('$path/lib/$libpath');
-            out[library.name] = library;
+    private function get_libraries():Map<String, HaxeLibrary> {
+        if (_libraries == null) {
+            _libraries = new Map<String, HaxeLibrary>();
+            for (libpath in FileSystem2.listFiles('$path/lib')) {
+                var library = new HaxeLibrary(this, '$path/lib/$libpath');
+                _libraries[library.name] = library;
+            }
         }
-        return out;
+        return _libraries;
+    }
+
+    public function getLibrary(name:String):HaxeLibrary {
+        return new HaxeLibrary(this, '$path/lib/$name');
     }
 }

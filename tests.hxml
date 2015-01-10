@@ -3,4 +3,4 @@
 -main Test
 -dce no
 -debug
--js out.js
+-js tests.js

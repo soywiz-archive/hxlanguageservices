@@ -1,0 +1,1 @@
+haxe tests.hxml && node tests.js

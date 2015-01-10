@@ -11,6 +11,16 @@ class FileSystem2 {
         #end
     }
 
+    static public function exists(path:String):Bool {
+        #if (neko || cpp || php)
+            return sys.io.FileSystem.exists(path);
+        #elseif (js)
+            return untyped require('fs').existsSync(path);
+        #else
+            throw "Not supported FileSystem2.exists";
+        #end
+    }
+
     static public function listFiles(path:String):Array<String> {
         #if (neko || cpp || php)
             return sys.FileSystem.readDirectory(path);
