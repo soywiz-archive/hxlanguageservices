@@ -1,3 +1,4 @@
+import haxe.languageservices.util.FileSystem2;
 import haxe.Json;
 import haxe.languageservices.sdk.HaxeLibrary;
 import haxe.languageservices.sdk.HaxeSdk;
@@ -16,7 +17,7 @@ class TestLanguageServices extends TestCase {
     }
 
     public function testHaxeVersion() {
-        var sdk = new HaxeSdk('testassets/fakehaxesdk');
+        var sdk = new HaxeSdk(new FileSystem2(), 'testassets/fakehaxesdk');
         var sdkVersion = sdk.getVersion();
         assertEquals('3.1.3', sdkVersion);
         var libraries = sdk.libraries;

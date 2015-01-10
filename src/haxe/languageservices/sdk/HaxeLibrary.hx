@@ -1,5 +1,6 @@
 package haxe.languageservices.sdk;
 
+import haxe.languageservices.util.Vfs;
 import haxe.languageservices.util.FileSystem2;
 
 using StringTools;
@@ -18,25 +19,27 @@ class HaxeLibrary {
         var nameMatch = ~/\/?(\w+)$/;
         nameMatch.match(path);
         this.name = nameMatch.matched(1);
-        if (FileSystem2.exists(path)) {
-            for (version in FileSystem2.listFiles(path)) {
+        if (getVfs().exists(path)) {
+            for (version in getVfs().listFiles(path)) {
                 if (version.charAt(0) == '.') continue;
                 var versionNormalized = normalizeVersion(version);
                 this.versions[versionNormalized] = currentVersion = getVersion(version);
             }
         }
         var _currentPath = '$path/.current';
-        if (FileSystem2.exists(_currentPath)) {
-            currentVersion = getVersion(FileSystem2.readString(_currentPath));
+        if (getVfs().exists(_currentPath)) {
+            currentVersion = getVersion(getVfs().readString(_currentPath));
         }
     }
+
+    private inline function getVfs():Vfs return sdk.vfs;
     
     public function getVersion(version:String):HaxeLibraryVersion {
         version = version.trim();
         return new HaxeLibraryVersion(this, normalizeVersion(version), path + '/' + denormalizeVersion(version));
     }
     
-    private function get_exists() return FileSystem2.exists(path);
+    private function get_exists() return getVfs().exists(path);
     
     static private function normalizeVersion(version:String) return version.replace(',', '.');
     static private function denormalizeVersion(version:String) return version.replace('.', ',');

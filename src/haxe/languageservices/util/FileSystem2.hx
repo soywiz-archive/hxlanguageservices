@@ -1,7 +1,9 @@
 package haxe.languageservices.util;
 
-class FileSystem2 {
-    static public function readString(path:String):String {
+class FileSystem2 extends Vfs {
+    public function new() { super(); }
+
+    override private function _readString(path:String):String {
         #if (neko || cpp || php)
             return sys.io.File.read(path, false).readAll(1024).toString();
         #elseif (js)
@@ -11,7 +13,7 @@ class FileSystem2 {
         #end
     }
 
-    static public function exists(path:String):Bool {
+    override private function _exists(path:String):Bool {
         #if (neko || cpp || php)
             return sys.io.FileSystem.exists(path);
         #elseif (js)
@@ -21,7 +23,7 @@ class FileSystem2 {
         #end
     }
 
-    static public function listFiles(path:String):Array<String> {
+    override private function _listFiles(path:String):Array<String> {
         #if (neko || cpp || php)
             return sys.FileSystem.readDirectory(path);
         #elseif (js)
@@ -31,7 +33,7 @@ class FileSystem2 {
         #end
     }
 
-    static public function exec(cmd:String, args:Array<String>):String {
+    override private function _exec(cmd:String, args:Array<String>):String {
         #if (neko || cpp)
         var process = new sys.io.Process(cmd, args);
         return process.stdout.readAll(1024).toString();

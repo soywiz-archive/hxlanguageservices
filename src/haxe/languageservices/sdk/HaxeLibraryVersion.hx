@@ -1,4 +1,5 @@
 package haxe.languageservices.sdk;
+import haxe.languageservices.util.Vfs;
 import haxe.languageservices.sdk.HaxeLibraryVersion;
 import haxe.languageservices.util.FileSystem2;
 class HaxeLibraryVersion {
@@ -22,13 +23,16 @@ class HaxeLibraryVersion {
         this.name = library.name;
         this.version = version;
         this.path = path;
+        
     }
     
-    private function get_exists() return FileSystem2.exists(path);
+    private inline function getVfs():Vfs return library.sdk.vfs;
+    
+    private function get_exists() return getVfs().exists(path);
 
     private var _info:Dynamic;
     private function get_info() {
-        if (_info == null) _info = Json.parse(FileSystem2.readString('$path/haxelib.json'));
+        if (_info == null) _info = Json.parse(getVfs().readString('$path/haxelib.json'));
         return _info;
     }
     private function get_license() return this.info.license;

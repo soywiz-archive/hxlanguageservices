@@ -1,0 +1,10 @@
+-cp src
+-cp test
+-D haxe3
+-D haxe3
+-D test1
+-lib cairo:0,0,2
+-main Test
+-dce no
+-debug
+-js tests.js

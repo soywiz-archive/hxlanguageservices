@@ -1,15 +1,16 @@
 package haxe.languageservices.sdk;
 
+import haxe.languageservices.util.Vfs;
 import haxe.languageservices.util.FileSystem2;
 
 using StringTools;
 
-//2014-04-13: 3.1.3
-
 class HaxeSdk {
+    public var vfs(default, null):Vfs;
     private var path:String;
 
-    public function new(?path:String) {
+    public function new(vfs:Vfs, ?path:String) {
+        this.vfs = vfs;
         if (path == null) path = detectPath();
         this.path = path;
     }
@@ -20,8 +21,8 @@ class HaxeSdk {
     
     public function getVersion():String {
         var match = ~/\d+\.\d+\.\d+/;
-        var changes = FileSystem2.readString('$path/CHANGES.txt').split('\n')[0];
-        if (!match.match(changes)) throw "Can't detect version";
+        var changes = vfs.readString('$path/CHANGES.txt').split('\n')[0];
+        if (!match.match(changes)) throw "Can't detect haxe version: CHANGES.txt has invalid format";
         return match.matched(0);
     }
     
@@ -31,7 +32,7 @@ class HaxeSdk {
     private function get_libraries():Map<String, HaxeLibrary> {
         if (_libraries == null) {
             _libraries = new Map<String, HaxeLibrary>();
-            for (libpath in FileSystem2.listFiles('$path/lib')) {
+            for (libpath in vfs.listFiles('$path/lib')) {
                 var library = new HaxeLibrary(this, '$path/lib/$libpath');
                 _libraries[library.name] = library;
             }
@@ -41,5 +42,15 @@ class HaxeSdk {
 
     public function getLibrary(name:String):HaxeLibrary {
         return new HaxeLibrary(this, '$path/lib/$name');
+    }
+
+    public function getLibraryVersion(qualifiedName:String):HaxeLibraryVersion {
+        var parts = qualifiedName.split(':');
+        var library = getLibrary(parts[0]);
+        return if (parts.length >= 2) {
+            library.getVersion(parts[1]);
+        } else {
+            library.currentVersion;
+        }
     }
 }
