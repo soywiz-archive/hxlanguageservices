@@ -1,3 +1,4 @@
+import haxe.languageservices.util.MemoryVfs;
 import haxe.languageservices.util.FileSystem2;
 import haxe.Json;
 import haxe.languageservices.sdk.HaxeLibrary;
@@ -7,9 +8,7 @@ import haxe.unit.TestCase;
 
 class TestLanguageServices extends TestCase {
     public function test1() {
-        var services = new HaxeLanguageServices(new LambdaHaxeFileProvider(function(path:String) {
-            return 'var z = 1;';
-        }));
+        var services = new HaxeLanguageServices(new MemoryVfs().add('test.hx', 'var z = 1;'));
 
         services.updateFile('test.hx');
         var completions = services.getCompletionAt('test.hx', 10);
