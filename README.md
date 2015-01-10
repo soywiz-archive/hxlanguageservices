@@ -1,6 +1,8 @@
 Haxe Language Services
 ======================
 
+[![Build Status](https://travis-ci.org/soywiz/hxlanguageservices.svg?branch=master)](https://travis-ci.org/soywiz/hxlanguageservices)
+
 The aim for this project is to provide haxe language services completely written in haxe that are able to
 work anywhere without a server or even an haxe compiler providing completion, refactoring, references services
 and providing unified code to debug the haxe compiled code for several languages like flash, cpp or javascript.
