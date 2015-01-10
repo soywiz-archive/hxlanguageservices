@@ -10,7 +10,6 @@ interface DebugInterface {
     function gc():Void;
     function listBreakpoints():Array<Breakpoint>;
     var onStop:Signal;
-    //var onStop(callback:Void -> Void):Void;
 }
 
 enum ExecType {

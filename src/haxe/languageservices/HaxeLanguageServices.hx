@@ -30,8 +30,9 @@ class HaxeLanguageServices {
         return parser.completionsAt(offset);
     }
     
-    public function getCallInfoAt(path:String, offset:Int):Dynamic {
-        return null;
+    public function getCallInfoAt(path:String, offset:Int):CCompletion {
+        var parser:Parser = parsers[path];
+        return parser.callCompletionAt(offset);
     }
 
     public function getErrors(path:String):ErrorContext {
