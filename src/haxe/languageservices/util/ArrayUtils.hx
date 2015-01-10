@@ -7,10 +7,14 @@ class ArrayUtils {
         return out;
     }
 
+    static public function sorted<T>(array:Array<T>):Array<T> {
+        var out = array.slice(0, array.length);
+        out.sort(compare);
+        return out;
+    }
+
     static public function uniqueSorted<T>(array:Array<T>):Array<T> {
-        var array = unique(array);
-        array.sort(compare);
-        return array;
+        return sorted(unique(array));
     }
 
     static private function compare(a:Dynamic, b:Dynamic):Int {

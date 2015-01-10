@@ -1,10 +1,12 @@
 package haxe.languageservices.parser;
 import haxe.io.Input;
 import haxe.languageservices.parser.Completion.CompletionContext;
-import haxe.languageservices.parser.Completion.CompletionSegment;
+import haxe.languageservices.parser.Completion.CompletionScope;
 import haxe.languageservices.parser.Completion.CompletionType;
 import haxe.languageservices.parser.Completion.CompletionEntry;
 import haxe.languageservices.parser.Completion.CompletionList;
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
+import haxe.languageservices.parser.Completion.CCompletion;
 import haxe.languageservices.parser.Completion.Reference;
 import haxe.languageservices.parser.Expr.CType;
 import haxe.languageservices.parser.Expr.ErrorDef;
@@ -75,7 +77,7 @@ class Parser {
     public function parseExpressions() {
         var a:Array<Expr> = [];
 
-        completion.pushContext(function() {
+        completion.pushContext(function(c) {
             while (true) {
                 var tk = token();
                 if (tk == TEof) break;
@@ -135,23 +137,20 @@ class Parser {
         }
         return e;
     }
+    
+    public function callCompletionAt(index:Int):CCompletion {
+        return CCompletion.CallCompletion('', '', [], { type: CompletionType.Unknown }, 1);
+    }
 
     public function completionsAt(index:Int):CompletionList {
-        function _() {
-            var out = [];
-            for (segment in completion.segments) {
-                if (index >= segment.start && index <= segment.end) {
-                    switch (segment.gettype()) {
-                        case CompletionType.Object(items):
-                            out = out.concat(items);
-                        default:
-                    }
-                    return out;
-                }
-            }
-            return [];
+        var out = [];
+        var scope = completion.root.locateIndex(index);
+        switch (scope.getCompletionType()) {
+            case CompletionType.Object(items):
+                out = out.concat(items);
+            default:
         }
-        return new CompletionList(_());
+        return new CompletionList(out);
     }
 
     function parseObject(p1) {
@@ -190,7 +189,7 @@ class Parser {
                 var e:Expr = parseStructure(id);
                 if (e == null) {
                     e = mk(EIdent(id));
-                    var local = completion.scope.get(id);
+                    var local = completion.scope.getLocal(id);
                     if (local != null) {
                         local.addReference(Reference.Read(e));
                     } else {
@@ -235,7 +234,7 @@ class Parser {
                         push(tk);
                 }
                 var a = new Array();
-                completion.pushContext(function() {
+                completion.pushContext(function(c) {
                     while (true) {
                         a.push(parseFullExpr());
                         tk = token();
@@ -353,7 +352,7 @@ class Parser {
                 } else {
                     push(tk);
                 }
-                completion.addLocal(ident, t, e);
+                completion.scope.addLocal(ident, t, e);
                 mk(EVar(ident, t, e), p1, (e == null) ? tokenizer.tokenMax : pmax(e));
             case "while":
                 var econd = parseExpr();
@@ -372,8 +371,8 @@ class Parser {
                 var eiter = parseExpr();
                 ensure(TPClose);
                 var e:Expr = null;
-                var forContext = completion.pushContext(function() {
-                    completion.addLocal(vname, null, eiter, completion.getElementType(eiter, completion.scope));
+                var forContext = completion.pushContext(function(scope:CompletionScope) {
+                    scope.addLocal(vname, null, eiter, scope.getElementType(eiter));
                     e = parseExpr();
                 });
                 mk(EFor(vname, eiter, e), p1, pmax(e));
@@ -427,14 +426,14 @@ class Parser {
                     ret = parseType();
                 }
                 var body:Expr = null;
-                var bodyScope = completion.pushContext(function() {
+                var bodyScope = completion.pushContext(function(scope:CompletionScope) {
                     for (arg in args) {
-                        completion.addLocal(arg.name, arg.t, null, completion.ctypeToCompletionType(arg.t));
+                        scope.addLocal(arg.name, arg.t, null, CompletionTypeUtils.fromCType(arg.t));
                     }
                     body = parseExpr();
                 });
                 var expr = mk(EFunction(args, body, name, ret), p1, pmax(body));
-                completion.addLocal(name, ret, expr, bodyScope);
+                completion.scope.addLocal(name, ret, expr, bodyScope);
                 expr;
             case "return":
                 var tk = token();
@@ -574,15 +573,18 @@ class Parser {
                 var field = null;
 
 
-                var tp = completion.getType(e1, completion.scope);
-                completion.segments.push(new CompletionSegment(tokenizer.tokenMax, tokenizer.tokenMax, function() return tp));
+                var tp = completion.scope.getType(e1);
+                completion.scope.createChild()
+                    .setStartEnd(tokenizer.tokenMax, tokenizer.tokenMax)
+                    .setCompletionType(tp)
+                ;
 
                 switch(tk) {
                     case TId(id): field = id;
                     default: unexpected(tk);
                 }
-                var exprType = completion.getType(e1, completion.scope);
-                if (!completion.hasField(exprType, field)) {
+                var exprType = completion.scope.getType(e1);
+                if (!CompletionTypeUtils.hasField(exprType, field)) {
                     trace('Expression $e1 doesn\'t contain field $field');
                     trace('type:' + exprType);
                 }

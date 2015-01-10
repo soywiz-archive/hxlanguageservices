@@ -1,5 +1,10 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.util.ArrayUtils;
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
+import haxe.languageservices.parser.Completion.CompletionTypeUtils;
+import haxe.languageservices.util.ArrayUtils;
+import haxe.languageservices.parser.Completion.CompletionScope;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.parser.Expr.CType;
 import haxe.languageservices.parser.Expr.Error;
@@ -44,6 +49,21 @@ enum CompletionType {
     Function(args:Array<CompletionType>, ret:CompletionType);
 }
 
+typedef CallArgument = {
+    name: String,
+    type: CompletionType,
+    ?doc: String,
+};
+
+typedef CallReturn = {
+    type: CompletionType,
+    ?doc: String,
+};
+
+enum CCompletion {
+    CallCompletion(baseType:String, name:String, args:Array<CallArgument>, ret:CallReturn, argIndex:Int, ?doc:String);
+}
+
 class CompletionList {
     public var items:Array<CompletionEntry>;
 
@@ -57,20 +77,6 @@ class CompletionList {
 }
 
 typedef CompletionEntry = { name:String, type:CompletionType };
-
-class CompletionSegment {
-    public var start:Int;
-    public var end:Int;
-    public var gettype:Void -> CompletionType;
-
-    public function new(start:Int, end:Int, gettype:Void -> CompletionType) {
-        this.start = start;
-        this.end = end;
-        this.gettype = gettype;
-    }
-
-    public function toString() return 'CompletionSegment($start-$end, ${gettype()})';
-}
 
 class Scope<TKey : String, TValue> {
     public var parent:Scope<TKey, TValue>;
@@ -110,113 +116,45 @@ class Scope<TKey : String, TValue> {
     }
 }
 
-class Scope2<TKey : String, TValue> {
-    public var scope = new Scope<TKey, TValue>();
+class CompletionScope {
+    public var start:Int;
+    public var end:Int;
+    private var parent:CompletionScope;
+    public var children:Array<CompletionScope> = [];
+    public var context:CompletionContext;
+    private var scope:Scope<String, CompletionVariable>;
 
-    public function new() {
+    public function new(context:CompletionContext, ?parent:CompletionScope) {
+        this.context = context;
+        this.parent = parent;
+        this.scope = new Scope<String, CompletionVariable>((parent != null) ? parent.scope : null);
+        if (parent != null)parent.children.push(this);
+    }
+    
+    public function setStartEnd(start:Int, end:Int):CompletionScope {
+        this.start = start;
+        this.end = end;
+        return this;
+    }
+    
+    private var _completionType:CompletionType = null;
+    public function setCompletionType(ct:CompletionType):CompletionScope {
+        this._completionType = ct;
+        return this;
+    }
+    
+    public function createChild():CompletionScope return new CompletionScope(context, this);
+
+    public function set(name:String, v:CompletionVariable) {
+        this.scope.set(name, v);
+    }
+    
+    public function getLocal(name:String) {
+        return this.scope.get(name);
     }
 
-//public function exists(key:TKey) return scope.exists(key);
-//public function get(key:TKey) return scope.get(key);
-//public function set(key:TKey, value:TValue) return scope.set(key, value);
-    public function push(callback: Void -> Void) {
-        var oldscope = scope = new Scope<TKey, TValue>(scope);
-        callback();
-        scope = scope.parent;
-        return oldscope;
-    }
-}
-
-typedef CompletionScope = Scope<String, CompletionVariable>;
-
-
-class CompletionContext {
-    public var scope = new CompletionScope();
-    private var tokenizer:Tokenizer;
-    private var errors:ErrorContext;
-    public var segments:Array<CompletionSegment> = [];
-
-    public function new(tokenizer:Tokenizer, errors:ErrorContext) {
-        this.tokenizer = tokenizer;
-        this.errors = errors;
-        scope.set("true", new CompletionVariable("true", CompletionType.Bool));
-        scope.set("false", new CompletionVariable("false", CompletionType.Bool));
-        scope.set("null", new CompletionVariable("null", CompletionType.Dynamic));
-    }
-
-    public function hasField(type:CompletionType, field:String):Bool {
-        switch (type) {
-            case CompletionType.Dynamic: return true;
-            case CompletionType.Object(items):
-                for (item in items) if (item.name == field) return true;
-            default:
-
-        }
-        return false;
-    }
-
-    public function getFieldType(type:CompletionType, field:String):CompletionType {
-        switch (type) {
-            case CompletionType.Dynamic: return CompletionType.Dynamic;
-            case CompletionType.Object(items):
-                for (item in items) if (item.name == field) return item.type;
-            default:
-
-        }
-        return CompletionType.Unknown;
-    }
-
-    public function ctypeToCompletionType(type:CType):CompletionType {
-        if (type == null) return CompletionType.Dynamic;
-        switch (type) {
-            case CType.CTPath(["Int"], null): return CompletionType.Int;
-            case CType.CTPath(["Float"], null): return CompletionType.Float;
-            case CType.CTPath(["Bool"], null): return CompletionType.Bool;
-            case CType.CTPath(["String"], null): return CompletionType.String;
-            default:
-        }
-        throw 'Not implemented $type';
-        return null;
-    }
-
-/*
-    public function getLocal(name:String):CompletionVariable {
-        if (!scope.exists(name)) {
-            trace(scope);
-            throw 'Can\'t find local "$name"';
-        }
-        return scope.get(name);
-    }
-    */
-
-
-    public function pushContext(callback: Void -> Void) {
-//trace('push scope');
-        var startPos = tokenizer.tokenMax;
-        scope = new CompletionScope(scope);
-        var output = scope;
-        callback();
-        scope = scope.parent;
-
-        var endPos = tokenizer.tokenMin;
-
-        segments.push(new CompletionSegment(startPos, endPos, function() {
-            var keys = output.keys();
-            keys.sort(StringUtils.compare);
-            return CompletionType.Object([for (key in keys) { name: key, type: output.get(key).type }]);
-        }));
-
-//trace('pop scope');
-        return output;
-    }
-
-    public function unificateTypes(types:Array<CompletionType>):CompletionType {
-        if (types.length == 0) return CompletionType.Dynamic;
-        return types[0];
-    }
-
-    public function getElementType(e:Expr, scope:CompletionScope):CompletionType {
-        var result = getType(e, scope);
+    public function getElementType(e:Expr):CompletionType {
+        var result = getType(e);
         switch (result) {
             case CompletionType.Array(type): return type;
             default:
@@ -224,7 +162,7 @@ class CompletionContext {
         return CompletionType.Unknown;
     }
 
-    public function getType(e:Expr, scope:CompletionScope):CompletionType {
+    public function getType(e:Expr):CompletionType {
         switch (e.e) {
             case ExprDef.EIdent(v):
                 var local = scope.get(v);
@@ -233,17 +171,17 @@ class CompletionContext {
             case ExprDef.EConst(CFloat(_)): return CompletionType.Float;
             case ExprDef.EConst(CString(_)): return CompletionType.String;
             case ExprDef.EField(expr, field):
-                return getFieldType(getType(expr, scope), field);
+                return CompletionTypeUtils.getFieldType(getType(expr), field);
             case ExprDef.EBlock(exprs):
 //trace('Block:' + exprs);
-                return getType(exprs[exprs.length - 1], scope);
-            case ExprDef.EReturn(e): return getType(e, scope);
+                return getType(exprs[exprs.length - 1]);
+            case ExprDef.EReturn(e): return getType(e);
             case ExprDef.EIf(cond, e1, e2):
-                return unificateTypes([getType(e1, scope), getType(e2, scope)]);
+                return CompletionTypeUtils.unificateTypes([getType(e1), getType(e2)]);
             case ExprDef.EParent(expr):
-                return getType(expr, scope);
+                return getType(expr);
             case ExprDef.EUnop(op, prefix, expr):
-                var type = getType(expr, scope);
+                var type = getType(expr);
                 switch (op) {
                     case '-':
                         switch (type) {
@@ -255,17 +193,17 @@ class CompletionContext {
                 throw 'Unhandled unary op $op';
 
             case ExprDef.EBinop(op, left, right):
-                var ltype = getType(left, scope);
-                var rtype = getType(right, scope);
+                var ltype = getType(left);
+                var rtype = getType(right);
                 switch (op) {
                     case '==':
-                        if (ltype != rtype) errors.errors.push(new Error(ErrorDef.EInvalidOp("Disctinct types"), e.pmin, e.pmax));
+                        if (ltype != rtype) context.errors.add(new Error(ErrorDef.EInvalidOp("Disctinct types"), e.pmin, e.pmax));
                         return CompletionType.Bool;
                     case '...':
                         return CompletionType.Array(CompletionType.Int);
                     case '+':
                         if (Std.is(ltype, CompletionType.Bool) || Std.is(rtype, CompletionType.Bool)) {
-                            errors.errors.push(new Error(ErrorDef.EInvalidOp("Cannot add bool"), e.pmin, e.pmax));
+                            context.errors.add(new Error(ErrorDef.EInvalidOp("Cannot add bool"), e.pmin, e.pmax));
                         }
                         switch ([ltype, rtype]) {
                             case [CompletionType.Int, CompletionType.Int]: return CompletionType.Int;
@@ -280,7 +218,7 @@ class CompletionContext {
                             case [_, CompletionType.Dynamic]: return CompletionType.Dynamic;
                             case [CompletionType.Dynamic, _]: return CompletionType.Dynamic;
                             default:
-                                errors.errors.push(new Error(ErrorDef.EInvalidOp('Unsupported op2 $ltype $op $rtype'), e.pmin, e.pmax));
+                                context.errors.add(new Error(ErrorDef.EInvalidOp('Unsupported op2 $ltype $op $rtype'), e.pmin, e.pmax));
                                 return CompletionType.Dynamic;
                         }
                         ltype;
@@ -292,10 +230,10 @@ class CompletionContext {
             case ExprDef.EFunction(args, e, name, ret):
                 return CompletionType.Function(
                     [for (arg in args) CompletionType.Unknown],
-                    getType(e, scope)
+                    getType(e)
                 );
             case ExprDef.ECall(e, params):
-                switch (getType(e, scope)) {
+                switch (getType(e)) {
                     case CompletionType.Function(args, ret): return ret;
                     case CompletionType.Dynamic: return CompletionType.Dynamic;
                     default:
@@ -303,36 +241,121 @@ class CompletionContext {
                 return CompletionType.Unknown;
             case ExprDef.EArrayDecl(exprs):
 //trace(exprs);
-                return CompletionType.Array(unificateTypes([for (expr in exprs) getType(expr, scope)]));
+                return CompletionType.Array(CompletionTypeUtils.unificateTypes([for (expr in exprs) getType(expr)]));
             case ExprDef.EObject(parts):
-                return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e, scope) } ]);
+                return CompletionType.Object([for (part in parts) { name: part.name, type: getType(part.e) } ]);
             default:
                 throw 'Unhandled expression ${e.e}';
         }
         trace(e);
         return CompletionType.Unknown;
     }
+    
+    public function containsIndex(index:Int) return index >= start && index <= end;
 
     public function addLocal(ident:String, t:CType, e:Expr, ?type:CompletionType, ?exprScope:CompletionScope):CompletionVariable {
-        if (exprScope == null) exprScope = this.scope;
+        if (exprScope == null) exprScope = this;
         if (type == null) {
             if (e != null) {
                 type = try {
-                    getType(e, exprScope);
+                    exprScope.getType(e);
                 } catch (e:Dynamic) {
-                    errors.errors.push(new Error(ErrorDef.EUnknown('Error:$e'), e.pmin, e.pmax));
+                    context.errors.add(new Error(ErrorDef.EUnknown('Error:$e'), e.pmin, e.pmax));
                     CompletionType.Unknown;
                 }
             }
         }
         var v = new CompletionVariable(ident, type);
         if (e != null) v.addReference(Reference.Declaration(e));
-        scope.set(ident, v);
+        set(ident, v);
         return v;
+    }
+    
+    public function locateIndex(index:Int):CompletionScope {
+        for (child in children) if (child.containsIndex(index)) return child.locateIndex(index);
+        return this;
+    }
+
+    public function getCompletionType():CompletionType {
+        if (_completionType != null) return _completionType;
+        var keys = ArrayUtils.sorted(scope.keys());
+        return CompletionType.Object([for (key in keys) { name: key, type: getLocal(key).type }]);
     }
 }
 
+class CompletionContext {
+    public var root(default, null):CompletionScope;
+    public var scope:CompletionScope;
+    public var tokenizer:Tokenizer;
+    public var errors:ErrorContext;
+
+    public function new(tokenizer:Tokenizer, errors:ErrorContext) {
+        this.tokenizer = tokenizer;
+        this.errors = errors;
+        this.scope = this.root = new CompletionScope(this);
+        scope.set("true", new CompletionVariable("true", CompletionType.Bool));
+        scope.set("false", new CompletionVariable("false", CompletionType.Bool));
+        scope.set("null", new CompletionVariable("null", CompletionType.Dynamic));
+    }
+    
+    public function pushContext(callback: CompletionScope -> Void):CompletionScope {
+//trace('push scope');
+        var old = this.scope;
+        var output = this.scope = scope.createChild();
+        {
+            scope.start = tokenizer.tokenMax;
+            callback(scope);
+            scope.end = tokenizer.tokenMin;
+        }
+        this.scope = old;
+        
+//trace('pop scope');
+        return output;
+    }
+
+}
+
 class CompletionTypeUtils {
+    static public function hasField(type:CompletionType, field:String):Bool {
+        switch (type) {
+            case CompletionType.Dynamic: return true;
+            case CompletionType.Object(items):
+                for (item in items) if (item.name == field) return true;
+            default:
+
+        }
+        return false;
+    }
+
+    static public function unificateTypes(types:Array<CompletionType>):CompletionType {
+        if (types.length == 0) return CompletionType.Dynamic;
+        return types[0];
+    }
+
+    static public function getFieldType(type:CompletionType, field:String):CompletionType {
+        switch (type) {
+            case CompletionType.Dynamic: return CompletionType.Dynamic;
+            case CompletionType.Object(items):
+                for (item in items) if (item.name == field) return item.type;
+            default:
+
+        }
+        return CompletionType.Unknown;
+    }
+
+    static public function fromCType(type:CType):CompletionType {
+        if (type == null) return CompletionType.Dynamic;
+        switch (type) {
+            case CType.CTPath(["Int"], null): return CompletionType.Int;
+            case CType.CTPath(["Float"], null): return CompletionType.Float;
+            case CType.CTPath(["Bool"], null): return CompletionType.Bool;
+            case CType.CTPath(["String"], null): return CompletionType.String;
+            default:
+        }
+        throw 'Not implemented $type';
+        return null;
+    }
+
     static public function toString(ct:CompletionType) {
         switch (ct) {
             case CompletionType.Array(ct): return 'Array<' + toString(ct) + '>';

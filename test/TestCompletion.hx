@@ -1,6 +1,8 @@
 import haxe.languageservices.parser.Parser;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
+import haxe.languageservices.parser.Completion.CCompletion;
+import haxe.languageservices.parser.Completion.CompletionType;
 import haxe.PosInfos;
 import haxe.unit.TestCase;
 
@@ -47,20 +49,37 @@ class TestCompletion extends TestCase {
             ['c:Float']
         );
 
-// @TODO: Fixme
+        // @TODO: Fixme
         assertCompletion2(
             'var c = [for (n in 0 ... 10) "test" + n]; ###',
             ['c:Dynamic']
-//['c:Array<String>']
         );
     }
+
+    /*
+    public function testCallCompletion() {
+        assertCallCompletion(
+            'function test(a:Int, b:String, c:Bool) { return 7; } test(1, ###2, 3);',
+            CCompletion.CallCompletion(
+                '',
+                'test',
+                [
+                    { name : "a", type : CompletionType.Int },
+                    { name : "b", type : CompletionType.String },
+                    { name : "c", type : CompletionType.Bool },
+                ],
+                { type: CompletionType.Int },
+                1
+            )
+        );
+    }
+    */
 
     private function assertCompletion(x:String, v:Array<String>,  ?c : PosInfos) {
         var index = x.indexOf('###');
         x = StringTools.replace(x, '###', '');
         var p = new Parser();
         var program = p.parseExpressionsString(x);
-//trace(program);
         for (e in p.errors.errors) trace('Error:$e');
         assertEquals(v.join(','), p.completionsAt(index).toString(), c);
         return p.errors;
@@ -75,5 +94,13 @@ class TestCompletion extends TestCase {
         assertCompletion(x, v2, c);
     }
 
-
+    private function assertCallCompletion(x:String, v:CCompletion,  ?c : PosInfos) {
+        var index = x.indexOf('###');
+        x = StringTools.replace(x, '###', '');
+        var p = new Parser();
+        var program = p.parseExpressionsString(x);
+        for (e in p.errors.errors) trace('Error:$e');
+        assertEquals(v, p.callCompletionAt(index), c);
+        return p.errors;
+    }
 }

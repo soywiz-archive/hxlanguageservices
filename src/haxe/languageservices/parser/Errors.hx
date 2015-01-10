@@ -9,5 +9,9 @@ class Errors {
 
 class ErrorContext {
     public var errors = new Array<Error>();
+
+    public function add(error:Error) {
+        errors.push(error);
+    }
 }
 
