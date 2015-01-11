@@ -9,6 +9,7 @@ class Test {
 		r.add(new TestFileCompletion());
 		r.add(new TestLanguageServices());
 		r.add(new TestCompletion());
+		r.add(new TestGrammar2());
 		r.run();
 	}
 }
