@@ -1,4 +1,6 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.grammar.type.HaxeMember.FieldHaxeMember;
+import haxe.languageservices.grammar.type.HaxeType.ClassHaxeType;
 import haxe.languageservices.grammar.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.grammar.Grammar.Result;
@@ -6,7 +8,7 @@ import haxe.languageservices.grammar.Position;
 import haxe.languageservices.grammar.HaxeGrammar.ZNode;
 import haxe.languageservices.grammar.HaxeGrammar.Node;
 
-class HaxeSemantic {
+class HaxeTypeBuilder {
     public var errors = new Array<ParserError>();
     public var types:HaxeTypes;
 
@@ -45,6 +47,13 @@ class HaxeSemantic {
         }
         return parts;
     }
+    
+    private function getId(znode:ZNode):String {
+        switch (znode.node) {
+            case Node.NId(v): return v;
+            default: throw 'Invalid id';
+        }
+    }
 
     public function process(znode:ZNode) {
         switch (znode.node) {
@@ -65,6 +74,8 @@ class HaxeSemantic {
                             if (typesCount > 0) error(item.pos, 'import should appear before any type decl');
                         case Node.NClass(name, typeParams, decls):
                             typesCount++;
+                            var type = packag.accessTypeCreate(getId(name), ClassHaxeType);
+                            processClass(type, decls);
                         case Node.NTypedef(name):
                             typesCount++;
                         case Node.NEnum(name):
@@ -76,6 +87,27 @@ class HaxeSemantic {
                 }
             default:
                 throw 'Expected haxe file';
+        }
+    }
+
+    private function processClass(type:ClassHaxeType, decls:ZNode) {
+        switch (decls.node) {
+            case Node.NList(members):
+                for (member in members) {
+                    switch (member.node) {
+                        case Node.NMember(modifiers, decl):
+                            switch (decl.node) {
+                                case Node.NVar(vname, vtype, vvalue):
+                                    var field = new FieldHaxeMember(getId(vname));
+                                    type.addMember(field);
+                                default:
+                                    trace(decl.node);
+                            }
+                        default: throw 'Invalid';
+                    }
+                }
+            default:
+                throw 'Invalid';
         }
     }
 }

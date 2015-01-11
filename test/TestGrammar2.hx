@@ -1,5 +1,6 @@
 package ;
-import haxe.languageservices.grammar.HaxeSemantic;
+import haxe.Json;
+import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar;
@@ -70,21 +71,29 @@ class TestGrammar2 extends TestCase {
         assertEquals('' + a, '' + b, p);
     }
 
+    private function assertEqualsJson(a:Dynamic, b:Dynamic, ?p:PosInfos) {
+        assertEquals(Json.stringify(a), Json.stringify(b), p);
+    }
+
     public function testSem() {
-        function assertErrors(program:String, checker: HaxeSemantic -> Void) {
-            var sem = new HaxeSemantic();
+        function assert(program:String, checker: HaxeTypeBuilder -> Void) {
+            var sem = new HaxeTypeBuilder();
             sem.processResult(hg.parseString(hg.program, program));
             checker(sem);
         }
-        assertErrors(
-            'package p.T; import a; class Test { } import b; package c;',
-            function(sem:HaxeSemantic) {
+        assert(
+            'package p.T; import a; class Test { var z; } import b; package c;',
+            function(sem:HaxeTypeBuilder) {
                 assertEqualsString(['p.T'], sem.types.getLeafPackageNames());
                 assertEqualsString([
                     '8:11:package should be lowercase',
-                    '38:47:import should appear before any type decl',
-                    '48:58:package should be first element in the file'
+                    '45:54:import should appear before any type decl',
+                    '55:65:package should be first element in the file'
                 ], sem.errors);
+                assertEqualsString(
+                    'Type("p.T.Test", [Field(z)])',
+                    sem.types.rootPackage.accessType('p.T.Test')
+                );
             }
         );
     }

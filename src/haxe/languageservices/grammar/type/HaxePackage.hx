@@ -37,12 +37,24 @@ class HaxePackage {
         return accessParts(path.split('.'), create);
     }
 
-    public function accessType(path:String, create:Bool):HaxeType {
+    public function accessType(path:String):HaxeType {
+        return _accessType(path, false, null);
+    }
+
+    public function accessTypeCreate<T:HaxeType>(path:String, type:Class<HaxeType>):T {
+        return cast _accessType(path, true, type);
+    }
+
+    private function _accessType(path:String, create:Bool, type:Class<HaxeType>):HaxeType {
         var parts = path.split('.');
         var typeName = parts.pop();
         var packag = accessParts(parts, create);
-        if (packag.types.exists(typeName)) return packag.types[typeName];
-        if (create) return packag.types[typeName] = new HaxeType(packag, typeName);
+        var exists = packag.types.exists(typeName);
+        if (exists && create) {
+            trace('type already exists, recreating');
+        }
+        if (create) return packag.types[typeName] = Type.createInstance(type, [packag, typeName]);
+        if (exists) return packag.types[typeName];
         return null;
     }
 
