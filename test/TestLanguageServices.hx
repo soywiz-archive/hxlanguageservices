@@ -8,9 +8,9 @@ import haxe.unit.TestCase;
 
 class TestLanguageServices extends TestCase {
     public function test1() {
-        var services = new HaxeLanguageServices(new MemoryVfs().add('test.hx', 'var z = 1;'));
+        var services = new HaxeLanguageServices(new MemoryVfs().set('test.hx', 'var z = 1;'));
 
-        services.updateFile('test.hx');
+        services.updateHaxeScriptFile('test.hx');
         var completions = services.getCompletionAt('test.hx', 10);
         assertEquals('false:Bool,null:Dynamic,true:Bool,z:Int', completions.toString());
     }
@@ -20,7 +20,7 @@ class TestLanguageServices extends TestCase {
         var sdkVersion = sdk.getVersion();
         assertEquals('3.1.3', sdkVersion);
         var libraries = sdk.libraries;
-        assertEquals("{cairo => HaxeLibrary(cairo), nme => HaxeLibrary(nme)}", libraries.toString());
+        assertEquals("{cairo => HaxeLibrary(cairo), nme => HaxeLibrary(nme)}", '' + libraries);
         var cairo:HaxeLibrary = libraries['cairo'];
         assertEquals(true, cairo.exists);
         assertEquals(true, cairo.currentVersion.exists);

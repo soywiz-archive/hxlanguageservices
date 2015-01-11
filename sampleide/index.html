@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ACE in Action</title>
+    <style type="text/css" media="screen">
+        #editorIn, #editorOut {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        .refread {position:absolute; /*border: 1px solid green;*/ border-radius:2px;background: #ddf;}
+        .refwrite {position:absolute; /*border: 1px solid green;*/ border-radius:2px;background: #fdd;margin-left:-2px;padding:0 2px;}
+        .error {
+            background: red;
+        }
+        .matching {
+            color: purple;
+        }
+        .autocompletion {
+            position:absolute;top:0;left:0;
+            min-width:320px;
+            max-width: 640px;
+            height: 100px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid #aaa;
+            background: white;
+            margin-top:1.2em;
+            max-height:200px;
+            overflow-y:auto;
+            z-index: 10000;
+            visibility: hidden;
+            font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+        }
+        .signaturecompletion {
+            position:absolute;top:0;left:0;
+            min-width:320px;
+            max-width: 640px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid #aaa;
+            margin-top:1.2em;
+            max-height:200px;
+            z-index: 10000;
+            visibility: hidden;
+            font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+            background: #ffc;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .signaturecompletion strong {
+            background: #fee;
+            border-bottom: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div id="editorIn"></div>
+
+    <div id="autocompletion" class="autocompletion">
+        dadada
+    </div>
+    <div id="signaturecompletion" class="signaturecompletion"></div>
+
+    <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="mainide.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>

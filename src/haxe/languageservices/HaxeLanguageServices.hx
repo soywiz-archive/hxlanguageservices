@@ -18,16 +18,23 @@ class HaxeLanguageServices {
         this.vfs = vfs;
     }
     
-    public function updateFile(path:String):Void {
-        var parser = new Parser(typeContext);
+    public function updateHaxeScriptFile(path:String):Void {
+        var parser = parsers[path] = new Parser(typeContext);
         var fileContent = vfs.readString(path);
         parser.setInputString(fileContent);
         var expr = parser.parseExpressions();
-        parsers[path] = parser;
+    }
+
+    public function updateHaxeFile(path:String):Void {
+        var parser = parsers[path] = new Parser(typeContext);
+        var fileContent = vfs.readString(path);
+        parser.setInputString(fileContent);
+        var expr = parser.parseHaxeFile();
     }
 
     public function getCompletionAt(path:String, offset:Int):CompletionList {
         var parser:Parser = parsers[path];
+        if (parser == null) throw 'Can\'t find parser for file $path';
         return parser.completionsAt(offset);
     }
     

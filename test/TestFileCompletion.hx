@@ -50,16 +50,16 @@ class TestFileCompletion extends TestCase {
         var index = x.indexOf('###');
         x = StringTools.replace(x, '###', '');
         var p = new Parser();
-        var program = p.parseFileString(x);
+        var program = p.parseHaxeFileString(x);
         for (e in p.errors.errors) trace('Error:$e');
         var list = [for (i in p.completionsAt(index).items) i.name + ':' + CompletionTypeUtils.toString(i.type)];
         if (!ArrayUtils.containsAll(list, has)) {
             trace([for (type in p.typeContext.getAllTypes()) type.uid]);
             trace([for (type in p.typeContext.getAllTypes()) type.members]);
-            assertEquals('List ${list} doesn\'t contain ${has}', '--');
+            assertEquals('List ${list} doesn\'t contain ${has}', '--', c);
         }
         if (ArrayUtils.containsAny(list, nohas)) {
-            assertEquals('List ${list} contains some of ${nohas}', '--');
+            assertEquals('List ${list} contains some of ${nohas}', '--', c);
         }
         assertTrue(true);
         return p.errors;
@@ -67,10 +67,10 @@ class TestFileCompletion extends TestCase {
 
     private function assertTypes(x:String, test:String, ?c : PosInfos) {
         var p = new Parser();
-        var program = p.parseFileString(x);
+        var program = p.parseHaxeFileString(x);
         for (e in p.errors.errors) trace('Error:$e');
-        assertEquals(0, p.errors.errors.length);
-        assertEquals('' + test, '' + p.typeContext.getAllTypes());
+        assertEquals(0, p.errors.errors.length, c);
+        assertEquals('' + test, '' + p.typeContext.getAllTypes(), c);
         return p.errors;
     }
 }

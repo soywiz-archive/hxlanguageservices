@@ -8,6 +8,8 @@ import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 class TypeContext {
     public var packages = new Map<String, TypePackage>();
 
+    public function toString() return 'TypeContext';
+
     public function new() {
     }
 

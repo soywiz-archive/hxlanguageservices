@@ -19,6 +19,11 @@ class TestCompletion extends TestCase {
         );
 
         assertCompletion2(
+            'var z = {a:1};var sum=0;for (item in [z,z,z]) sum += ###item.a;',
+            ['item:{a:Int}', 'sum:Int','z:{a:Int}']
+        );
+
+        assertCompletion2(
             'var z = 1; { var x = 1; ### }',
             ['x:Int', 'z:Int']
         );

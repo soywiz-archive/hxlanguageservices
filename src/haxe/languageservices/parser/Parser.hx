@@ -1,4 +1,5 @@
 package haxe.languageservices.parser;
+import haxe.languageservices.parser.Expr.ErrorDef;
 import haxe.languageservices.parser.TypeContext.TypeClass;
 import haxe.languageservices.parser.TypeContext.TypeType;
 import haxe.languageservices.parser.TypeContext.TypeField;
@@ -76,7 +77,7 @@ class Parser {
         return parseExpressionsFile();
     }
 
-    public function parseFileString(s:String, ?path:String) {
+    public function parseHaxeFileString(s:String, ?path:String) {
         setInputString(s, path);
         return parseHaxeFile();
     }
@@ -264,6 +265,13 @@ class Parser {
         var modifier:String = null;
         var isStatic = false;
         var isInline = false;
+        
+        function resetModifiers() {
+            modifier = null;
+            isStatic = false;
+            isInline = false;
+        }
+        
         while (true) {
             var tk = token();
             switch (tk) {
@@ -298,6 +306,7 @@ class Parser {
                     ensure(Token.TSemicolon);
                     completion.scope.addLocal(name, ctype, null, valueType);
                     type.members.push(new TypeField(name, valueType));
+                    resetModifiers();
                     break;
                 case Token.TId('function'):
                     var name = parseIdentifier();
@@ -328,6 +337,7 @@ class Parser {
                     });
                     
                     type.members.push(new TypeMethod(name, funcType));
+                    resetModifiers();
                 case Token.TBrClose:
                     push(tk);
                     break;
@@ -944,8 +954,8 @@ class Parser {
                 var exprType = completion.scope.getType(e1);
                 afterChecks.push(function() {
                     if (!CompletionTypeUtils.hasField(typeContext, exprType, field)) {
-                        trace('Expression $e1 doesn\'t contain field $field');
-                        trace('type:' + exprType);
+                        errors.add(new Error(ErrorDef.EUnknown('Expression $e1 doesn\'t contain field $field'), e1.pmin, e1.pmax));
+                        //trace('type:' + exprType);
                     }
                 });
                 return parseExprNext(mk(EField(e1, field), pmin(e1)));
