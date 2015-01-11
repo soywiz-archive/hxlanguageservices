@@ -73,5 +73,17 @@ class TestGrammar2 extends TestCase {
             'RMatchedValue(NVar(NId(z)@4:5,[NList([NList([NIdWithType(NId(a)@7:8,[NId(Int)@9:12]@8:12)@7:12])@7:12])@6:13]@5:13,NObject([NList([NObjectItem(NId(a)@17:18,NConst(CInt(1))@19:20)@17:20])@17:20])@16:21@14:21)@0:22)',
             '' + hg.parse(hg.expr, new Reader("var z:{a:Int} = {a:1};"))
         );
+        assertEquals(
+            'RMatchedValue(NAccessList(NConst(CInt(7))@0:1,NList([NBinOpPart(NAccessList(NConst(CInt(9))@4:5,NList([NBinOpPart(NConst(CInt(3))@8:9,null)@6:9])@6:9)@4:9,null)@2:9])@2:9)@0:9)',
+            '' + hg.parse(hg.expr, new Reader("7 + 9 + 3"))
+        );
+        assertEquals(
+            'RMatchedValue(NUnary(NOp(-)@0:1,NConst(CInt(7))@1:2)@0:2)',
+            '' + hg.parse(hg.expr, new Reader("-7"))
+        );
+        assertEquals(
+            'RMatchedValue(NUnary(NOp(-)@0:1,NId(test)@2:6@1:7)@0:7)',
+            '' + hg.parse(hg.expr, new Reader("-(test)"))
+        );
     }
 }

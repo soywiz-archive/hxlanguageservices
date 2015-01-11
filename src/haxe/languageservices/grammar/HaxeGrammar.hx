@@ -31,6 +31,10 @@ class HaxeGrammar extends Grammar<Node> {
         }
         return znode;
     }
+    
+    private function operator(v:Dynamic):Term {
+        return term(v, buildNode2('NOp'));
+    }
 
     public function new() {
         function rlist(v) return Node.NList(v);
@@ -49,8 +53,8 @@ class HaxeGrammar extends Grammar<Node> {
         var ifExpr = seq(['if', '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
         var forExpr = seq(['for', '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
         var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
-        var parenExpr = seq(['(', expr, ')'], function (v) return v);
-        var constant = any([ int ]);
+        var parenExpr = seqi(['(', expr, ')']);
+        var constant = any([ int, identifier ]);
         var type = createRef();
 
         var optType = opt(seq([':', type], identity));
@@ -66,14 +70,14 @@ class HaxeGrammar extends Grammar<Node> {
         var varDecl = seq(['var', identifier, optType, opt(seqi(['=', expr])), ';'], buildNode('NVar'));
         var objectItem = seq([identifier, ':', expr], buildNode('NObjectItem'));
 
-        var array = seq(['[', list(expr, ',', rlist), ']'], buildNode2('NArray'));
-        var object = seq(['{', list(objectItem, ',', rlist), '}'], buildNode2('NObject'));
-        var literal = any([ identifier, constant, array, object ]);
-        var unaryOp = any(['++', '--', '+', '-']);
+        var arrayExpr = seq(['[', list(expr, ',', rlist), ']'], buildNode2('NArray'));
+        var objectExpr = seq(['{', list(objectItem, ',', rlist), '}'], buildNode2('NObject'));
+        var literal = any([ constant, arrayExpr, objectExpr ]);
+        var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
         var binaryOp = any(['+', '-', '*', '/', '%']);
         var primaryExpr = createRef();
         
-        var unaryExpr = seq([unaryOp, primaryExpr], identity);
+        var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
         //var binaryExpr = seq([primaryExpr, binaryOp, expr], identity);
     
         var exprCommaList = list(expr, ',', rlist);
@@ -81,13 +85,14 @@ class HaxeGrammar extends Grammar<Node> {
         var arrayAccess = seq(['[', expr, ']'], buildNode('NAccess'));
         var fieldAccess = seq(['.', identifier], buildNode('NAccess'));
         var callPart = seq(['(', exprCommaList, ')'], buildNode('NCall'));
+        var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));
 
         setRef(primaryExpr, any([
             parenExpr,
             unaryExpr,
             seq(['new', identifier, callPart], buildNode('NNew')),
             seq(
-                [identifier, list2(any([fieldAccess, arrayAccess, callPart]), rlist)],
+                [constant, list2(any([fieldAccess, arrayAccess, callPart, binaryPart]), rlist)],
                 buildNode('NAccessList')
             ),
         ]));
@@ -140,6 +145,7 @@ typedef ZNode = NNode<Node>;
 
 enum Node {
     NId(value:String);
+    NOp(value:String);
     NConst(value:Dynamic);
     NList(value:Array<ZNode>);
     NListDummy(value:Array<ZNode>);
@@ -163,7 +169,9 @@ enum Node {
     NAccessList(node:ZNode, accessors:ZNode);
     NMember(modifiers:ZNode, decl:ZNode);
     NNew(id:ZNode, call:ZNode);
+    NUnary(op:ZNode, value:ZNode);
     NIdWithType(id:ZNode, type:ZNode);
     NTypeParams(items:Array<ZNode>);
+    NBinOpPart(op:ZNode, expr:ZNode);
 }
 
