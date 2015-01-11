@@ -52,6 +52,9 @@ class HaxeGrammar extends Grammar<Node> {
         //expr.term
         var ifExpr = seq(['if', '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
         var forExpr = seq(['for', '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
+        var breakExpr = seq(['break', ';'], buildNode('NBreak'));
+        var continueExpr = seq(['continue', ';'], buildNode('NContinue'));
+        var returnExpr = seq(['return', opt(expr), ';'], buildNode('NReturn'));
         var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
         var parenExpr = seqi(['(', expr, ')']);
         var constant = any([ int, identifier ]);
@@ -101,6 +104,9 @@ class HaxeGrammar extends Grammar<Node> {
             varDecl,
             ifExpr,
             forExpr,
+            breakExpr,
+            continueExpr,
+            returnExpr,
             blockExpr,
             primaryExpr,
             literal,
@@ -128,7 +134,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         var typeDecl = any([classDecl, typedefDecl, enumDecl]);
 
-        program = list2(any([packageDecl, importDecl, typeDecl]), rlist);
+        program = list2(any([packageDecl, importDecl, typeDecl]), buildNode2('NFile'));
     }
 
     private var spaces = ~/^\s+/;
@@ -153,17 +159,22 @@ enum Node {
     NConstList(items:Array<ZNode>);
     NPackage(fqName:ZNode);
     NImport(fqName:ZNode);
-    NIf(cond:Node, trueExpr:ZNode, falseExpr:ZNode);
+    NIf(cond:ZNode, trueExpr:ZNode, falseExpr:ZNode);
     NArray(items:Array<ZNode>);
     NObjectItem(key:ZNode, value:ZNode);
     NObject(items:Array<ZNode>);
     NBlock(items:Array<ZNode>);
     NFor(iteratorName:ZNode, iteratorExpr:ZNode, body:ZNode);
+
     NClass(name:ZNode, typeParams:ZNode, decls:ZNode);
     NTypedef(name:ZNode);
     NEnum(name:ZNode);
+    
     NVar(name:ZNode, type:ZNode, value:ZNode);
     NFunction(name:ZNode, expr:ZNode);
+    NContinue();
+    NBreak();
+    NReturn(?expr:ZNode);
     NAccess(node:ZNode);
     NCall(node:ZNode);
     NAccessList(node:ZNode, accessors:ZNode);
@@ -173,5 +184,6 @@ enum Node {
     NIdWithType(id:ZNode, type:ZNode);
     NTypeParams(items:Array<ZNode>);
     NBinOpPart(op:ZNode, expr:ZNode);
+    NFile(decls:Array<ZNode>);
 }
 

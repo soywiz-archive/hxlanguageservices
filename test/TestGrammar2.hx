@@ -1,4 +1,6 @@
 package ;
+import haxe.languageservices.grammar.HaxeSemantic;
+import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar;
 import haxe.languageservices.grammar.Grammar.Reader;
@@ -42,48 +44,48 @@ class TestGrammar2 extends TestCase {
 
     public function testProgram() {
         assertEquals(
-            'RMatchedValue(NList([NClass(NId(Test)@6:10,null,NList([NMember(NList([])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
+            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([NMember(NList([])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
             '' + hg.parse(hg.program, new Reader("class Test { static var a; public var b; }"))
         );
 
         assertEquals(
-            'RMatchedValue(NList([NPackage(NIdList([NId(a)@8:9,NId(b)@10:11,NId(c)@12:13])@8:13)@0:14,NImport(NIdList([NId(a)@22:23,NId(b)@24:25,NId(c)@26:27])@22:27)@15:28,NClass(NId(Z)@35:36,null,NList([])@38:38)@29:39])@0:39)',
+            'RMatchedValue(NFile([NPackage(NIdList([NId(a)@8:9,NId(b)@10:11,NId(c)@12:13])@8:13)@0:14,NImport(NIdList([NId(a)@22:23,NId(b)@24:25,NId(c)@26:27])@22:27)@15:28,NClass(NId(Z)@35:36,null,NList([])@38:38)@29:39])@0:39)',
             '' + hg.parse(hg.program, new Reader("package a.b.c; import a.b.c; class Z {}"))
         );
     }
-
+    
     public function testExpressions() {
-        assertEquals(
-            'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8])@1:8)@0:8)',
-            '' + hg.parse(hg.expr, new Reader("a.b[777]"))
-        );
-        assertEquals(
-            'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13])@9:13)@8:14])@1:14)@0:14)',
-            '' + hg.parse(hg.expr, new Reader("a.b[777](1, 2)"))
-        );
-        assertEquals(
-            'RMatchedValue(NNew(NId(Test)@4:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13,NConst(CInt(3))@15:16])@9:16)@8:17)@0:17)',
-            '' + hg.parse(hg.expr, new Reader("new Test(1, 2, 3)"))
-        );
-        assertEquals(
-            'RMatchedValue(NVar(NId(z)@4:5,[NId(Int)@6:9]@5:9,NConst(CInt(1))@12:13@10:13)@0:14)',
-            '' + hg.parse(hg.expr, new Reader("var z:Int = 1;"))
-        );
-        assertEquals(
-            'RMatchedValue(NVar(NId(z)@4:5,[NList([NList([NIdWithType(NId(a)@7:8,[NId(Int)@9:12]@8:12)@7:12])@7:12])@6:13]@5:13,NObject([NList([NObjectItem(NId(a)@17:18,NConst(CInt(1))@19:20)@17:20])@17:20])@16:21@14:21)@0:22)',
-            '' + hg.parse(hg.expr, new Reader("var z:{a:Int} = {a:1};"))
-        );
-        assertEquals(
-            'RMatchedValue(NAccessList(NConst(CInt(7))@0:1,NList([NBinOpPart(NAccessList(NConst(CInt(9))@4:5,NList([NBinOpPart(NConst(CInt(3))@8:9,null)@6:9])@6:9)@4:9,null)@2:9])@2:9)@0:9)',
-            '' + hg.parse(hg.expr, new Reader("7 + 9 + 3"))
-        );
-        assertEquals(
-            'RMatchedValue(NUnary(NOp(-)@0:1,NConst(CInt(7))@1:2)@0:2)',
-            '' + hg.parse(hg.expr, new Reader("-7"))
-        );
-        assertEquals(
-            'RMatchedValue(NUnary(NOp(-)@0:1,NId(test)@2:6@1:7)@0:7)',
-            '' + hg.parse(hg.expr, new Reader("-(test)"))
+        function assertExpr(str, expected, ?p) assertEquals(expected, '' + hg.parse(hg.expr, new Reader(str)), p);
+        assertExpr("a.b[777]", 'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8])@1:8)@0:8)');
+        assertExpr("a.b[777](1, 2)", 'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13])@9:13)@8:14])@1:14)@0:14)');
+        assertExpr("new Test(1, 2, 3)", 'RMatchedValue(NNew(NId(Test)@4:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13,NConst(CInt(3))@15:16])@9:16)@8:17)@0:17)');
+        assertExpr("var z:Int = 1;", 'RMatchedValue(NVar(NId(z)@4:5,[NId(Int)@6:9]@5:9,NConst(CInt(1))@12:13@10:13)@0:14)');
+        assertExpr("var z:{a:Int} = {a:1};", 'RMatchedValue(NVar(NId(z)@4:5,[NList([NList([NIdWithType(NId(a)@7:8,[NId(Int)@9:12]@8:12)@7:12])@7:12])@6:13]@5:13,NObject([NList([NObjectItem(NId(a)@17:18,NConst(CInt(1))@19:20)@17:20])@17:20])@16:21@14:21)@0:22)');
+        assertExpr("7 + 9 + 3", 'RMatchedValue(NAccessList(NConst(CInt(7))@0:1,NList([NBinOpPart(NAccessList(NConst(CInt(9))@4:5,NList([NBinOpPart(NConst(CInt(3))@8:9,null)@6:9])@6:9)@4:9,null)@2:9])@2:9)@0:9)');
+        assertExpr("-7", 'RMatchedValue(NUnary(NOp(-)@0:1,NConst(CInt(7))@1:2)@0:2)');
+        assertExpr("-(test)", 'RMatchedValue(NUnary(NOp(-)@0:1,NId(test)@2:6@1:7)@0:7)');
+    }
+    
+    private function assertEqualsString(a:Dynamic, b:Dynamic, ?p:PosInfos) {
+        assertEquals('' + a, '' + b, p);
+    }
+
+    public function testSem() {
+        function assertErrors(program:String, checker: HaxeSemantic -> Void) {
+            var sem = new HaxeSemantic();
+            sem.processResult(hg.parseString(hg.program, program));
+            checker(sem);
+        }
+        assertErrors(
+            'package p.T; import a; class Test { } import b; package c;',
+            function(sem:HaxeSemantic) {
+                assertEqualsString(['p.T'], sem.types.getLeafPackageNames());
+                assertEqualsString([
+                    '8:11:package should be lowercase',
+                    '38:47:import should appear before any type decl',
+                    '48:58:package should be first element in the file'
+                ], sem.errors);
+            }
         );
     }
 }

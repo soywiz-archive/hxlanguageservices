@@ -32,6 +32,8 @@ class Grammar<TNode> {
     private function skipNonGrammar(str:Reader) {
     }
 
+    public function parseString(t:Term, str:String):Result return parse(t, new Reader(str));
+
     public function parse(t:Term, reader:Reader):Result {
         skipNonGrammar(reader);
         var start:Int = reader.pos;
@@ -97,13 +99,6 @@ class Grammar<TNode> {
 }
 
 class TermRef { public var term:Term; public function new() { } }
-
-class Position {
-    public var min:Int;
-    public var max:Int;
-    public function new(min:Int, max:Int) { this.min = min; this.max = max; }
-    public function toString() return '$min:$max';
-}
 
 class NNode<T> {
     public var pos:Position;
