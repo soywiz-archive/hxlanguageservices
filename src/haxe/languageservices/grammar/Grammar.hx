@@ -1,6 +1,34 @@
 package haxe.languageservices.grammar;
 
 class Grammar<TNode> {
+    private function term(z:Dynamic, ?conv: Dynamic -> Dynamic):Term {
+        if (Std.is(z, String)) return Term.TLit(cast(z, String), conv);
+        if (Std.is(z, EReg)) return Term.TReg(cast(z, EReg), conv);
+        if (Std.is(z, TermRef)) return Term.TRef(z);
+        return cast(z, Term);
+    }
+    private function _term(z:Dynamic):Term return term(z);
+    
+    private function createRef():Term return Term.TRef(new TermRef());
+    private function setRef(ref:Term, value:Term) {
+        switch (ref) {
+            case Term.TRef(t): t.term = value;
+            default: throw "Invalid ref";
+        }
+    }
+
+    private function simplify(znode:NNode<TNode>):NNode<TNode> {
+        return znode;
+    }
+
+    private function identity(v) return v;
+    private function seq(v:Array<Dynamic>, conv: Dynamic -> Dynamic):Term return Term.TSeq(v.map(_term), conv);
+    private function seqi(v:Array<Dynamic>):Term return seq(v, function(v) return v[0]);
+    private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term));
+    private function opt(v:Dynamic):Term return Term.TOpt(term(v));
+    private function list(item:Dynamic, separator:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), conv);
+    private function list2(item:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, conv);
+
     private function skipNonGrammar(str:Reader) {
     }
 
@@ -10,7 +38,7 @@ class Grammar<TNode> {
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
             if (result == null) return Result.RUnmatched;
             if (conv == null) return Result.RMatched;
-            return Result.RMatchedValue(new NNode(new Position(start, reader.pos), conv(result)));
+            return Result.RMatchedValue(simplify(new NNode(new Position(start, reader.pos), conv(result))));
         }
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);
@@ -53,10 +81,12 @@ class Grammar<TNode> {
                         case Result.RMatched:
                         case Result.RMatchedValue(value): items.push(value);
                     }
-                    var resultSep = parse(separator, reader);
-                    switch (resultItem) {
-                        case Result.RUnmatched: break;
-                        default:
+                    if (separator != null) {
+                        var resultSep = parse(separator, reader);
+                        switch (resultItem) {
+                            case Result.RUnmatched: break;
+                            default:
+                        }
                     }
                 }
                 return gen(items, conv);
@@ -89,8 +119,8 @@ enum Result {
 }
 
 enum Term {
-    TLit(lit:String, ?conv:String -> Dynamic);
-    TReg(reg:EReg, ?conv:String -> Dynamic);
+    TLit(lit:String, ?conv:Dynamic -> Dynamic);
+    TReg(reg:EReg, ?conv:Dynamic -> Dynamic);
     TRef(ref:TermRef);
     TAny(items:Array<Term>);
     TSeq(items:Array<Term>, ?conv: Dynamic -> Dynamic);

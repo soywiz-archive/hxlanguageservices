@@ -7,24 +7,123 @@ import haxe.languageservices.grammar.Grammar.Reader;
 class HaxeGrammar extends Grammar<Node> {
     public var ints:Term;
     public var fqName:Term;
-    public var packageDesc:Term;
+    public var packageDecl:Term;
+    public var importDecl:Term;
     public var expr:Term;
+    public var program:Term;
+    
+    private function buildNode(name:String): Dynamic -> Dynamic {
+        return function(v) return Type.createEnum(Node, name, v);
+    }
+
+    private function buildNode2(name:String): Dynamic -> Dynamic {
+        return function(v) return Type.createEnum(Node, name, [v]);
+    }
+    
+    override private function simplify(znode:ZNode):ZNode {
+        switch (znode.node) {
+            case NAccessList(node, accessors):
+                switch (accessors.node) {
+                    case Node.NList([]): return node;
+                    default:
+                }
+            default:
+        }
+        return znode;
+    }
 
     public function new() {
-        var int = TReg(~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
+        function rlist(v) return Node.NList(v);
+        //function rlist2(v) return Node.NListDummy(v);
+
+
+        var int = term(~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         var identifier = TReg(~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
-        var comma = TLit(',');
-        var dot = TLit('.');
-        fqName = TList(identifier, dot, function(v) return Node.NIdList(v));
-        ints = TList(int, comma, function(v) return Node.NConstList(v));
-        packageDesc = TSeq([TLit('package'), fqName, TLit(';')], function(v) return Node.NPackage(v[0]));
-        var _expr = new TermRef();
-        expr = TRef(_expr);
+        fqName = list(identifier, '.', function(v) return Node.NIdList(v));
+        ints = list(int, ',', function(v) return Node.NConstList(v));
+        //packageDesc = TSeq([TLit('package'), fqName, TLit(';')], function(v) return Node.NPackage(v[0]));
+        packageDecl = seq(['package', fqName, ';'], buildNode('NPackage'));
+        importDecl = seq(['import', fqName, ';'], buildNode('NImport'));
+        expr = createRef();
         //expr.term
-        var ifExpr = TSeq([TLit('if'), TLit('('), expr, TLit(')'), expr], function (v) return Node.NIf(v[0], v[1]));
-        var constant = TAny([ int, identifier ]);
-        _expr.term = TAny([ ifExpr, constant ]);
-        var intOrId = TAny([int, identifier]);
+        var ifExpr = seq(['if', '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
+        var forExpr = seq(['for', '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
+        var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
+        var parenExpr = seq(['(', expr, ')'], function (v) return v);
+        var constant = any([ int ]);
+        var type = createRef();
+
+        var optType = opt(seq([':', type], identity));
+
+        var typeName = seq([identifier, optType], buildNode('NIdWithType'));
+        var typeNameList = list(typeName, ',', rlist);
+        
+        setRef(type, any([
+            identifier,
+            seq([ '{', typeNameList, '}' ], rlist),
+        ]));
+        
+        var varDecl = seq(['var', identifier, optType, opt(seqi(['=', expr])), ';'], buildNode('NVar'));
+        var objectItem = seq([identifier, ':', expr], buildNode('NObjectItem'));
+
+        var array = seq(['[', list(expr, ',', rlist), ']'], buildNode2('NArray'));
+        var object = seq(['{', list(objectItem, ',', rlist), '}'], buildNode2('NObject'));
+        var literal = any([ identifier, constant, array, object ]);
+        var unaryOp = any(['++', '--', '+', '-']);
+        var binaryOp = any(['+', '-', '*', '/', '%']);
+        var primaryExpr = createRef();
+        
+        var unaryExpr = seq([unaryOp, primaryExpr], identity);
+        //var binaryExpr = seq([primaryExpr, binaryOp, expr], identity);
+    
+        var exprCommaList = list(expr, ',', rlist);
+    
+        var arrayAccess = seq(['[', expr, ']'], buildNode('NAccess'));
+        var fieldAccess = seq(['.', identifier], buildNode('NAccess'));
+        var callPart = seq(['(', exprCommaList, ')'], buildNode('NCall'));
+
+        setRef(primaryExpr, any([
+            parenExpr,
+            unaryExpr,
+            seq(['new', identifier, callPart], buildNode('NNew')),
+            seq(
+                [identifier, list2(any([fieldAccess, arrayAccess, callPart]), rlist)],
+                buildNode('NAccessList')
+            ),
+        ]));
+
+        setRef(expr, any([
+            varDecl,
+            ifExpr,
+            forExpr,
+            blockExpr,
+            primaryExpr,
+            literal,
+        ]));
+        
+        var typeParamItem = type;
+        var typeParamDecl = seq(['<', list(typeParamItem, ',', rlist), '>'], buildNode2('NTypeParams'));
+        
+        var memberModifier = any(['static', 'public', 'private']);
+        var functionDecl = seq(['function', identifier, '(', ')', expr], buildNode('NFunction'));
+        var memberDecl = seq([opt(list2(memberModifier, rlist)), any([varDecl, functionDecl])], buildNode('NMember'));
+        var classDecl = seq(
+            ['class', identifier, opt(typeParamDecl), '{', list2(memberDecl, rlist), '}'],
+            buildNode('NClass')
+        );
+        var typedefDecl = seq(
+            ['typedef', identifier, '=', type],
+            buildNode('NTypedef')
+        );
+
+        var enumDecl = seq(
+            ['enum', identifier, '{', '}'],
+            buildNode('NEnum')
+        );
+
+        var typeDecl = any([classDecl, typedefDecl, enumDecl]);
+
+        program = list2(any([packageDecl, importDecl, typeDecl]), rlist);
     }
 
     private var spaces = ~/^\s+/;
@@ -37,12 +136,34 @@ enum Const {
     CInt(value:Int);
 }
 
+typedef ZNode = NNode<Node>;
+
 enum Node {
     NId(value:String);
     NConst(value:Dynamic);
-    NIdList(value:Array<NNode<Node>>);
-    NConstList(items:Array<NNode<Node>>);
-    NPackage(fqName:Node);
-    NIf(cond:Node, result:Node);
+    NList(value:Array<ZNode>);
+    NListDummy(value:Array<ZNode>);
+    NIdList(value:Array<ZNode>);
+    NConstList(items:Array<ZNode>);
+    NPackage(fqName:ZNode);
+    NImport(fqName:ZNode);
+    NIf(cond:Node, trueExpr:ZNode, falseExpr:ZNode);
+    NArray(items:Array<ZNode>);
+    NObjectItem(key:ZNode, value:ZNode);
+    NObject(items:Array<ZNode>);
+    NBlock(items:Array<ZNode>);
+    NFor(iteratorName:ZNode, iteratorExpr:ZNode, body:ZNode);
+    NClass(name:ZNode, typeParams:ZNode, decls:ZNode);
+    NTypedef(name:ZNode);
+    NEnum(name:ZNode);
+    NVar(name:ZNode, type:ZNode, value:ZNode);
+    NFunction(name:ZNode, expr:ZNode);
+    NAccess(node:ZNode);
+    NCall(node:ZNode);
+    NAccessList(node:ZNode, accessors:ZNode);
+    NMember(modifiers:ZNode, decl:ZNode);
+    NNew(id:ZNode, call:ZNode);
+    NIdWithType(id:ZNode, type:ZNode);
+    NTypeParams(items:Array<ZNode>);
 }
 
