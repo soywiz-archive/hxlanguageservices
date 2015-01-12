@@ -33,7 +33,7 @@ class Grammar<TNode> {
     private function skipNonGrammar(str:Reader) {
     }
 
-    public function parseString(t:Term, str:String):Result return parse(t, new Reader(str));
+    public function parseString(t:Term, str:String, file:String):Result return parse(t, new Reader(str, file));
 
     public function parse(t:Term, reader:Reader):Result {
         skipNonGrammar(reader);
@@ -41,7 +41,7 @@ class Grammar<TNode> {
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
             if (result == null) return Result.RUnmatched;
             if (conv == null) return Result.RMatched;
-            return Result.RMatchedValue(simplify(new NNode(new Position(start, reader.pos), conv(result))));
+            return Result.RMatchedValue(simplify(new NNode(new Position(start, reader.pos, reader.file), conv(result))));
         }
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);
@@ -126,10 +126,12 @@ enum Term {
 
 class Reader {
     private var str:String;
+    public var file(default, null):String;
     public var pos:Int;
 
-    public function new(str:String) {
+    public function new(str:String, ?file:String) {
         this.str = str;
+        this.file = file;
         this.pos = 0;
     }
     

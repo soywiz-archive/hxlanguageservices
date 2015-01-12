@@ -11,6 +11,7 @@ import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.node.ZNode;
 
 class HaxeCompletion {
+    public var errors = new Array<ParserError>();
     public var types:HaxeTypes;
 
     public function new(types:HaxeTypes) {
@@ -27,7 +28,14 @@ class HaxeCompletion {
     */
 
     public function process(znode:ZNode, ?scope:CompletionScope):CompletionScope {
-        if (scope == null) scope = new CompletionScope(this, znode.pos);
+        // @TODO: Ugly hack!
+        if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
+
+        if (scope == null) {
+            scope = new CompletionScope(this, znode.pos);
+            var pos = new Position(0, 0, 'dummy.hx');
+            //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
+        }
         switch (znode.node) {
             case Node.NFile(decls):
                 for (decl in decls) process(decl, scope.createChild(decl.pos));
@@ -37,6 +45,24 @@ class HaxeCompletion {
                 for (item in items) process(item, scope);
             case Node.NVar(name, type, value):
                 scope.addLocal(new CompletionEntry(scope, name.pos, value, NodeTools.getId(name)));
+            case Node.NId(value):
+                switch (value) {
+                    case 'true', 'false', 'null':
+                    default:
+                        var local = scope.getLocal(value);
+                        if (local == null) {
+                            errors.push(new ParserError(znode.pos, 'Can\'t find local "$value"'));
+                        } else {
+                            local.usages.push(znode);
+                        }
+                }
+            case Node.NUnary(op, value):
+                process(value, scope);
+            case Node.NIf(code, trueExpr, falseExpr):
+                process(code, scope);
+                process(trueExpr, scope);
+                process(falseExpr, scope);
+            case Node.NConst(_):
             default:
                 throw 'Unhandled ${znode}';
         }
@@ -49,7 +75,7 @@ class CompletionEntry {
     public var pos:Position;
     public var name:String;
     public var expr:ZNode;
-    public var references:Array<Position>;
+    public var usages = new Array<ZNode>();
 
     public function new(scope:CompletionScope, pos:Position, expr:ZNode, name:String) {
         this.scope = scope;
@@ -75,8 +101,7 @@ class CompletionScope {
     private var children = new Array<CompletionScope>();
     private var locals:Scope<String, CompletionEntry>;
 
-    public function new(completion:HaxeCompletion, ?pos:Position, ?parent:CompletionScope) {
-        if (pos == null) pos = new Position(0, 0);
+    public function new(completion:HaxeCompletion, pos:Position, ?parent:CompletionScope) {
         this.pos = pos;
         this.completion = completion;
         this.types = completion.types;
@@ -102,6 +127,17 @@ class CompletionScope {
         switch (znode.node) {
             case Node.NConst(Const.CInt(_)): return types.typeInt;
             case Node.NConst(Const.CFloat(_)): return types.typeFloat;
+            case Node.NIf(code, trueExpr, falseExpr):
+                return types.unify([getNodeType(trueExpr), getNodeType(falseExpr)]);
+            case Node.NId(str):
+                switch (str) {
+                    case 'true', 'false': return types.typeBool;
+                    case 'null': return types.typeDynamic;
+                    default:
+                        var local = getLocal(str);
+                        if (local != null) return local.getType();
+                        return types.typeDynamic;
+                }
             default:
                 throw 'Not implemented (I): ${znode}';
         }
@@ -121,6 +157,6 @@ class CompletionScope {
         locals.set(entry.name, entry);
     }
 
-    public function createChild(?pos:Position):CompletionScope return new CompletionScope(this.completion, pos, this);
+    public function createChild(pos:Position):CompletionScope return new CompletionScope(this.completion, pos, this);
 }
 

@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.grammar.HaxeTypeChecker;
@@ -45,8 +46,6 @@ class TestGrammar2 extends TestCase {
             'RMatchedValue(NBlock([NList([NConst(CInt(1))@1:2,NConst(CInt(2))@4:5])@1:6])@0:7)',
             '' + hg.parse(hg.expr, new Reader("{1; 2;}"))
         );
-
-
     }
 
     public function testProgram() {
@@ -84,7 +83,7 @@ class TestGrammar2 extends TestCase {
     public function testSem() {
         function assert(program:String, checker: HaxeTypeBuilder -> Void) {
             var sem = new HaxeTypeBuilder();
-            sem.processResult(hg.parseString(hg.program, program));
+            sem.processResult(hg.parseString(hg.program, program, 'program.hx'));
             checker(sem);
         }
         assert(
@@ -97,7 +96,7 @@ class TestGrammar2 extends TestCase {
                     '55:65:package should be first element in the file'
                 ], sem.errors);
                 assertEqualsString('Type("p.T.Test", [Field(z)])', sem.types.rootPackage.accessType('p.T.Test'));
-                assertEqualsString('[Dynamic,Int,Float,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
+                assertEqualsString('[Dynamic,Bool,Int,Float,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
                 var tc = new HaxeTypeChecker(sem.types);
                 tc.checkType(sem.types.rootPackage.accessType('p.T.Test'));
                 assertEqualsString('[]', tc.errors);
@@ -106,23 +105,36 @@ class TestGrammar2 extends TestCase {
     }
 
     public function testAutocompletion() {
-        var types = new HaxeTypes();
-        var str = '{var z = 10;###}';
-        var completionIndex = str.indexOf('###');
-        str = str.replace('###', '');
-        var result = hg.parseString(hg.expr, str);
-        var completion = new HaxeCompletion(types);
-        switch (result) {
-            case Result.RMatchedValue(value):
-                var cc = completion.process(cast(value));
-                var scope = cc.locateIndex(completionIndex);
-                //var locals = scope.getLocals();
-                //trace(locals);
-                //trace(locals[0].getType().fqName);
-                //trace(scope.getLocal('m').getType().fqName);
-                assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
-                assertEqualsString('Int', scope.getLocal('z').getType().fqName);
-            default: throw 'Error';
+        function assert(str:String, callback: ZNode -> CompletionScope -> Void) {
+            var types = new HaxeTypes();
+            var completionIndex = str.indexOf('###');
+            str = str.replace('###', '');
+            var result = hg.parseString(hg.expr, str, 'program.hx');
+            var completion = new HaxeCompletion(types);
+            switch (result) {
+                case Result.RMatchedValue(value):
+                    var node:ZNode = cast(value);
+                    var cc = completion.process(node);
+                    var scope = cc.locateIndex(completionIndex);
+                    callback(node, scope);
+                default: throw 'Error';
+            }
+
         }
+
+        assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
+            assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
+            assertEqualsString('Int', scope.getLocal('z').getType().fqName);
+        });
+
+        assert('{var z = 10; -z; z;###}', function(node:ZNode, scope:CompletionScope) {
+            var local = scope.getLocal('z');
+            assertEqualsString('5:6', local.pos);
+            assertEqualsString('[NId(z)@14:15,NId(z)@17:18]', local.usages);
+        });
+
+        assert('if (z) true else false', function(node:ZNode, scope:CompletionScope) {
+            assertEqualsString('Bool', scope.getNodeType(node).fqName);
+        });
     }
 }
