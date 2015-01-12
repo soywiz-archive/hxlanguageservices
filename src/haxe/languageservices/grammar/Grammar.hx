@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.Position;
 class Grammar<TNode> {
     private function term(z:Dynamic, ?conv: Dynamic -> Dynamic):Term {
         if (Std.is(z, String)) return Term.TLit(cast(z, String), conv);

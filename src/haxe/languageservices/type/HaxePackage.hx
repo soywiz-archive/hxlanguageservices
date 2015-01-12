@@ -1,34 +1,49 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.Position;
 class HaxePackage {
+    public var base:HaxeTypes;
+    public var root(default, null):HaxePackage;
     public var parent(default, null):HaxePackage;
     public var fqName(default, null):String;
     public var name(default, null):String;
     public var children = new Map<String, HaxePackage>();
     public var types = new Map<String, HaxeType>();
 
-    public function new(name:String, ?parent:HaxePackage) {
+    public function new(base:HaxeTypes, name:String, ?parent:HaxePackage) {
+        this.base = base;
         this.parent = parent;
         this.name = name;
         if (parent != null) {
             parent.children.set(name, this);
             this.fqName = (parent.fqName != '') ? parent.fqName + '.' + name : name;
+            this.root = parent.root;
         } else {
             this.fqName = name;
+            this.root = this;
         }
     }
     
-    public function getLeafs(?out:Array<HaxePackage>):Array<HaxePackage> {
+    public function isLeaf():Bool {
+        for (child in children) return false;
+        return true;
+    }
+
+    public function getAllTypes():Array<HaxeType> {
+        return [for (p in getAll()) for (t in p.types) t];
+    }
+
+    public function getLeafs():Array<HaxePackage> {
+        return getAll().filter(function(p:HaxePackage) return p.isLeaf());
+    }
+
+    public function getAll(?out:Array<HaxePackage>):Array<HaxePackage> {
         if (out == null) out = [];
-        var count = 0;
-        for (child in children) {
-            count++;
-            child.getLeafs(out);
-        }
-        if (count == 0) out.push(this);
+        out.push(this);
+        for (child in children) child.getAll(out);
         return out;
     }
-    
+
     public function toString() {
         return 'Package("$name",${[for (child in children) child]})';
     }
@@ -38,14 +53,14 @@ class HaxePackage {
     }
 
     public function accessType(path:String):HaxeType {
-        return _accessType(path, false, null);
+        return _accessType(path, false, null, null);
     }
 
-    public function accessTypeCreate<T:HaxeType>(path:String, type:Class<HaxeType>):T {
-        return cast _accessType(path, true, type);
+    public function accessTypeCreate<T:HaxeType>(path:String, pos:Position, type:Class<HaxeType>):T {
+        return cast _accessType(path, true, pos, type);
     }
 
-    private function _accessType(path:String, create:Bool, type:Class<HaxeType>):HaxeType {
+    private function _accessType(path:String, create:Bool, pos:Position, type:Class<HaxeType>):HaxeType {
         var parts = path.split('.');
         var typeName = parts.pop();
         var packag = accessParts(parts, create);
@@ -53,7 +68,7 @@ class HaxePackage {
         if (exists && create) {
             trace('type already exists, recreating');
         }
-        if (create) return packag.types[typeName] = Type.createInstance(type, [packag, typeName]);
+        if (create) return packag.types[typeName] = Type.createInstance(type, [packag, pos, typeName]);
         if (exists) return packag.types[typeName];
         return null;
     }
@@ -65,7 +80,7 @@ class HaxePackage {
                 node = node.children[part];
             } else {
                 if (!create) return null;
-                node = node.children[part] = new HaxePackage(part, node);
+                node = node.children[part] = new HaxePackage(base, part, node);
             }
         }
         return node;

@@ -80,7 +80,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectExpr = seq(['{', list(objectItem, ',', rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
-        var binaryOp = any(['+', '-', '*', '/', '%']);
+        var binaryOp = any(['+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
         var primaryExpr = createRef();
         
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));

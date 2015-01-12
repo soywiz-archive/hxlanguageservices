@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar;
+package haxe.languageservices.node;
 
 class Position {
     public var min:Int;

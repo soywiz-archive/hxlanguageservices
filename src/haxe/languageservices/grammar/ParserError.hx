@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.Position;
 class ParserError {
     public var pos:Position;
     public var message:String;

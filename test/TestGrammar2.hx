@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.Json;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.PosInfos;
@@ -90,10 +91,11 @@ class TestGrammar2 extends TestCase {
                     '45:54:import should appear before any type decl',
                     '55:65:package should be first element in the file'
                 ], sem.errors);
-                assertEqualsString(
-                    'Type("p.T.Test", [Field(z)])',
-                    sem.types.rootPackage.accessType('p.T.Test')
-                );
+                assertEqualsString('Type("p.T.Test", [Field(z)])', sem.types.rootPackage.accessType('p.T.Test'));
+                assertEqualsString('[Dynamic,Int,Float,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
+                var tc = new HaxeTypeChecker(sem.types);
+                tc.checkType(sem.types.rootPackage.accessType('p.T.Test'));
+                assertEqualsString('[]', tc.errors);
             }
         );
     }

@@ -6,7 +6,7 @@ import haxe.languageservices.type.HaxeType.ClassHaxeType;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.grammar.Grammar.Result;
-import haxe.languageservices.grammar.Position;
+import haxe.languageservices.node.Position;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
 
@@ -76,7 +76,7 @@ class HaxeTypeBuilder {
                             if (typesCount > 0) error(item.pos, 'import should appear before any type decl');
                         case Node.NClass(name, typeParams, decls):
                             typesCount++;
-                            var type = packag.accessTypeCreate(getId(name), ClassHaxeType);
+                            var type = packag.accessTypeCreate(getId(name), item.pos, ClassHaxeType);
                             processClass(type, decls);
                         case Node.NTypedef(name):
                             typesCount++;
@@ -100,7 +100,7 @@ class HaxeTypeBuilder {
                         case Node.NMember(modifiers, decl):
                             switch (decl.node) {
                                 case Node.NVar(vname, vtype, vvalue):
-                                    var field = new FieldHaxeMember(getId(vname));
+                                    var field = new FieldHaxeMember(decl.pos, getId(vname));
                                     type.addMember(field);
                                 default:
                                     trace(decl.node);
