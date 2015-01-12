@@ -70,10 +70,11 @@ class HaxeTypeBuilder {
                             }
                         case Node.NImport(name):
                             if (typesCount > 0) error(item.pos, 'import should appear before any type decl');
-                        case Node.NClass(name, typeParams, decls):
+                        case Node.NClass(name, typeParams, extendsImplementsList, decls):
                             typesCount++;
-                            var type = packag.accessTypeCreate(getId(name), item.pos, ClassHaxeType);
+                            var type:ClassHaxeType = packag.accessTypeCreate(getId(name), item.pos, ClassHaxeType);
                             processClass(type, decls);
+                        
                         case Node.NTypedef(name):
                             typesCount++;
                         case Node.NEnum(name):

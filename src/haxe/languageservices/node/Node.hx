@@ -10,8 +10,8 @@ enum Node {
     NListDummy(value:Array<ZNode>);
     NIdList(value:Array<ZNode>);
     NConstList(items:Array<ZNode>);
-    NPackage(fqName:ZNode);
-    NImport(fqName:ZNode);
+    
+    
     NIf(cond:ZNode, trueExpr:ZNode, falseExpr:ZNode);
     NArray(items:Array<ZNode>);
     NObjectItem(key:ZNode, value:ZNode);
@@ -19,9 +19,16 @@ enum Node {
     NBlock(items:Array<ZNode>);
     NFor(iteratorName:ZNode, iteratorExpr:ZNode, body:ZNode);
 
-    NClass(name:ZNode, typeParams:ZNode, decls:ZNode);
+    NPackage(fqName:ZNode);
+    NImport(fqName:ZNode);
+    NUsing(fqName:ZNode);
+
+    NClass(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
     NTypedef(name:ZNode);
     NEnum(name:ZNode);
+
+    NExtends(type:ZNode);
+    NImplements(type:ZNode);
 
     NVar(name:ZNode, type:ZNode, value:ZNode);
     NFunction(name:ZNode, expr:ZNode);

@@ -26,68 +26,81 @@ class Grammar<TNode> {
     private function seq(v:Array<Dynamic>, conv: Dynamic -> Dynamic):Term return Term.TSeq(v.map(_term), conv);
     private function seqi(v:Array<Dynamic>):Term return seq(v, function(v) return v[0]);
     private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term));
-    private function opt(v:Dynamic):Term return Term.TOpt(term(v));
+    private function opt(v:Dynamic):Term return Term.TOpt(term(v), null);
+    private function optError(v:Dynamic, message:String):Term return Term.TOpt(term(v), message);
     private function list(item:Dynamic, separator:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), conv);
     private function list2(item:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, conv);
 
     private function skipNonGrammar(str:Reader) {
     }
 
-    public function parseString(t:Term, str:String, file:String):Result return parse(t, new Reader(str, file));
+    public function parseString(t:Term, str:String, file:String, ?errors:HaxeErrors):Result return parse(t, new Reader(str, file), errors);
 
-    public function parse(t:Term, reader:Reader):Result {
+    public function parse(t:Term, reader:Reader, ?errors:HaxeErrors):Result {
         skipNonGrammar(reader);
         var start:Int = reader.pos;
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
-            if (result == null) return Result.RUnmatched;
+            if (result == null) return Result.RUnmatched(0);
             if (conv == null) return Result.RMatched;
-            return Result.RMatchedValue(simplify(new NNode(new Position(start, reader.pos, reader.file), conv(result))));
+            return Result.RMatchedValue(simplify(new NNode(reader.createPos(start, reader.pos), conv(result))));
         }
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);
             case Term.TReg(reg, conv): return gen(reader.matchEReg(reg), conv);
-            case Term.TRef(ref): return parse(ref.term, reader);
-            case Term.TOpt(item):
-                return switch (parse(item, reader)) {
-                    case Result.RMatchedValue(v): Result.RMatchedValue(v);
-                    default: Result.RMatchedValue(null);
+            case Term.TRef(ref): return parse(ref.term, reader, errors);
+            case Term.TOpt(item, error):
+                switch (parse(item, reader, errors)) {
+                    case Result.RMatchedValue(v): return Result.RMatchedValue(v);
+                    case Result.RUnmatched(_):
+                        if (errors != null && error != null) {
+                            errors.add(new ParserError(reader.createPos(start, reader.pos), error));
+                        }
+                        return Result.RMatchedValue(null);
+                    default:
+                        return Result.RMatchedValue(null);
                 }
             case Term.TAny(items):
+                var maxValidCount = 0;
                 for (item in items) {
-                    var r = parse(item, reader);
+                    var r = parse(item, reader, errors);
                     switch (r) {
-                        case Result.RUnmatched:
+                        case Result.RUnmatched(validCount):
+                            maxValidCount = Std.int(Math.max(maxValidCount, validCount));
                         default: return r;
                     }
                 }
-                return Result.RUnmatched;
+                return Result.RUnmatched(maxValidCount);
             case Term.TSeq(items, conv):
                 var results = [];
+                var count = 0;
                 for (item in items) {
-                    var r = parse(item, reader);
+                    var r = parse(item, reader, errors);
                     switch (r) {
-                        case Result.RUnmatched:
+                        case Result.RUnmatched(validCount):
                             reader.pos = start;
-                            return Result.RUnmatched;
+                            return Result.RUnmatched(validCount + count);
                         case Result.RMatched:
                         case Result.RMatchedValue(v):
                             results.push(v);
                     }
+                    count++;
                 }
                 return gen(results, conv);
             case Term.TList(item, separator, conv):
                 var items = [];
+                var count = 0;
                 while (true) {
-                    var resultItem = parse(item, reader);
+                    var resultItem = parse(item, reader, errors);
                     switch (resultItem) {
-                        case Result.RUnmatched: break;
+                        case Result.RUnmatched(validCount): break;
                         case Result.RMatched:
                         case Result.RMatchedValue(value): items.push(value);
                     }
+                    count++;
                     if (separator != null) {
-                        var resultSep = parse(separator, reader);
+                        var resultSep = parse(separator, reader, errors);
                         switch (resultItem) {
-                            case Result.RUnmatched: break;
+                            case Result.RUnmatched(validCount): break;
                             default:
                         }
                     }
@@ -110,7 +123,7 @@ class NNode<T> {
 
 enum Result {
     RMatched;
-    RUnmatched;
+    RUnmatched(validCount:Int);
     RMatchedValue(value:NNode<Dynamic>);
 }
 
@@ -120,7 +133,7 @@ enum Term {
     TRef(ref:TermRef);
     TAny(items:Array<Term>);
     TSeq(items:Array<Term>, ?conv: Dynamic -> Dynamic);
-    TOpt(term:Term);
+    TOpt(term:Term, errorMessage:String);
     TList(item:Term, separator:Term, conv:Dynamic -> Dynamic);
 }
 
@@ -133,6 +146,10 @@ class Reader {
         this.str = str;
         this.file = file;
         this.pos = 0;
+    }
+    
+    public function createPos(start:Int, end:Int):Position {
+        return new Position(start, end, file);
     }
     
     public function matchLit(lit:String) {

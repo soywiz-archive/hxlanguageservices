@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.grammar.HaxeErrors;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.grammar.HaxeCompletion;
@@ -49,14 +50,19 @@ class TestGrammar2 extends TestCase {
     }
 
     public function testProgram() {
-        assertEquals(
-            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([NMember(NList([])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
-            '' + hg.parse(hg.program, new Reader("class Test { static var a; public var b; }"))
+        assertEqualsString(
+            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
+            hg.parse(hg.program, new Reader("class Test { static var a; public var b; }"))
         );
 
-        assertEquals(
-            'RMatchedValue(NFile([NPackage(NIdList([NId(a)@8:9,NId(b)@10:11,NId(c)@12:13])@8:13)@0:14,NImport(NIdList([NId(a)@22:23,NId(b)@24:25,NId(c)@26:27])@22:27)@15:28,NClass(NId(Z)@35:36,null,NList([])@38:38)@29:39])@0:39)',
-            '' + hg.parse(hg.program, new Reader("package a.b.c; import a.b.c; class Z {}"))
+        assertEqualsString(
+            'RMatchedValue(NFile([NPackage(NIdList([NId(a)@8:9,NId(b)@10:11,NId(c)@12:13])@8:13)@0:14,NImport(NIdList([NId(a)@22:23,NId(b)@24:25,NId(c)@26:27])@22:27)@15:28,NClass(NId(Z)@35:36,null,NList([])@37:37,NList([])@38:38)@29:39])@0:39)',
+            hg.parse(hg.program, new Reader("package a.b.c; import a.b.c; class Z {}"))
+        );
+
+        assertEqualsString(
+            'RMatchedValue(NFile([NClass(NId(A)@6:7,null,NList([NExtends(NId(B)@16:17)@8:17,NImplements(NId(C)@29:30)@18:30])@8:31,NList([])@33:33)@0:34])@0:34)',
+            hg.parse(hg.program, new Reader("class A extends B implements C { }"))
         );
     }
     
@@ -136,5 +142,11 @@ class TestGrammar2 extends TestCase {
         assert('if (z) true else false', function(node:ZNode, scope:CompletionScope) {
             assertEqualsString('Bool', scope.getNodeType(node).fqName);
         });
+    }
+
+    public function testRecovery() {
+        var errors = new HaxeErrors();
+        var result = hg.parseString(hg.expr, '{ var a = 10; var c = 9 }', 'program.hx', errors);
+        assertEqualsString('[24:24:expected semicolon]', errors.errors);
     }
 }
