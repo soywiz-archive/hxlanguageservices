@@ -18,6 +18,8 @@ enum Node {
     NObject(items:Array<ZNode>);
     NBlock(items:Array<ZNode>);
     NFor(iteratorName:ZNode, iteratorExpr:ZNode, body:ZNode);
+    NWhile(cond:ZNode, body:ZNode);
+    NDoWhile(body:ZNode, cond:ZNode);
 
     NPackage(fqName:ZNode);
     NImport(fqName:ZNode);

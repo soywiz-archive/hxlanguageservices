@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.Node;
 import haxe.languageservices.node.Position;
 class Grammar<TNode> {
     private function term(z:Dynamic, ?conv: Dynamic -> Dynamic):Term {
@@ -34,6 +35,14 @@ class Grammar<TNode> {
     private function skipNonGrammar(str:Reader) {
     }
 
+    public function parseStringNode(t:Term, str:String, file:String, ?errors:HaxeErrors):NNode<TNode> {
+        var result = parseString(t, str, file, errors);
+        return switch (result) {
+            case Result.RUnmatched(_) | Result.RMatched: return null;
+            case Result.RMatchedValue(v): return cast(v);
+        }
+    }
+
     public function parseString(t:Term, str:String, file:String, ?errors:HaxeErrors):Result return parse(t, new Reader(str, file), errors);
 
     public function parse(t:Term, reader:Reader, ?errors:HaxeErrors):Result {
@@ -61,13 +70,22 @@ class Grammar<TNode> {
                 }
             case Term.TAny(items):
                 var maxValidCount = 0;
+                var maxTerm = null;
                 for (item in items) {
                     var r = parse(item, reader, errors);
                     switch (r) {
                         case Result.RUnmatched(validCount):
-                            maxValidCount = Std.int(Math.max(maxValidCount, validCount));
+                            if (validCount > maxValidCount) {
+                                maxTerm = item;
+                                maxValidCount = validCount;
+                            }
                         default: return r;
                     }
+                }
+                if (maxValidCount > 0) {
+                    trace('maxValidCount:' + maxValidCount);
+                    trace('maxTerm:' + maxTerm);
+                    trace('ctx:' + reader.peek(20));
                 }
                 return Result.RUnmatched(maxValidCount);
             case Term.TSeq(items, conv):
@@ -92,15 +110,15 @@ class Grammar<TNode> {
                 while (true) {
                     var resultItem = parse(item, reader, errors);
                     switch (resultItem) {
-                        case Result.RUnmatched(validCount): break;
+                        case Result.RUnmatched(_): break;
                         case Result.RMatched:
                         case Result.RMatchedValue(value): items.push(value);
                     }
                     count++;
                     if (separator != null) {
                         var resultSep = parse(separator, reader, errors);
-                        switch (resultItem) {
-                            case Result.RUnmatched(validCount): break;
+                        switch (resultSep) {
+                            case Result.RUnmatched(_): break;
                             default:
                         }
                     }
@@ -118,6 +136,26 @@ class NNode<T> {
     public var pos:Position;
     public var node:T;
     public function new(pos:Position, node:T) { this.pos = pos; this.node = node; }
+    public function locateIndex(index:Int):NNode<T> {
+        return staticLocateIndex(this, index);
+    }
+    static public function staticLocateIndex<T>(item:Dynamic, index:Int):NNode<T> {
+        if (Std.is(item, NNode)) {
+            var result = staticLocateIndex(cast(item).node, index);
+            if (result != null) return result;
+            return item;
+        }
+        if (Type.getEnum(item) != null) {
+            var params = Type.enumParameters(item);
+            for (param in params) {
+                var result = staticLocateIndex(param, index);
+                if (result != null && result.pos.contains(index)) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
     public function toString() return '$node@$pos';
 }
 
@@ -150,6 +188,10 @@ class Reader {
     
     public function createPos(start:Int, end:Int):Position {
         return new Position(start, end, file);
+    }
+    
+    public function peek(count:Int):String {
+        return str.substr(pos, count);
     }
     
     public function matchLit(lit:String) {

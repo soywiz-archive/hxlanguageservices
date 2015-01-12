@@ -32,15 +32,15 @@ class HaxeCompletion {
         if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
 
         if (scope == null) {
-            scope = new CompletionScope(this, znode.pos);
+            scope = new CompletionScope(this, znode);
             var pos = new Position(0, 0, 'dummy.hx');
             //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
         }
         switch (znode.node) {
             case Node.NFile(decls):
-                for (decl in decls) process(decl, scope.createChild(decl.pos));
+                for (decl in decls) process(decl, scope.createChild(decl));
             case Node.NBlock(items):
-                for (item in items) process(item, scope.createChild(item.pos));
+                for (item in items) process(item, scope.createChild(item));
             case Node.NList(items):
                 for (item in items) process(item, scope);
             case Node.NVar(name, type, value):
@@ -94,15 +94,15 @@ class CompletionEntry {
 class CompletionScope {
     static private var lastUid = 0;
     public var uid:Int = lastUid++;
-    public var pos:Position;
+    public var node:ZNode;
     private var completion:HaxeCompletion;
     private var types:HaxeTypes;
     private var parent:CompletionScope;
     private var children = new Array<CompletionScope>();
     private var locals:Scope<String, CompletionEntry>;
 
-    public function new(completion:HaxeCompletion, pos:Position, ?parent:CompletionScope) {
-        this.pos = pos;
+    public function new(completion:HaxeCompletion, node:ZNode, ?parent:CompletionScope) {
+        this.node = node;
         this.completion = completion;
         this.types = completion.types;
         if (parent != null) {
@@ -115,9 +115,24 @@ class CompletionScope {
         }
     }
 
+    public function getIdentifierAt(index:Int):{ pos: Position, name: String } {
+        var znode = getNodeAt(index);
+        if (znode != null) {
+            switch (znode.node) {
+                case Node.NId(v): return { pos : znode.pos, name : v };
+                default:
+            }
+        }
+        return null;
+    }
+    
+    public function getNodeAt(index:Int):ZNode {
+        return locateIndex(index).node.locateIndex(index);
+    }
+
     public function locateIndex(index:Int):CompletionScope {
         for (child in children) {
-            if (child.pos.contains(index)) return child.locateIndex(index);
+            if (child.node.pos.contains(index)) return child.locateIndex(index);
         }
         return this;
     }
@@ -157,6 +172,6 @@ class CompletionScope {
         locals.set(entry.name, entry);
     }
 
-    public function createChild(pos:Position):CompletionScope return new CompletionScope(this.completion, pos, this);
+    public function createChild(node:ZNode):CompletionScope return new CompletionScope(this.completion, node, this);
 }
 

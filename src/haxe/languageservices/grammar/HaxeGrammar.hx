@@ -39,6 +39,10 @@ class HaxeGrammar extends Grammar<Node> {
     private function operator(v:Dynamic):Term {
         return term(v, buildNode2('NOp'));
     }
+    
+    private function optError2(tok:String) {
+        return optError(tok, 'expected $tok');
+    }
 
     public function new() {
         function rlist(v) return Node.NList(v);
@@ -50,18 +54,20 @@ class HaxeGrammar extends Grammar<Node> {
         fqName = list(identifier, '.', function(v) return Node.NIdList(v));
         ints = list(int, ',', function(v) return Node.NConstList(v));
         //packageDesc = TSeq([TLit('package'), fqName, TLit(';')], function(v) return Node.NPackage(v[0]));
-        packageDecl = seq(['package', fqName, ';'], buildNode('NPackage'));
-        importDecl = seq(['import', fqName, ';'], buildNode('NImport'));
-        usingDecl = seq(['using', fqName, ';'], buildNode('NUsing'));
+        packageDecl = seq(['package', fqName, optError2(';')], buildNode('NPackage'));
+        importDecl = seq(['import', fqName, optError2(';')], buildNode('NImport'));
+        usingDecl = seq(['using', fqName, optError2(';')], buildNode('NUsing'));
         expr = createRef();
         //expr.term
         var ifExpr = seq(['if', '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
         var forExpr = seq(['for', '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
-        var breakExpr = seq(['break', ';'], buildNode('NBreak'));
-        var continueExpr = seq(['continue', ';'], buildNode('NContinue'));
-        var returnExpr = seq(['return', opt(expr), ';'], buildNode('NReturn'));
+        var whileExpr = seq(['while', '(', expr, ')', expr], buildNode('NWhile'));
+        var doWhileExpr = seq(['do', expr, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
+        var breakExpr = seq(['break', optError2(';')], buildNode('NBreak'));
+        var continueExpr = seq(['continue', optError2(';')], buildNode('NContinue'));
+        var returnExpr = seq(['return', opt(expr), optError2(';')], buildNode('NReturn'));
         var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
-        var parenExpr = seqi(['(', expr, ')']);
+        var parenExpr = seqi(['(', expr, optError2(')')]);
         var constant = any([ int, identifier ]);
         var type = createRef();
 
@@ -109,6 +115,8 @@ class HaxeGrammar extends Grammar<Node> {
             varDecl,
             ifExpr,
             forExpr,
+            whileExpr,
+            doWhileExpr,
             breakExpr,
             continueExpr,
             returnExpr,

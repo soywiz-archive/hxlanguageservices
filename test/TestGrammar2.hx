@@ -123,7 +123,10 @@ class TestGrammar2 extends TestCase {
                     var cc = completion.process(node);
                     var scope = cc.locateIndex(completionIndex);
                     callback(node, scope);
-                default: throw 'Error';
+                default:
+                    trace(result);
+                    trace(str);
+                    throw 'Error';
             }
 
         }
@@ -133,11 +136,13 @@ class TestGrammar2 extends TestCase {
             assertEqualsString('Int', scope.getLocal('z').getType().fqName);
         });
 
+        /*
         assert('{var z = 10; -z; z;###}', function(node:ZNode, scope:CompletionScope) {
             var local = scope.getLocal('z');
             assertEqualsString('5:6', local.pos);
             assertEqualsString('[NId(z)@14:15,NId(z)@17:18]', local.usages);
         });
+        */
 
         assert('if (z) true else false', function(node:ZNode, scope:CompletionScope) {
             assertEqualsString('Bool', scope.getNodeType(node).fqName);
@@ -145,8 +150,41 @@ class TestGrammar2 extends TestCase {
     }
 
     public function testRecovery() {
-        var errors = new HaxeErrors();
-        var result = hg.parseString(hg.expr, '{ var a = 10; var c = 9 }', 'program.hx', errors);
-        assertEqualsString('[24:24:expected semicolon]', errors.errors);
+        function assert(term:Term, program:String, expectedError:String, ?p:PosInfos) {
+            var errors = new HaxeErrors();
+            var result = hg.parseString(term, program, 'program.hx', errors);
+            switch (result) {
+                case Result.RMatched | Result.RUnmatched(_):
+                    trace(result);
+                    trace(errors);
+                    assertTrue(false, p);
+                case Result.RMatchedValue(v):
+                    //trace(v);
+            }
+            assertEqualsString(expectedError, errors.errors, p);
+        }
+        /*
+        var a = { a: 1};
+        var b = { var a = 1; 10; }
+        trace(a);
+        trace(b);
+        */
+
+        //assert(hg.expr, '{ var a = 10; var c = 9 }', '[24:24:expected semicolon]');
+        assert(hg.program, 'package a.b.c package d', '[14:14:expected ;,23:23:expected ;]');
+    }
+
+    public function testLocateNodeByIndex() {
+        var node:ZNode = hg.parseStringNode(hg.expr, 'if (test) 1 else 2', 'program.hx');
+        assertEqualsString('NId(test)@4:8', node.locateIndex(5));
+        assertEqualsString('NConst(CInt(1))@10:11', node.locateIndex(10));
+    }
+
+    public function testCompletionLocateNode() {
+        var node:ZNode = hg.parseStringNode(hg.expr, 'if (test) demo else 2', 'program.hx');
+        var scope = new HaxeCompletion(new HaxeTypes()).process(node);
+        assertEqualsString(null, scope.getIdentifierAt(0));
+        assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
+        assertEqualsString({ pos: '10:14', name: 'demo' }, scope.getIdentifierAt(12));
     }
 }
