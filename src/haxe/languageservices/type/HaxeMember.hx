@@ -1,10 +1,12 @@
-package haxe.languageservices.grammar.type;
-import haxe.languageservices.grammar.HaxeGrammar.Node;
+package haxe.languageservices.type;
+
+import haxe.languageservices.node.ZNode;
+
 class HaxeMember {
     public var name(default, null):String;
     public var modifiers = new HaxeModifiers();
-    public var typeNode:Node;
-    public var valueNode:Node;
+    public var typeNode:ZNode;
+    public var valueNode:ZNode;
     public var typeResolver:HaxeTypeResolver;
     
     public function new(name:String) {

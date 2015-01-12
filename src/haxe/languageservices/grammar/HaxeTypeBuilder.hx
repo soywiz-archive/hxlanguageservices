@@ -1,12 +1,14 @@
 package haxe.languageservices.grammar;
-import haxe.languageservices.grammar.type.HaxeMember.FieldHaxeMember;
-import haxe.languageservices.grammar.type.HaxeType.ClassHaxeType;
-import haxe.languageservices.grammar.type.HaxeTypes;
+import haxe.languageservices.type.HaxeMember;
+import haxe.languageservices.type.HaxeType;
+import haxe.languageservices.type.HaxeMember.FieldHaxeMember;
+import haxe.languageservices.type.HaxeType.ClassHaxeType;
+import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.grammar.Grammar.Result;
 import haxe.languageservices.grammar.Position;
-import haxe.languageservices.grammar.HaxeGrammar.ZNode;
-import haxe.languageservices.grammar.HaxeGrammar.Node;
+import haxe.languageservices.node.ZNode;
+import haxe.languageservices.node.Node;
 
 class HaxeTypeBuilder {
     public var errors = new Array<ParserError>();

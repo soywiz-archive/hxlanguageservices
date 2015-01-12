@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar.type;
+package haxe.languageservices.type;
 
 interface HaxeTypeResolver {
     function resolve():HaxeType;

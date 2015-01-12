@@ -1,10 +1,11 @@
-package haxe.languageservices.grammar.type;
+package haxe.languageservices.type;
 
-import haxe.languageservices.grammar.type.HaxePackage;
 class HaxeType {
     public var packag:HaxePackage;
     public var name:String;
     public var fqName:String;
+    
+    public var typeParameters = new Array<HaxeTypeParameter>();
     public var members = new Array<HaxeMember>();
     public var membersByName = new Map<String, HaxeMember>();
 
@@ -23,10 +24,13 @@ class HaxeType {
 }
 
 class ClassHaxeType extends HaxeType {
+    public var extending:HaxeType;
+    public var implementing = new Array<HaxeType>();
 }
 
 class EnumHaxeType extends HaxeType {
 }
 
 class TypedefHaxeType extends HaxeType {
+    public var destType:HaxeType;
 }

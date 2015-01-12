@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar.type;
+package haxe.languageservices.type;
 
 class HaxeTypes {
     public var rootPackage = new HaxePackage('');

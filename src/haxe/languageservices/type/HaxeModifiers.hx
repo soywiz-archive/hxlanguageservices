@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar.type;
+package haxe.languageservices.type;
 
 class HaxeModifiers {
     public var isPublic:Bool;
