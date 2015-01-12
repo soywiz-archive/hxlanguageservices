@@ -1,4 +1,5 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.type.HaxeMember.FieldHaxeMember;
@@ -50,12 +51,7 @@ class HaxeTypeBuilder {
         return parts;
     }
     
-    private function getId(znode:ZNode):String {
-        switch (znode.node) {
-            case Node.NId(v): return v;
-            default: throw 'Invalid id';
-        }
-    }
+    private function getId(znode:ZNode):String return NodeTools.getId(znode);
 
     public function process(znode:ZNode) {
         switch (znode.node) {

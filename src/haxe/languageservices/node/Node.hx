@@ -1,5 +1,7 @@
 package haxe.languageservices.node;
 
+import haxe.languageservices.grammar.Grammar.NNode;
+
 enum Node {
     NId(value:String);
     NOp(value:String);

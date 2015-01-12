@@ -1,4 +1,6 @@
 package ;
+import haxe.languageservices.type.HaxeTypes;
+import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.Json;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
@@ -7,6 +9,9 @@ import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar;
 import haxe.languageservices.grammar.Grammar.Reader;
 import haxe.unit.TestCase;
+
+using StringTools;
+
 class TestGrammar2 extends TestCase {
     var hg = new HaxeGrammar();
 
@@ -98,5 +103,26 @@ class TestGrammar2 extends TestCase {
                 assertEqualsString('[]', tc.errors);
             }
         );
+    }
+
+    public function testAutocompletion() {
+        var types = new HaxeTypes();
+        var str = '{var z = 10;###}';
+        var completionIndex = str.indexOf('###');
+        str = str.replace('###', '');
+        var result = hg.parseString(hg.expr, str);
+        var completion = new HaxeCompletion(types);
+        switch (result) {
+            case Result.RMatchedValue(value):
+                var cc = completion.process(cast(value));
+                var scope = cc.locateIndex(completionIndex);
+                //var locals = scope.getLocals();
+                //trace(locals);
+                //trace(locals[0].getType().fqName);
+                //trace(scope.getLocal('m').getType().fqName);
+                assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
+                assertEqualsString('Int', scope.getLocal('z').getType().fqName);
+            default: throw 'Error';
+        }
     }
 }

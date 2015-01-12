@@ -1,5 +1,6 @@
 package haxe.languageservices.parser;
 
+import haxe.languageservices.util.Scope;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.parser.TypeContext;
 import haxe.languageservices.parser.TypeContext.TypeClass;
@@ -87,44 +88,6 @@ class CompletionList {
 }
 
 typedef CompletionEntry = { name:String, type:CompletionType };
-
-class Scope<TKey : String, TValue> {
-    public var parent:Scope<TKey, TValue>;
-    private var map:Map<String, TValue>;
-
-    public function new(?parent:Scope<TKey, TValue>) {
-        this.parent = parent;
-        this.map = new Map<String, TValue>();
-    }
-
-    public function exists(key:TKey):Bool {
-        if (map.exists(key)) return true;
-        if (parent != null) return parent.exists(key);
-        return false;
-    }
-
-    public function get(key:TKey):TValue {
-        if (map.exists(key)) return map.get(key);
-        if (parent != null) return parent.get(key);
-//throw new Error2('Can\'t find "$key"');
-        return null;
-    }
-
-    public function set(key:TKey, value:TValue) return map.set(key, value);
-
-    public function keys(?out:Array<String>):Array<String> {
-        if (out == null) out = [];
-        for (key in map.keys()) {
-            if (out.indexOf(key) < 0) out.push(key);
-        }
-        if (parent != null) parent.keys(out);
-        return out;
-    }
-
-    public function toString() {
-        return 'Scope(${[for (key in map.keys()) key]}, $parent)';
-    }
-}
 
 class CompletionScope {
     public var start:Int;
