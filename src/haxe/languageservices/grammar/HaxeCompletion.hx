@@ -37,14 +37,11 @@ class HaxeCompletion {
             //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
         }
         switch (znode.node) {
-            case Node.NFile(decls):
-                for (decl in decls) process(decl, scope.createChild(decl));
-            case Node.NBlock(items):
-                for (item in items) process(item, scope.createChild(item));
-            case Node.NList(items):
-                for (item in items) process(item, scope);
+            case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
+            case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
             case Node.NVar(name, type, value):
                 scope.addLocal(new CompletionEntry(scope, name.pos, value, NodeTools.getId(name)));
+                process(value, scope);
             case Node.NId(value):
                 switch (value) {
                     case 'true', 'false', 'null':
@@ -62,6 +59,11 @@ class HaxeCompletion {
                 process(code, scope);
                 process(trueExpr, scope);
                 process(falseExpr, scope);
+            case Node.NFor(iteratorName, iteratorExpr, body):
+                process(iteratorExpr, scope);
+                var forScope = scope.createChild(body);
+                forScope.addLocal(new CompletionEntry(scope, iteratorName.pos, iteratorExpr, NodeTools.getId(iteratorName)));
+                process(body, forScope);
             case Node.NConst(_):
             default:
                 throw 'Unhandled ${znode}';
@@ -162,6 +164,12 @@ class CompletionScope {
 
     public function getLocals():Array<CompletionEntry> {
         return locals.values();
+    }
+
+    public function getLocalAt(index:Int):CompletionEntry {
+        var id = getIdentifierAt(index);
+        if (id == null) return null;
+        return locals.get(id.name);
     }
 
     public function getLocal(name:String):CompletionEntry {

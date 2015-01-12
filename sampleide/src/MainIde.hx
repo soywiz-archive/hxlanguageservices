@@ -132,23 +132,23 @@ class MainIde {
 
     private function updateLive() {
         var annotations = new Array<Ace.Annotation>();
-        function addError(e:Error) {
+        function addError(e:CompError) {
             trace(e);
-            var pos1 = editor.session.doc.indexToPosition(e.pmin, 0);
+            var pos1 = editor.session.doc.indexToPosition(e.pos.min, 0);
             annotations.push({
             row: pos1.row,
             column: pos1.column,
-            text: e.toString(),
+            text: e.text,
             type: 'error'
             });
         }
 
         try {
             services.updateHaxeFile('live.hx');
-            for (error in services.getErrors('live.hx').errors) {
+            for (error in services.getErrors('live.hx')) {
                 addError(error);
             }
-        } catch (e:Error) {
+        } catch (e:CompError) {
             addError(e);
         } catch (e:Dynamic) {
             trace(e);
