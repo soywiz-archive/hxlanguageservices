@@ -54,8 +54,8 @@ class HaxeGrammar extends Grammar<Node> {
 
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         var identifier = Term.TReg('identifier', ~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
-        fqName = list(identifier, '.', 1, function(v) return Node.NIdList(v));
-        ints = list(int, ',', 1, function(v) return Node.NConstList(v));
+        fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
+        ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));
         packageDecl = seq(['package', sure(), fqName, ';'], buildNode('NPackage'));
         importDecl = seq(['import', sure(), fqName, ';'], buildNode('NImport'));
         usingDecl = seq(['using', sure(), fqName, ';'], buildNode('NUsing'));
@@ -74,12 +74,12 @@ class HaxeGrammar extends Grammar<Node> {
         var constant = any([ int, identifier ]);
         var type = createRef();
         var typeParamItem = type;
-        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, rlist), '>'], buildNode2('NTypeParams'));
+        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
 
         var optType = opt(seq([':', sure(), type], identity));
 
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
-        var typeNameList = list(typeName, ',', 0, rlist);
+        var typeNameList = list(typeName, ',', 0, false, rlist);
         
         setRef(type, any([
             identifier,
@@ -89,8 +89,8 @@ class HaxeGrammar extends Grammar<Node> {
         var varDecl = seq(['var', sure(), identifier, optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
         var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
-        var arrayExpr = seq(['[', list(expr, ',', 0, rlist), ']'], buildNode2('NArray'));
-        var objectExpr = seq(['{', list(objectItem, ',', 0, rlist), '}'], buildNode2('NObject'));
+        var arrayExpr = seq(['[', list(expr, ',', 0, true, rlist), ']'], buildNode2('NArray'));
+        var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
         var binaryOp = any(['+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
@@ -99,7 +99,7 @@ class HaxeGrammar extends Grammar<Node> {
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
         //var binaryExpr = seq([primaryExpr, binaryOp, expr], identity);
     
-        var exprCommaList = list(expr, ',', 1, rlist);
+        var exprCommaList = list(expr, ',', 1, false, rlist);
 
         var arrayAccess = seq(['[', expr, ']'], buildNode('NAccess'));
         var fieldAccess = seq(['.', identifier], buildNode('NAccess'));

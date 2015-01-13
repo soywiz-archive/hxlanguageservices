@@ -80,6 +80,7 @@ class HaxeTypeBuilder {
                                 error(item.pos, 'type $typeName already exists');
                             }
                             var type:ClassHaxeType = packag.accessTypeCreate(typeName, item.pos, ClassHaxeType);
+                            builtTypes.push(type);
                             if (ZNode.isValid(extendsImplementsList)) {
                                 switch (extendsImplementsList.node) {
                                     case Node.NList(items):
@@ -104,13 +105,12 @@ class HaxeTypeBuilder {
                             //trace(extendsImplementsList);
                             type.node = item;
                             processClass(type, decls);
-                            builtTypes.push(type);
                         case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                             var typeName = getId(name);
                             if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
                             var type:InterfaceHaxeType = packag.accessTypeCreate(typeName, item.pos, InterfaceHaxeType);
-                            processClass(type, decls);
                             builtTypes.push(type);
+                            processClass(type, decls);
                         case Node.NTypedef(name):
                             var typeName = getId(name);
                             if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');

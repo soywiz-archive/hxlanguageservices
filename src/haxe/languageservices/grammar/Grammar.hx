@@ -35,7 +35,7 @@ class Grammar<TNode> {
     private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term));
     private function opt(v:Dynamic):Term return Term.TOpt(term(v), null);
     private function optError(v:Dynamic, message:String):Term return Term.TOpt(term(v), message);
-    private function list(item:Dynamic, separator:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, true, conv);
+    private function list(item:Dynamic, separator:Dynamic, minCount:Int, allowExtraSeparator:Bool, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, allowExtraSeparator, conv);
     private function list2(item:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, minCount, true, conv);
 
     private function skipNonGrammar(str:Reader) {
@@ -151,10 +151,12 @@ class Grammar<TNode> {
             case Term.TList(item, separator, minCount, allowExtraSeparator, conv):
                 var items = [];
                 var count = 0;
+                var separatorCount = 0;
                 while (true) {
                     var resultItem = _parse(item, reader, errors);
                     switch (resultItem) {
-                        case Result.RUnmatched(_): break;
+                        case Result.RUnmatched(_):
+                            break;
                         case Result.RMatched:
                         case Result.RMatchedValue(value): items.push(value);
                     }
@@ -165,11 +167,22 @@ class Grammar<TNode> {
                             case Result.RUnmatched(_): break;
                             default:
                         }
+                        separatorCount++;
                     }
                 }
-                if (count < minCount) {
+                
+                var unmatched = false;
+                if (count < minCount) unmatched = true;
+                if (!allowExtraSeparator) {
+                    if (separatorCount >= count) {
+                        unmatched = true;
+                    }
+                    //trace(count + ':' + separatorCount);
+                }
+                
+                if (unmatched) {
                     var lastPos = reader.pos;
-                    reader.pos = start;
+                    //reader.pos = start;
                     return Result.RUnmatched(count, lastPos);
                 }
                 return gen(items, conv);
