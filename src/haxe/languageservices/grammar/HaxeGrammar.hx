@@ -162,7 +162,9 @@ class HaxeGrammar extends Grammar<Node> {
     }
 
     private var spaces = ~/^\s+/;
+    //private var comments = ~/^\/\*(.*)\*\//;
     override private function skipNonGrammar(str:Reader) {
+        //str.matchEReg(comments);
         str.matchEReg(spaces);
     }
 }

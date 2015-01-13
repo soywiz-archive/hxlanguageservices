@@ -28,6 +28,10 @@ class HaxeType {
         membersByName.set(member.name, member);
     }
 
+    public function remove() {
+        packag.types.remove(this.name);
+    }
+
     public function canAssign(that:HaxeType):Bool {
         // @TODO
         return true;

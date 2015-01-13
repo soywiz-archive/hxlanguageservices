@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.grammar.Grammar.Result;
 import haxe.languageservices.grammar.HaxeTypeChecker;
@@ -100,12 +101,21 @@ class CompFileContext {
     public var grammarResult:Result;
     public var rootNode:ZNode;
     public var errors:HaxeErrors = new HaxeErrors();
+    public var builtTypes:Array<HaxeType> = [];
     public function new(types:HaxeTypes) { this.types = types; }
+
+    private function removeOldTypes() {
+        for (type in builtTypes) types.getType(type.fqName).remove();
+        builtTypes = [];
+    }
+
     public function setFile(str:String, file:String) {
         this.reader = new Reader(str, file);
         this.term = grammar.program;
     }
+
     public function update():Void {
+        removeOldTypes();
         reader.reset();
         errors.reset();
         grammarResult = grammar.parse(term, reader, errors);
@@ -118,7 +128,7 @@ class CompFileContext {
             case Result.RMatchedValue(value): rootNode = cast(value);
         }
         if (rootNode != null) {
-            var builtTypes = typeBuilder.process(rootNode);
+            builtTypes = typeBuilder.process(rootNode);
             for (type in builtTypes) typeChecker.checkType(type);
             completionScope = completion.process(rootNode);
         }
