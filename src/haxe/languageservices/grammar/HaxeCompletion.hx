@@ -12,11 +12,12 @@ import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.node.ZNode;
 
 class HaxeCompletion {
-    public var errors = new Array<ParserError>();
+    public var errors:HaxeErrors;
     public var types:HaxeTypes;
 
-    public function new(types:HaxeTypes) {
+    public function new(types:HaxeTypes, errors:HaxeErrors) {
         this.types = types;
+        this.errors = errors;
     }
 
     /*
@@ -29,14 +30,16 @@ class HaxeCompletion {
     */
 
     public function process(znode:ZNode, ?scope:CompletionScope):CompletionScope {
-        // @TODO: Ugly hack!
-        if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
-
         if (scope == null) {
             scope = new CompletionScope(this, znode);
             var pos = new Position(0, 0, new Reader('', 'dummy.hx'));
             //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
         }
+
+        if (znode == null || znode.node == null) return scope;
+        // @TODO: Ugly hack!
+        if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
+
         switch (znode.node) {
             case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
             case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
@@ -49,7 +52,7 @@ class HaxeCompletion {
                     default:
                         var local = scope.getLocal(value);
                         if (local == null) {
-                            errors.push(new ParserError(znode.pos, 'Can\'t find local "$value"'));
+                            errors.add(new ParserError(znode.pos, 'Can\'t find local "$value"'));
                         } else {
                             local.usages.push(znode);
                         }
@@ -66,8 +69,20 @@ class HaxeCompletion {
                 forScope.addLocal(new CompletionEntry(scope, iteratorName.pos, iteratorExpr, NodeTools.getId(iteratorName)));
                 process(body, forScope);
             case Node.NConst(_):
+            case Node.NPackage(fqName):
+            case Node.NImport(fqName):
+            case Node.NClass(name, typeParams, extendsImplementsList, decls):
+                process(decls, scope.createChild(decls));
+            case Node.NMember(modifiers, decl):
+                process(decl);
+            case Node.NFunction(name, expr):
+                process(expr);
+            case Node.NReturn(expr):
+                process(expr);
+            //case Node.NPackage()
             default:
-                throw 'Unhandled ${znode}';
+                errors.add(new ParserError(znode.pos, 'Unhandled completion ${znode}'));
+                //throw ;
         }
         return scope;
     }

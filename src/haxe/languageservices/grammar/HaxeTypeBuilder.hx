@@ -12,12 +12,12 @@ import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
 
 class HaxeTypeBuilder {
-    public var errors = new Array<ParserError>();
+    public var errors:HaxeErrors;
     public var types:HaxeTypes;
 
-    public function new(?types:HaxeTypes) {
-        if (types == null) types = new HaxeTypes();
+    public function new(types:HaxeTypes, errors:HaxeErrors) {
         this.types = types;
+        this.errors = errors;
     }
 
     public function processResult(result:Result) {
@@ -29,7 +29,7 @@ class HaxeTypeBuilder {
     }
     
     private function error(pos:Position, text:String) {
-        errors.push(new ParserError(pos, text));
+        errors.add(new ParserError(pos, text));
     }
     
     private function checkPackage(nidList2:ZNode):Array<String> {

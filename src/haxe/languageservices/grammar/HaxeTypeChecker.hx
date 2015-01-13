@@ -5,11 +5,12 @@ import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;
 
 class HaxeTypeChecker {
-    public var errors = new Array<ParserError>();
+    public var errors:HaxeErrors;
     private var types:HaxeTypes;
 
-    public function new(types:HaxeTypes) {
+    public function new(types:HaxeTypes, errors:HaxeErrors) {
         this.types = types;
+        this.errors = errors;
     }
 
     public function checkType(type:HaxeType) {
@@ -27,7 +28,7 @@ class HaxeTypeChecker {
         // Check implementing methods
         for (mem in expectedImplementingMembers) {
             if (!allMembers.exists(mem.name)) {
-                errors.push(new ParserError(type.pos, 'member ${mem.name} not implemented'));
+                errors.add(new ParserError(type.pos, 'member ${mem.name} not implemented'));
             }
             // @TODO: Check compatible signature
         }
@@ -37,7 +38,7 @@ class HaxeTypeChecker {
             var mem:HaxeMember = _mem;
             if (ancestorMembers.exists(mem.name)) {
                 if (!mem.modifiers.isOverride) {
-                    errors.push(new ParserError(mem.pos, 'member ${mem.name} must override'));
+                    errors.add(new ParserError(mem.pos, 'member ${mem.name} must override'));
                 }
             }
         }
@@ -47,7 +48,7 @@ class HaxeTypeChecker {
             var expressionType = getType(member.valueNode);
             if (!expectedType.canAssign(expressionType)) {
             //if (true) {
-                errors.push(new ParserError(member.pos, 'expression cannnot be assigned to explicit type'));
+                errors.add(new ParserError(member.pos, 'expression cannnot be assigned to explicit type'));
             }
         }
     }

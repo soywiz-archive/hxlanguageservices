@@ -11,6 +11,10 @@ class Reader {
         this.pos = 0;
     }
     
+    public function reset() {
+        this.pos = 0;
+    }
+    
     public function eof() {
         return this.pos >= this.str.length;
     }

@@ -1,52 +1,43 @@
 package haxe.languageservices;
 
-import haxe.languageservices.node.Position;
-import haxe.languageservices.parser.Expr.Error;
-import haxe.languageservices.util.Vfs;
-import haxe.languageservices.parser.TypeContext;
-import haxe.languageservices.parser.Completion.CompletionEntry;
-import haxe.languageservices.parser.Completion.CompletionList;
-import haxe.languageservices.parser.Completion.CCompletion;
-import haxe.languageservices.parser.Completion.CompletionType;
+import haxe.languageservices.node.ZNode;
+import haxe.languageservices.grammar.Grammar.Result;
+import haxe.languageservices.grammar.HaxeTypeChecker;
+import haxe.languageservices.grammar.HaxeTypeBuilder;
+import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
-import haxe.languageservices.parser.Errors.ErrorContext;
-import haxe.languageservices.parser.Parser;
+import haxe.languageservices.grammar.HaxeErrors;
+import haxe.languageservices.grammar.HaxeGrammar;
+import haxe.languageservices.node.Reader;
+import haxe.languageservices.type.HaxeTypes;
+import haxe.languageservices.node.Position;
+import haxe.languageservices.util.Vfs;
 
 class HaxeLanguageServices {
     private var vfs:Vfs;
-    private var typeContext = new TypeContext();
-    private var parsers = new Map<String, Parser>();
+    private var types = new HaxeTypes();
+    private var contexts = new Map<String, CompFileContext>();
     public var classPaths = ["."];
 
     public function new(vfs:Vfs) {
         this.vfs = vfs;
     }
     
-    public function updateHaxeScriptFile(path:String):Void {
-        try {
-            var parser = parsers[path] = new Parser(typeContext);
-            var fileContent = vfs.readString(path);
-            parser.setInputString(fileContent);
-            var expr = parser.parseExpressions();
-        } catch (e:Error) {
-            throw new CompError(new CompPosition(e.pmin, e.pmax), '$e');
-        }
-    }
-
     public function updateHaxeFile(path:String):Void {
         try {
-            var parser = parsers[path] = new Parser(typeContext);
+            var context:CompFileContext = contexts[path] = new CompFileContext(types);
             var fileContent = vfs.readString(path);
-            parser.setInputString(fileContent);
-            var expr = parser.parseHaxeFile();
-        } catch (e:Error) {
-            throw new CompError(new CompPosition(e.pmin, e.pmax), '$e');
+            context.setFile(fileContent, path);
+            context.update();
+        } catch (e:Dynamic) {
+            throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
         }
     }
     
     public function getCompletionAt(path:String, offset:Int):CompList {
-        var clist = getParser(path).completionsAt(offset);
-        return new CompList([for (e in clist.items) new CompEntry(e.name, typeConvert(e.type))]);
+        var context = getContext(path);
+        var locals = context.completionScope.locateIndex(offset).getLocals();
+        return new CompList([for (l in locals) new CompEntry(l.name, new CompType('???'))]);
     }
     
     public function getReferencesAt(path:String, offset:Int):Array<CompReference> {
@@ -58,6 +49,7 @@ class HaxeLanguageServices {
     }
     
     public function getCallInfoAt(path:String, offset:Int):CompCall {
+        /*
         return switch (getParser(path).callCompletionAt(offset)) {
             case CCompletion.CallCompletion(baseType, name, args, ret, argIndex, doc):
                 return new CompCall(
@@ -69,22 +61,64 @@ class HaxeLanguageServices {
             default:
                 return null;
         }
+        */
+        return null;
     }
 
     public function getErrors(path:String):Array<CompError> {
-        var parser:Parser = parsers[path];
-        return [for (e in parser.errors.errors) new CompError(new CompPosition(e.pmin, e.pmax), '$e')];
+        var context:CompFileContext = getContext(path);
+        return [for (error in context.errors.errors) new CompError(convertPos(error.pos), error.message)];
     }
 
-    private function getParser(path:String):Parser {
-        var parser:Parser = parsers[path];
-        if (parser == null) throw 'Can\'t find parser for file $path';
-        return parser;
+    private function getContext(path:String):CompFileContext {
+        var context:CompFileContext = contexts[path];
+        if (context == null) throw 'Can\'t find context for file $path';
+        return context;
+    }
+    
+    static private function convertPos(pos:Position):CompPosition {
+        return new CompPosition(pos.min, pos.max);
     }
 
-    static private function typeConvert(type:CompletionType):CompType {
-        return new CompType(CompletionTypeUtils.toString(type));
+    //static private function convertType(type:CompletionType):CompType {
+    //    return new CompType(CompletionTypeUtils.toString(type));
+    //}
+}
+
+class CompFileContext {
+    static private var grammar = new HaxeGrammar();
+    public var reader:Reader;
+    public var types:HaxeTypes;
+    public var typeBuilder:HaxeTypeBuilder;
+    public var typeChecker:HaxeTypeChecker;
+    public var completion:HaxeCompletion;
+    public var completionScope:CompletionScope;
+    public var grammarResult:Result;
+    public var rootNode:ZNode;
+    public var errors:HaxeErrors = new HaxeErrors();
+    public function new(types:HaxeTypes) { this.types = types; }
+    public function setFile(str:String, file:String) {
+        this.reader = new Reader(str, file);
     }
+    public function update():Void {
+        reader.reset();
+        errors.reset();
+        grammarResult = grammar.parse(grammar.program, reader, errors);
+        typeBuilder = new HaxeTypeBuilder(types, errors);
+        typeChecker = new HaxeTypeChecker(types, errors);
+        completion = new HaxeCompletion(types, errors);
+        completionScope = null;
+        switch (grammarResult) {
+            case Result.RUnmatched(_, _) | Result.RMatched: rootNode = null;
+            case Result.RMatchedValue(value): rootNode = cast(value);
+        }
+        if (rootNode != null) {
+            typeBuilder.process(rootNode);
+            //typeChecker.checkType();
+            completionScope = completion.process(rootNode);
+        }
+        //typeBuilder.
+    } 
 }
 
 enum CompReferenceType {
