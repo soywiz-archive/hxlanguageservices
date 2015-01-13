@@ -1,9 +1,17 @@
 package ;
 
+import js.Browser;
 @:native("ace")
 extern class Ace {
     static public function edit(el:String):Editor;
     static public function require(path:String):Dynamic;
+}
+
+class AceTools {
+    static public function createRange(startRow:Int, startColumn:Int, endRow:Int, endColumn:Int):Range {
+        var vv = untyped ace.require("ace/range").Range;
+        return Type.createInstance(vv, [startRow, startColumn, endRow, endColumn]);
+    }
 }
 
 extern class Editor {
@@ -26,7 +34,7 @@ extern class Document {
 typedef Position = { row:Int, column:Int };
 typedef ScreenPosition = { pageX:Int, pageY:Int };
 
-@:native('ace.require("ace/range").Range')
+@:native('')
 extern class Range {
     public function new(startRow:Int, startColumn:Int, endRow:Int, endColumn:Int);
 }
@@ -100,7 +108,8 @@ extern class Session {
     clearBreakpoint(row: number);
     */
     @:overload(function(range:Range, clazz:String, type:Dynamic, inFront:Bool):Void {})
-    public function addMarker(range:Range, clazz:String, type:String, inFront:Bool):Void;
+    public function removeMarker(markerId:Int):Void;
+    public function addMarker(range:Range, clazz:String, type:String, inFront:Bool):Int;
     public function setAnnotations(annotations: Array<Annotation>):Void;
     public function getAnnotations(): Array<Annotation>;
 /*

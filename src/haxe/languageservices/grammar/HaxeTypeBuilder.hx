@@ -1,4 +1,5 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.HaxeModifiers;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
@@ -53,11 +54,12 @@ class HaxeTypeBuilder {
     
     private function getId(znode:ZNode):String return NodeTools.getId(znode);
 
-    public function process(znode:ZNode) {
+    public function process(znode:ZNode, ?builtTypes:Array<HaxeType>):Array<HaxeType> {
+        if (builtTypes == null) builtTypes = [];
+        if (!ZNode.isValid(znode)) return builtTypes;
         switch (znode.node) {
             case Node.NFile(items):
                 var index = 0;
-                var typesCount = 0;
                 var packag = types.rootPackage;
                 for (item in items) {
                     switch (item.node) {
@@ -69,16 +71,58 @@ class HaxeTypeBuilder {
                                 packag = types.rootPackage.access(pathParts.join('.'), true);
                             }
                         case Node.NImport(name):
-                            if (typesCount > 0) error(item.pos, 'import should appear before any type decl');
+                            if (builtTypes.length > 0) error(item.pos, 'import should appear before any type decl');
                         case Node.NClass(name, typeParams, extendsImplementsList, decls):
-                            typesCount++;
                             var type:ClassHaxeType = packag.accessTypeCreate(getId(name), item.pos, ClassHaxeType);
+                            if (ZNode.isValid(extendsImplementsList)) {
+                                switch (extendsImplementsList.node) {
+                                    case Node.NList(items):
+                                        for (item in items) {
+                                            switch (item.node) {
+                                                case Node.NExtends(type2):
+                                                    if (type.extending != null) {
+                                                        error(item.pos, 'multiple inheritance not supported in haxe');
+                                                    }
+                                                    var className2 = type2.pos.text;
+                                                    var t2 = types.getType(className2);
+                                                    if (t2 == null) {
+                                                        error(item.pos, 'type $className2 not defined');
+                                                    } else if (!Std.is(t2, ClassHaxeType)) {
+                                                        error(item.pos, 'type $className2 is not a class');
+                                                    } else {
+                                                        type.extending = cast(t2, ClassHaxeType);
+                                                    }
+                                                case Node.NImplements(type2):
+                                                    var className2 = type2.pos.text;
+                                                    var t2 = types.getType(className2);
+                                                    if (t2 == null) {
+                                                        error(item.pos, 'type $className2 not defined');
+                                                    } else if (!Std.is(t2, InterfaceHaxeType)) {
+                                                        error(item.pos, 'type $className2 is not an interface');
+                                                    } else {
+                                                        type.implementing.push(cast(t2, InterfaceHaxeType));
+                                                    }
+                                                default: throw 'Invalid';
+                                            }
+                                        }
+                                    default: throw 'Invalid';
+                                }
+                            }
+
+                            //trace(extendsImplementsList);
+                            type.node = item;
                             processClass(type, decls);
-                        
+                            builtTypes.push(type);
+                        case Node.NInterface(name, typeParams, extendsImplementsList, decls):
+                            var type:InterfaceHaxeType = packag.accessTypeCreate(getId(name), item.pos, InterfaceHaxeType);
+                            processClass(type, decls);
+                            builtTypes.push(type);
                         case Node.NTypedef(name):
-                            typesCount++;
+                            var type:TypedefHaxeType = packag.accessTypeCreate(getId(name), item.pos, TypedefHaxeType);
+                            builtTypes.push(type);
                         case Node.NEnum(name):
-                            typesCount++;
+                            var type:EnumHaxeType = packag.accessTypeCreate(getId(name), item.pos, EnumHaxeType);
+                            builtTypes.push(type);
                         default:
                             error(item.pos, 'invalid node');
                     }
@@ -87,26 +131,49 @@ class HaxeTypeBuilder {
             default:
                 throw 'Expected haxe file';
         }
+        return builtTypes;
     }
 
-    private function processClass(type:ClassHaxeType, decls:ZNode) {
+    private function processClass(type:HaxeType, decls:ZNode) {
         switch (decls.node) {
             case Node.NList(members):
                 for (member in members) {
                     switch (member.node) {
                         case Node.NMember(modifiers, decl):
-                            switch (decl.node) {
-                                case Node.NVar(vname, vtype, vvalue):
-                                    var field = new FieldHaxeMember(decl.pos, getId(vname));
-                                    type.addMember(field);
-                                default:
-                                    trace(decl.node);
+                            var mods = new HaxeModifiers();
+                            if (ZNode.isValid(modifiers)) {
+                                switch (modifiers.node) {
+                                    case Node.NList(parts):
+                                        for (part in parts) {
+                                            if (ZNode.isValid(part)) {
+                                                switch (part.node) {
+                                                    case Node.NId(z): mods.add(z);
+                                                    default: throw 'Invalid $part';
+                                                }
+                                            }
+                                        }
+                                    default: throw 'Invalid $modifiers';
+                                }
                             }
-                        default: throw 'Invalid';
+                            if (ZNode.isValid(decl)) {
+                                switch (decl.node) {
+                                    case Node.NVar(vname, vtype, vvalue):
+                                        var field = new FieldHaxeMember(member.pos, getId(vname));
+                                        field.modifiers = mods;
+                                        type.addMember(field);
+                                    case Node.NFunction(vname, vexpr):
+                                        var method = new MethodHaxeMember(member.pos, getId(vname));
+                                        method.modifiers = mods;
+                                        type.addMember(method);
+                                    default:
+                                        throw 'Invalid $decl';
+                                }
+                            }
+                        default: throw 'Invalid $member';
                     }
                 }
             default:
-                throw 'Invalid';
+                throw 'Invalid $decls';
         }
     }
 }

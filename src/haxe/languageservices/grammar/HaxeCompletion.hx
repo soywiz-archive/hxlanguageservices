@@ -15,9 +15,9 @@ class HaxeCompletion {
     public var errors:HaxeErrors;
     public var types:HaxeTypes;
 
-    public function new(types:HaxeTypes, errors:HaxeErrors) {
+    public function new(types:HaxeTypes, ?errors:HaxeErrors) {
         this.types = types;
-        this.errors = errors;
+        this.errors = (errors != null) ? errors : new HaxeErrors();
     }
 
     /*
@@ -72,6 +72,8 @@ class HaxeCompletion {
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
             case Node.NClass(name, typeParams, extendsImplementsList, decls):
+                process(decls, scope.createChild(decls));
+            case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                 process(decls, scope.createChild(decls));
             case Node.NMember(modifiers, decl):
                 process(decl);

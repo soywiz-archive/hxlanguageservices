@@ -15,6 +15,7 @@ class HaxeTypeChecker {
 
     public function checkType(type:HaxeType) {
         if (Std.is(type, ClassHaxeType)) {
+            //errors.add(new ParserError(type.pos, 'test'));
             checkClass(cast(type, ClassHaxeType));
         }
     }
@@ -40,8 +41,14 @@ class HaxeTypeChecker {
                 if (!mem.modifiers.isOverride) {
                     errors.add(new ParserError(mem.pos, 'member ${mem.name} must override'));
                 }
+            } else {
+                if (mem.modifiers.isOverride) {
+                    errors.add(new ParserError(mem.pos, 'member ${mem.name} not overriding anything'));
+                }
             }
         }
+
+        // Check overriding invalid
         
         for (member in type.members) {
             var expectedType = getType(member.typeNode);

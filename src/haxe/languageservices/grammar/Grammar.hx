@@ -13,6 +13,7 @@ class Grammar<TNode> {
         if (Std.is(z, TermRef)) return Term.TRef(z);
         return cast(z, Term);
     }
+
     private function _term(z:Dynamic):Term return term(z);
     
     private function createRef():Term return Term.TRef(new TermRef());
@@ -197,6 +198,9 @@ class NNode<T> {
             }
         }
         return null;
+    }
+    static public function isValid<T>(node:NNode<T>):Bool {
+        return node != null && node.node != null;
     }
     public function toString() return '$node@$pos';
 }

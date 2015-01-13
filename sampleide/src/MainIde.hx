@@ -130,17 +130,26 @@ class MainIde {
         }
     }
 
+    private var markerIds = new Array<Int>();
+
     private function updateLive() {
+        for (id in markerIds) editor.session.removeMarker(id);
+
         var annotations = new Array<Ace.Annotation>();
         function addError(e:CompError) {
             trace(e);
-            var pos1 = editor.session.doc.indexToPosition(e.pos.min, 0);
+            var min = e.pos.min;
+            var max = e.pos.max;
+            if (max == min) max++;
+            var pos1 = editor.session.doc.indexToPosition(min, 0);
+            var pos2 = editor.session.doc.indexToPosition(max, 0);
             annotations.push({
             row: pos1.row,
             column: pos1.column,
             text: e.text,
             type: 'error'
             });
+            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1.row, pos1.column, pos2.row, pos2.column), 'mark_error', 'mark_error', false));
         }
 
         try {

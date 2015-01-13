@@ -8,6 +8,7 @@ import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.parser.Completion.CompletionTypeUtils;
 import haxe.languageservices.grammar.HaxeErrors;
 import haxe.languageservices.grammar.HaxeGrammar;
+import haxe.languageservices.grammar.Grammar.Term;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.node.Position;
@@ -30,6 +31,8 @@ class HaxeLanguageServices {
             context.setFile(fileContent, path);
             context.update();
         } catch (e:Dynamic) {
+            js.Browser.window.console.error(e);
+            trace(e);
             throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
         }
     }
@@ -88,6 +91,7 @@ class HaxeLanguageServices {
 class CompFileContext {
     static private var grammar = new HaxeGrammar();
     public var reader:Reader;
+    public var term:Term;
     public var types:HaxeTypes;
     public var typeBuilder:HaxeTypeBuilder;
     public var typeChecker:HaxeTypeChecker;
@@ -99,11 +103,12 @@ class CompFileContext {
     public function new(types:HaxeTypes) { this.types = types; }
     public function setFile(str:String, file:String) {
         this.reader = new Reader(str, file);
+        this.term = grammar.program;
     }
     public function update():Void {
         reader.reset();
         errors.reset();
-        grammarResult = grammar.parse(grammar.program, reader, errors);
+        grammarResult = grammar.parse(term, reader, errors);
         typeBuilder = new HaxeTypeBuilder(types, errors);
         typeChecker = new HaxeTypeChecker(types, errors);
         completion = new HaxeCompletion(types, errors);
@@ -113,8 +118,8 @@ class CompFileContext {
             case Result.RMatchedValue(value): rootNode = cast(value);
         }
         if (rootNode != null) {
-            typeBuilder.process(rootNode);
-            //typeChecker.checkType();
+            var builtTypes = typeBuilder.process(rootNode);
+            for (type in builtTypes) typeChecker.checkType(type);
             completionScope = completion.process(rootNode);
         }
         //typeBuilder.

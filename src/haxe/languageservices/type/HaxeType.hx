@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Position;
 class HaxeType {
     public var pos:Position;
@@ -10,6 +11,8 @@ class HaxeType {
     public var typeParameters = new Array<HaxeTypeParameter>();
     public var members = new Array<HaxeMember>();
     public var membersByName = new Map<String, HaxeMember>();
+
+    public var node:ZNode;
 
     public function new(packag:HaxePackage, pos:Position, name:String) {
         this.packag = packag;

@@ -51,7 +51,7 @@ class TestGrammar2 extends TestCase {
 
     public function testProgram() {
         assertEqualsString(
-            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
+            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([NId(static)@13:19])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([NId(public)@27:33])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
             hg.parse(hg.program, new Reader("class Test { static var a; public var b; }"))
         );
 
@@ -88,7 +88,7 @@ class TestGrammar2 extends TestCase {
 
     public function testSem() {
         function assert(program:String, checker: HaxeTypeBuilder -> Void) {
-            var sem = new HaxeTypeBuilder();
+            var sem = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
             sem.processResult(hg.parseString(hg.program, program, 'program.hx'));
             checker(sem);
         }
@@ -100,12 +100,12 @@ class TestGrammar2 extends TestCase {
                     '8:11:package should be lowercase',
                     '45:54:import should appear before any type decl',
                     '55:65:package should be first element in the file'
-                ], sem.errors);
+                ], sem.errors.errors);
                 assertEqualsString('Type("p.T.Test", [Field(z)])', sem.types.rootPackage.accessType('p.T.Test'));
                 assertEqualsString('[Dynamic,Bool,Int,Float,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
-                var tc = new HaxeTypeChecker(sem.types);
+                var tc = new HaxeTypeChecker(sem.types, new HaxeErrors());
                 tc.checkType(sem.types.rootPackage.accessType('p.T.Test'));
-                assertEqualsString('[]', tc.errors);
+                assertEqualsString('[]', tc.errors.errors);
             }
         );
     }

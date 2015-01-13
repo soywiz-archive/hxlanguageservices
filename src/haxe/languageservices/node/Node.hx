@@ -26,6 +26,7 @@ enum Node {
     NUsing(fqName:ZNode);
 
     NClass(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
+    NInterface(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
     NTypedef(name:ZNode);
     NEnum(name:ZNode);
 
