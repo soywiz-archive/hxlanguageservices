@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeType.ClassHaxeType;
 import haxe.languageservices.node.Position;
@@ -12,10 +13,10 @@ class HaxeTypes {
 
     public function new() {
         rootPackage = new HaxePackage(this, '');
-        typeDynamic = rootPackage.accessTypeCreate('Dynamic', new Position(0, 0, 'Dynamic.hx'), ClassHaxeType);
-        typeBool = rootPackage.accessTypeCreate('Bool', new Position(0, 0, 'Bool.hx'), ClassHaxeType);
-        typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, 'Int.hx'), ClassHaxeType);
-        typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, 'Float.hx'), ClassHaxeType);
+        typeDynamic = rootPackage.accessTypeCreate('Dynamic', new Position(0, 0, new Reader('', 'Dynamic.hx')), ClassHaxeType);
+        typeBool = rootPackage.accessTypeCreate('Bool', new Position(0, 0, new Reader('', 'Bool.hx')), ClassHaxeType);
+        typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
+        typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
     }
 
     public function unify(types:Array<HaxeType>):HaxeType {

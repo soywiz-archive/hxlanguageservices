@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.node.Reader;
 import haxe.languageservices.grammar.HaxeErrors;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeTypes;
@@ -9,7 +10,6 @@ import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar;
-import haxe.languageservices.grammar.Grammar.Reader;
 import haxe.unit.TestCase;
 
 using StringTools;
@@ -172,6 +172,11 @@ class TestGrammar2 extends TestCase {
 
         //assert(hg.expr, '{ var a = 10; var c = 9 }', '[24:24:expected semicolon]');
         assert(hg.program, 'package a.b.c package d', '[14:14:expected ;,23:23:expected ;]');
+        assert(hg.program, 'class Test', '[10:10:expected "{"]');
+        assert(hg.program, 'class Test {', '[12:12:expected "}"]');
+        //trace(hg.parseStringNode(hg.program, 'class Test {', 'file.hx'));
+        assert(hg.program, 'class Test { }', '[]');
+        assert(hg.program, 'class Test extends { public var test; }', '[18:18:expected identifier or "{",28:28:expected "{"]');
     }
 
     public function testLocateNodeByIndex() {
@@ -195,6 +200,7 @@ class TestGrammar2 extends TestCase {
         assertEqualsString(null, scope.getIdentifierAt(0));
         assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
         assertEqualsString({ pos: '11:15', name: 'test' }, scope.getIdentifierAt(12));
+        assertEqualsString('test', scope.getIdentifierAt(12).pos.text);
         assertEqualsString('test@4:8', scope.getLocalAt(5));
         assertEqualsString('test@4:8', scope.getLocalAt(12));
         assertEqualsString('[NId(test)@11:15]', scope.getLocalAt(5).usages);

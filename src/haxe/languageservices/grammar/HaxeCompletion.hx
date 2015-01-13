@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.Reader;
 import haxe.languageservices.grammar.Grammar.NNode;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.type.HaxeType;
@@ -33,7 +34,7 @@ class HaxeCompletion {
 
         if (scope == null) {
             scope = new CompletionScope(this, znode);
-            var pos = new Position(0, 0, 'dummy.hx');
+            var pos = new Position(0, 0, new Reader('', 'dummy.hx'));
             //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
         }
         switch (znode.node) {

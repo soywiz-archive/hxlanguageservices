@@ -1,11 +1,11 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
 import haxe.languageservices.grammar.Grammar;
 import haxe.languageservices.grammar.Grammar.Term;
-import haxe.languageservices.grammar.Grammar.Reader;
 
 class HaxeGrammar extends Grammar<Node> {
     public var ints:Term;
@@ -49,8 +49,8 @@ class HaxeGrammar extends Grammar<Node> {
         //function rlist2(v) return Node.NListDummy(v);
 
 
-        var int = term(~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
-        var identifier = TReg(~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
+        var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
+        var identifier = Term.TReg('identifier', ~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
         fqName = list(identifier, '.', function(v) return Node.NIdList(v));
         ints = list(int, ',', function(v) return Node.NConstList(v));
         //packageDesc = TSeq([TLit('package'), fqName, TLit(';')], function(v) return Node.NPackage(v[0]));
@@ -59,13 +59,13 @@ class HaxeGrammar extends Grammar<Node> {
         usingDecl = seq(['using', fqName, optError2(';')], buildNode('NUsing'));
         expr = createRef();
         //expr.term
-        var ifExpr = seq(['if', '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
-        var forExpr = seq(['for', '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
-        var whileExpr = seq(['while', '(', expr, ')', expr], buildNode('NWhile'));
-        var doWhileExpr = seq(['do', expr, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
-        var breakExpr = seq(['break', optError2(';')], buildNode('NBreak'));
-        var continueExpr = seq(['continue', optError2(';')], buildNode('NContinue'));
-        var returnExpr = seq(['return', opt(expr), optError2(';')], buildNode('NReturn'));
+        var ifExpr = seq(['if', sure(), '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
+        var forExpr = seq(['for', sure(), '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
+        var whileExpr = seq(['while', sure(), '(', expr, ')', expr], buildNode('NWhile'));
+        var doWhileExpr = seq(['do', sure(), expr, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
+        var breakExpr = seq(['break', sure(), optError2(';')], buildNode('NBreak'));
+        var continueExpr = seq(['continue', sure(), optError2(';')], buildNode('NContinue'));
+        var returnExpr = seq(['return', sure(), opt(expr), optError2(';')], buildNode('NReturn'));
         var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
         var parenExpr = seqi(['(', expr, optError2(')')]);
         var constant = any([ int, identifier ]);
@@ -81,7 +81,7 @@ class HaxeGrammar extends Grammar<Node> {
             seq([ '{', typeNameList, '}' ], rlist),
         ]));
         
-        var varDecl = seq(['var', identifier, optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
+        var varDecl = seq(['var', sure(), identifier, optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
         var objectItem = seq([identifier, ':', expr], buildNode('NObjectItem'));
 
         var arrayExpr = seq(['[', list(expr, ',', rlist), ']'], buildNode2('NArray'));
@@ -129,25 +129,25 @@ class HaxeGrammar extends Grammar<Node> {
         var typeParamDecl = seq(['<', list(typeParamItem, ',', rlist), '>'], buildNode2('NTypeParams'));
         
         var memberModifier = any(['static', 'public', 'private']);
-        var functionDecl = seq(['function', identifier, '(', ')', expr], buildNode('NFunction'));
+        var functionDecl = seq(['function', sure(), identifier, '(', ')', expr], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, rlist)), any([varDecl, functionDecl])], buildNode('NMember'));
         
-        var extendsDecl = seq(['extends', type], buildNode('NExtends'));
-        var implementsDecl = seq(['implements', type], buildNode('NImplements'));
+        var extendsDecl = seq(['extends', sure(), type], buildNode('NExtends'));
+        var implementsDecl = seq(['implements', sure(), type], buildNode('NImplements'));
         
         var extendsImplementsList = list2(any([extendsDecl, implementsDecl]), rlist);
         
         var classDecl = seq(
-            ['class', identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, rlist), '}'],
+            ['class', sure(), identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, rlist), '}'],
             buildNode('NClass')
         );
         var typedefDecl = seq(
-            ['typedef', identifier, '=', type],
+            ['typedef', sure(), identifier, '=', type],
             buildNode('NTypedef')
         );
 
         var enumDecl = seq(
-            ['enum', identifier, '{', '}'],
+            ['enum', sure(), identifier, '{', '}'],
             buildNode('NEnum')
         );
 
