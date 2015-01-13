@@ -11,9 +11,6 @@ and providing unified code to debug the haxe compiled code for several languages
 
 These services will allow to create a proper IDE with proper tooling (completion, renaming, organizing imports, debugging, unittests...) easily.
 
-This project is initially based on [hscript](https://github.com/HaxeFoundation/hscript) work
-and modified to get type information and to provide other language services.
-
 Services provided at this point:
 
 ```haxe

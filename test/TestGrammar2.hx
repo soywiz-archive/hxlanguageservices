@@ -44,7 +44,7 @@ class TestGrammar2 extends TestCase {
         );
 
         assertEquals(
-            'RMatchedValue(NBlock([NList([NConst(CInt(1))@1:2,NConst(CInt(2))@4:5])@1:6])@0:7)',
+            'RMatchedValue(NBlock([NList([NList([NConst(CInt(1))@1:2])@1:3,NList([NConst(CInt(2))@4:5])@4:6])@1:6])@0:7)',
             '' + hg.parse(hg.expr, new Reader("{1; 2;}"))
         );
     }
@@ -61,7 +61,7 @@ class TestGrammar2 extends TestCase {
         );
 
         assertEqualsString(
-            'RMatchedValue(NFile([NClass(NId(A)@6:7,null,NList([NExtends(NId(B)@16:17)@8:17,NImplements(NId(C)@29:30)@18:30])@8:31,NList([])@33:33)@0:34])@0:34)',
+            'RMatchedValue(NFile([NClass(NId(A)@6:7,null,NList([NExtends(NIdList([NId(B)@16:17])@16:18,null)@8:18,NImplements(NIdList([NId(C)@29:30])@29:31,null)@18:31])@8:31,NList([])@33:33)@0:34])@0:34)',
             hg.parse(hg.program, new Reader("class A extends B implements C { }"))
         );
     }
@@ -171,12 +171,12 @@ class TestGrammar2 extends TestCase {
         */
 
         //assert(hg.expr, '{ var a = 10; var c = 9 }', '[24:24:expected semicolon]');
-        assert(hg.program, 'package a.b.c package d', '[14:14:expected ;,23:23:expected ;]');
+        assert(hg.program, 'package a.b.c package d', '[14:14:expected ";",23:23:expected ";"]');
         assert(hg.program, 'class Test', '[10:10:expected "{"]');
         assert(hg.program, 'class Test {', '[12:12:expected "}"]');
         //trace(hg.parseStringNode(hg.program, 'class Test {', 'file.hx'));
         assert(hg.program, 'class Test { }', '[]');
-        assert(hg.program, 'class Test extends { public var test; }', '[18:18:expected identifier or "{",28:28:expected "{",28:28:unexpected end of file]');
+        assert(hg.program, 'class Test extends { public var test; }', '[18:18:expected identifier]');
     }
 
     public function testLocateNodeByIndex() {

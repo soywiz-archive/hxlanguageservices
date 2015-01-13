@@ -3,7 +3,6 @@ package;
 import Ace;
 import Ace.Annotation;
 import Ace.Editor;
-import haxe.languageservices.parser.Expr.Error;
 import haxe.languageservices.util.Vfs;
 import haxe.languageservices.util.MemoryVfs;
 import haxe.languageservices.HaxeLanguageServices;

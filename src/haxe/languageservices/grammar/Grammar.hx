@@ -58,6 +58,7 @@ class Grammar<TNode> {
             case Term.TRef(ref): return describe(ref.term);
             case Term.TOpt(item, _): return describe(item);
             case Term.TSeq(items, _): return describe(items[0]);
+            case Term.TList(item, _, _, _, _): return describe(item);
             case Term.TAny(items): return [for (item in items) describe(item)].join(' or ');
             default: return '???';
         }
