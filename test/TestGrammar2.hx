@@ -120,7 +120,7 @@ class TestGrammar2 extends TestCase {
             switch (result) {
                 case Result.RMatchedValue(value):
                     var node:ZNode = cast(value);
-                    var cc = completion.process(node);
+                    var cc = completion.processCompletion(node);
                     var scope = cc.locateIndex(completionIndex);
                     callback(node, scope);
                 default:
@@ -187,7 +187,7 @@ class TestGrammar2 extends TestCase {
 
     public function testCompletionLocateNode() {
         var node:ZNode = hg.parseStringNode(hg.expr, 'if (test) demo else 2', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).process(node);
+        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
         assertEqualsString(null, scope.getIdentifierAt(0));
         assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
         assertEqualsString({ pos: '10:14', name: 'demo' }, scope.getIdentifierAt(12));
@@ -196,7 +196,7 @@ class TestGrammar2 extends TestCase {
 
     public function testCompletionLocateNode2() {
         var node:ZNode = hg.parseStringNode(hg.expr, 'var test = test;', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).process(node);
+        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
         assertEqualsString(null, scope.getIdentifierAt(0));
         assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
         assertEqualsString({ pos: '11:15', name: 'test' }, scope.getIdentifierAt(12));
@@ -208,7 +208,7 @@ class TestGrammar2 extends TestCase {
 
     public function testCompletionLocateNode3() {
         var node:ZNode = hg.parseStringNode(hg.expr, 'for (it in [1,2,3]) var test = it;', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).process(node);
+        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
         assertEqualsString({pos : '5:7', name : 'it'}, scope.getIdentifierAt(6));
         assertEqualsString({pos : '31:33', name : 'it'}, scope.getIdentifierAt(32));
         //assertEqualsString('', scope.getLocalAt(6));

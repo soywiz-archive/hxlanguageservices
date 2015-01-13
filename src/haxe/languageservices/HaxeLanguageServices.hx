@@ -27,12 +27,16 @@ class HaxeLanguageServices {
     
     public function updateHaxeFile(path:String):Void {
         try {
-            var context:CompFileContext = contexts[path] = new CompFileContext(types);
+            var context:CompFileContext;
+            if (!contexts.exists(path)) contexts[path] = new CompFileContext(types);
+            context = contexts[path];
             var fileContent = vfs.readString(path);
             context.setFile(fileContent, path);
             context.update();
         } catch (e:Dynamic) {
+            #if js
             js.Browser.window.console.error(e);
+            #end
             trace(e);
             throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
         }
@@ -49,7 +53,13 @@ class HaxeLanguageServices {
     }
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
-        return null;
+        var context = getContext(path);
+        var id = context.completionScope.getIdentifierAt(offset);
+        if (id == null) return null;
+        return {
+            pos: convertPos(id.pos),
+            name: id.name
+        };
     }
     
     public function getCallInfoAt(path:String, offset:Int):CompCall {
@@ -105,8 +115,13 @@ class CompFileContext {
     public function new(types:HaxeTypes) { this.types = types; }
 
     private function removeOldTypes() {
-        for (type in builtTypes) types.getType(type.fqName).remove();
+        //trace('before:' + types.getAllTypes());
+        for (type in builtTypes) {
+            //trace('remove:' + type);
+            type.remove();
+        }
         builtTypes = [];
+        //trace('after:' + types.getAllTypes());
     }
 
     public function setFile(str:String, file:String) {
@@ -128,9 +143,11 @@ class CompFileContext {
             case Result.RMatchedValue(value): rootNode = cast(value);
         }
         if (rootNode != null) {
-            builtTypes = typeBuilder.process(rootNode);
+            builtTypes = [];
+            typeBuilder.process(rootNode, builtTypes);
+            //trace('builtTypes:' + builtTypes);
             for (type in builtTypes) typeChecker.checkType(type);
-            completionScope = completion.process(rootNode);
+            completionScope = completion.processCompletion(rootNode);
         }
         //typeBuilder.
     } 

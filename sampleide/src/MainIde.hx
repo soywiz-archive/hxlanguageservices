@@ -121,6 +121,8 @@ class MainIde {
                 show = true;
             }
             trace('Autocompletion:' + items);
+            var id = services.getIdAt('live.hx', getCursorIndex());
+            trace('Identifier:' + id);
         } catch (e:Dynamic) {
             trace(e);
         }

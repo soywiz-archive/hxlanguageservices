@@ -29,13 +29,11 @@ class HaxeCompletion {
     }
     */
 
-    public function process(znode:ZNode, ?scope:CompletionScope):CompletionScope {
-        if (scope == null) {
-            scope = new CompletionScope(this, znode);
-            var pos = new Position(0, 0, new Reader('', 'dummy.hx'));
-            //scope.addLocal(new CompletionEntry(scope, pos, Node.NConst({ pos: pos, node: Const.CBool(true) }), 'true'));
-        }
+    public function processCompletion(znode:ZNode):CompletionScope {
+        return process(znode, new CompletionScope(this, znode));
+    }
 
+    private function process(znode:ZNode, scope:CompletionScope):CompletionScope {
         if (znode == null || znode.node == null) return scope;
         // @TODO: Ugly hack!
         if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
@@ -45,6 +43,7 @@ class HaxeCompletion {
             case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
             case Node.NVar(name, type, value):
                 scope.addLocal(new CompletionEntry(scope, name.pos, value, NodeTools.getId(name)));
+                //trace(scope);
                 process(value, scope);
             case Node.NId(value):
                 switch (value) {
@@ -71,16 +70,18 @@ class HaxeCompletion {
             case Node.NConst(_):
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
+            case Node.NUsing(fqName):
             case Node.NClass(name, typeParams, extendsImplementsList, decls):
                 process(decls, scope.createChild(decls));
             case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                 process(decls, scope.createChild(decls));
+            case Node.NEnum(name):
             case Node.NMember(modifiers, decl):
-                process(decl);
+                process(decl, scope);
             case Node.NFunction(name, expr):
-                process(expr);
+                process(expr, scope.createChild(expr));
             case Node.NReturn(expr):
-                process(expr);
+                process(expr, scope);
             //case Node.NPackage()
             default:
                 errors.add(new ParserError(znode.pos, 'Unhandled completion ${znode}'));
@@ -200,4 +201,6 @@ class CompletionScope {
 
     public function createChild(node:ZNode):CompletionScope return new CompletionScope(this.completion, node, this);
 }
+
+
 

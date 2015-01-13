@@ -12,6 +12,8 @@ import haxe.languageservices.node.Position;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
 
+using StringTools;
+
 class HaxeTypeBuilder {
     public var errors:HaxeErrors;
     public var types:HaxeTypes;
@@ -70,38 +72,28 @@ class HaxeTypeBuilder {
                                 var pathParts = checkPackage(name);
                                 packag = types.rootPackage.access(pathParts.join('.'), true);
                             }
-                        case Node.NImport(name):
+                        case Node.NImport(name) | Node.NUsing(name):
                             if (builtTypes.length > 0) error(item.pos, 'import should appear before any type decl');
                         case Node.NClass(name, typeParams, extendsImplementsList, decls):
-                            var type:ClassHaxeType = packag.accessTypeCreate(getId(name), item.pos, ClassHaxeType);
+                            var typeName = getId(name);
+                            if (packag.accessType(typeName) != null) {
+                                error(item.pos, 'type $typeName already exists');
+                            }
+                            var type:ClassHaxeType = packag.accessTypeCreate(typeName, item.pos, ClassHaxeType);
                             if (ZNode.isValid(extendsImplementsList)) {
                                 switch (extendsImplementsList.node) {
                                     case Node.NList(items):
                                         for (item in items) {
                                             switch (item.node) {
-                                                case Node.NExtends(type2):
+                                                case Node.NExtends(type2, params2):
                                                     if (type.extending != null) {
                                                         error(item.pos, 'multiple inheritance not supported in haxe');
                                                     }
-                                                    var className2 = type2.pos.text;
-                                                    var t2 = types.getType(className2);
-                                                    if (t2 == null) {
-                                                        error(item.pos, 'type $className2 not defined');
-                                                    } else if (!Std.is(t2, ClassHaxeType)) {
-                                                        error(item.pos, 'type $className2 is not a class');
-                                                    } else {
-                                                        type.extending = cast(t2, ClassHaxeType);
-                                                    }
-                                                case Node.NImplements(type2):
-                                                    var className2 = type2.pos.text;
-                                                    var t2 = types.getType(className2);
-                                                    if (t2 == null) {
-                                                        error(item.pos, 'type $className2 not defined');
-                                                    } else if (!Std.is(t2, InterfaceHaxeType)) {
-                                                        error(item.pos, 'type $className2 is not an interface');
-                                                    } else {
-                                                        type.implementing.push(cast(t2, InterfaceHaxeType));
-                                                    }
+                                                    var className2 = type2.pos.text.trim();
+                                                    type.extending = new TypeReference(types, className2, item);
+                                                case Node.NImplements(type2, params2):
+                                                    var className2 = type2.pos.text.trim();
+                                                    type.implementing.push(new TypeReference(types, className2, item));
                                                 default: throw 'Invalid';
                                             }
                                         }
@@ -114,14 +106,20 @@ class HaxeTypeBuilder {
                             processClass(type, decls);
                             builtTypes.push(type);
                         case Node.NInterface(name, typeParams, extendsImplementsList, decls):
-                            var type:InterfaceHaxeType = packag.accessTypeCreate(getId(name), item.pos, InterfaceHaxeType);
+                            var typeName = getId(name);
+                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            var type:InterfaceHaxeType = packag.accessTypeCreate(typeName, item.pos, InterfaceHaxeType);
                             processClass(type, decls);
                             builtTypes.push(type);
                         case Node.NTypedef(name):
-                            var type:TypedefHaxeType = packag.accessTypeCreate(getId(name), item.pos, TypedefHaxeType);
+                            var typeName = getId(name);
+                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            var type:TypedefHaxeType = packag.accessTypeCreate(typeName, item.pos, TypedefHaxeType);
                             builtTypes.push(type);
                         case Node.NEnum(name):
-                            var type:EnumHaxeType = packag.accessTypeCreate(getId(name), item.pos, EnumHaxeType);
+                            var typeName = getId(name);
+                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            var type:EnumHaxeType = packag.accessTypeCreate(typeName, item.pos, EnumHaxeType);
                             builtTypes.push(type);
                         default:
                             error(item.pos, 'invalid node');

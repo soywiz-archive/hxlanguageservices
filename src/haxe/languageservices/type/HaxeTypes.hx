@@ -3,6 +3,7 @@ package haxe.languageservices.type;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeType.ClassHaxeType;
+import haxe.languageservices.type.HaxeType.InterfaceHaxeType;
 import haxe.languageservices.node.Position;
 class HaxeTypes {
     public var rootPackage:HaxePackage;
@@ -25,7 +26,15 @@ class HaxeTypes {
         return types[0];
     }
 
-    public function getType(path:String):HaxeType return rootPackage.accessType(path);
+    public function getType(path:String):HaxeType {
+        return rootPackage.accessType(path);
+    }
+    public function getClass(path:String):ClassHaxeType {
+        return Std.instance(getType(path), ClassHaxeType);
+    }
+    public function getInterface(path:String):InterfaceHaxeType {
+        return Std.instance(getType(path), InterfaceHaxeType);
+    }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();
 

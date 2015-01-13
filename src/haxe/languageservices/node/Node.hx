@@ -30,8 +30,8 @@ enum Node {
     NTypedef(name:ZNode);
     NEnum(name:ZNode);
 
-    NExtends(type:ZNode);
-    NImplements(type:ZNode);
+    NExtends(fqName:ZNode, params:ZNode);
+    NImplements(fqName:ZNode, params:ZNode);
 
     NVar(name:ZNode, type:ZNode, value:ZNode);
     NFunction(name:ZNode, expr:ZNode);

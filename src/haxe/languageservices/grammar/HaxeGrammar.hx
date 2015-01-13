@@ -14,6 +14,7 @@ class HaxeGrammar extends Grammar<Node> {
     public var importDecl:Term;
     public var usingDecl:Term;
     public var expr:Term;
+    public var stm:Term;
     public var program:Term;
     
     private function buildNode(name:String): Dynamic -> Dynamic {
@@ -53,29 +54,32 @@ class HaxeGrammar extends Grammar<Node> {
 
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         var identifier = Term.TReg('identifier', ~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
-        fqName = list(identifier, '.', function(v) return Node.NIdList(v));
-        ints = list(int, ',', function(v) return Node.NConstList(v));
-        packageDecl = seq(['package', fqName, optError2(';')], buildNode('NPackage'));
-        importDecl = seq(['import', fqName, optError2(';')], buildNode('NImport'));
-        usingDecl = seq(['using', fqName, optError2(';')], buildNode('NUsing'));
+        fqName = list(identifier, '.', 1, function(v) return Node.NIdList(v));
+        ints = list(int, ',', 1, function(v) return Node.NConstList(v));
+        packageDecl = seq(['package', sure(), fqName, ';'], buildNode('NPackage'));
+        importDecl = seq(['import', sure(), fqName, ';'], buildNode('NImport'));
+        usingDecl = seq(['using', sure(), fqName, ';'], buildNode('NUsing'));
         expr = createRef();
+        stm = createRef();
         //expr.term
-        var ifExpr = seq(['if', sure(), '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
-        var forExpr = seq(['for', sure(), '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
-        var whileExpr = seq(['while', sure(), '(', expr, ')', expr], buildNode('NWhile'));
-        var doWhileExpr = seq(['do', sure(), expr, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
-        var breakExpr = seq(['break', sure(), optError2(';')], buildNode('NBreak'));
-        var continueExpr = seq(['continue', sure(), optError2(';')], buildNode('NContinue'));
-        var returnExpr = seq(['return', sure(), opt(expr), optError2(';')], buildNode('NReturn'));
-        var blockExpr = seq(['{', list(expr, ';', rlist), '}'], buildNode2('NBlock'));
-        var parenExpr = seqi(['(', expr, optError2(')')]);
+        var ifExpr = seq(['if', sure(), '(', expr, ')', stm, opt(seqi(['else', stm]))], buildNode('NIf'));
+        var forExpr = seq(['for', sure(), '(', identifier, 'in', expr, ')', stm], buildNode('NFor'));
+        var whileExpr = seq(['while', sure(), '(', expr, ')', stm], buildNode('NWhile'));
+        var doWhileExpr = seq(['do', sure(), stm, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
+        var breakExpr = seq(['break', sure(), ';'], buildNode('NBreak'));
+        var continueExpr = seq(['continue', sure(), ';'], buildNode('NContinue'));
+        var returnExpr = seq(['return', sure(), opt(expr), ';'], buildNode('NReturn'));
+        var blockExpr = seq(['{', list2(stm, 0, rlist), '}'], buildNode2('NBlock'));
+        var parenExpr = seqi(['(', sure(), expr, ')']);
         var constant = any([ int, identifier ]);
         var type = createRef();
+        var typeParamItem = type;
+        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, rlist), '>'], buildNode2('NTypeParams'));
 
-        var optType = opt(seq([':', type], identity));
+        var optType = opt(seq([':', sure(), type], identity));
 
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
-        var typeNameList = list(typeName, ',', rlist);
+        var typeNameList = list(typeName, ',', 0, rlist);
         
         setRef(type, any([
             identifier,
@@ -83,10 +87,10 @@ class HaxeGrammar extends Grammar<Node> {
         ]));
         
         var varDecl = seq(['var', sure(), identifier, optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
-        var objectItem = seq([identifier, ':', expr], buildNode('NObjectItem'));
+        var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
-        var arrayExpr = seq(['[', list(expr, ',', rlist), ']'], buildNode2('NArray'));
-        var objectExpr = seq(['{', list(objectItem, ',', rlist), '}'], buildNode2('NObject'));
+        var arrayExpr = seq(['[', list(expr, ',', 0, rlist), ']'], buildNode2('NArray'));
+        var objectExpr = seq(['{', list(objectItem, ',', 0, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
         var binaryOp = any(['+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
@@ -95,7 +99,7 @@ class HaxeGrammar extends Grammar<Node> {
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
         //var binaryExpr = seq([primaryExpr, binaryOp, expr], identity);
     
-        var exprCommaList = list(expr, ',', rlist);
+        var exprCommaList = list(expr, ',', 1, rlist);
 
         var arrayAccess = seq(['[', expr, ']'], buildNode('NAccess'));
         var fieldAccess = seq(['.', identifier], buildNode('NAccess'));
@@ -105,9 +109,9 @@ class HaxeGrammar extends Grammar<Node> {
         setRef(primaryExpr, any([
             parenExpr,
             unaryExpr,
-            seq(['new', identifier, callPart], buildNode('NNew')),
+            seq(['new', sure(), identifier, callPart], buildNode('NNew')),
             seq(
-                [constant, list2(any([fieldAccess, arrayAccess, callPart, binaryPart]), rlist)],
+                [constant, list2(any([fieldAccess, arrayAccess, callPart, binaryPart]), 0, rlist)],
                 buildNode('NAccessList')
             ),
         ]));
@@ -125,25 +129,37 @@ class HaxeGrammar extends Grammar<Node> {
             primaryExpr,
             literal,
         ]));
-        
-        var typeParamItem = type;
-        var typeParamDecl = seq(['<', list(typeParamItem, ',', rlist), '>'], buildNode2('NTypeParams'));
-        
+
+        setRef(stm, any([
+            varDecl,
+            ifExpr,
+            forExpr,
+            whileExpr,
+            doWhileExpr,
+            breakExpr,
+            continueExpr,
+            returnExpr,
+            blockExpr,
+            seq([primaryExpr, ';'], rlist),
+            literal,
+        ]));
+
+
         var memberModifier = any([litS('static'), litS('public'), litS('private'), litS('override')]);
         var functionDecl = seq(['function', sure(), identifier, '(', ')', expr], buildNode('NFunction'));
-        var memberDecl = seq([opt(list2(memberModifier, rlist)), any([varDecl, functionDecl])], buildNode('NMember'));
+        var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varDecl, functionDecl])], buildNode('NMember'));
         
-        var extendsDecl = seq(['extends', sure(), type], buildNode('NExtends'));
-        var implementsDecl = seq(['implements', sure(), type], buildNode('NImplements'));
+        var extendsDecl = seq(['extends', sure(), fqName, opt(typeParamDecl)], buildNode('NExtends'));
+        var implementsDecl = seq(['implements', sure(), fqName, opt(typeParamDecl)], buildNode('NImplements'));
         
-        var extendsImplementsList = list2(any([extendsDecl, implementsDecl]), rlist);
+        var extendsImplementsList = list2(any([extendsDecl, implementsDecl]), 0, rlist);
         
         var classDecl = seq(
-            ['class', sure(), identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, rlist), '}'],
+            ['class', sure(), identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, 0, rlist), '}'],
             buildNode('NClass')
         );
         var interfaceDecl = seq(
-            ['interface', sure(), identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, rlist), '}'],
+            ['interface', sure(), identifier, opt(typeParamDecl), opt(extendsImplementsList), '{', list2(memberDecl, 0, rlist), '}'],
             buildNode('NInterface')
         );
         var typedefDecl = seq(
@@ -158,7 +174,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         var typeDecl = any([classDecl, interfaceDecl, typedefDecl, enumDecl]);
 
-        program = list2(any([packageDecl, importDecl, usingDecl, typeDecl]), buildNode2('NFile'));
+        program = list2(any([packageDecl, importDecl, usingDecl, typeDecl]), 0, buildNode2('NFile'));
     }
 
     private var spaces = ~/^\s+/;

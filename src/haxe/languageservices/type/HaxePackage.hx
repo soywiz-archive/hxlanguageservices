@@ -49,6 +49,7 @@ class HaxePackage {
     }
 
     public function access(path:String, create:Bool):HaxePackage {
+        if (path == null) return null;
         return accessParts(path.split('.'), create);
     }
 
@@ -61,6 +62,7 @@ class HaxePackage {
     }
 
     private function _accessType(path:String, create:Bool, pos:Position, type:Class<HaxeType>):HaxeType {
+        if (path == null) return null;
         var parts = path.split('.');
         var typeName = parts.pop();
         var packag = accessParts(parts, create);

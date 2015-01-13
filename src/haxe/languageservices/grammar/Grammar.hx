@@ -35,8 +35,8 @@ class Grammar<TNode> {
     private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term));
     private function opt(v:Dynamic):Term return Term.TOpt(term(v), null);
     private function optError(v:Dynamic, message:String):Term return Term.TOpt(term(v), message);
-    private function list(item:Dynamic, separator:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), conv);
-    private function list2(item:Dynamic, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, conv);
+    private function list(item:Dynamic, separator:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, true, conv);
+    private function list2(item:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, minCount, true, conv);
 
     private function skipNonGrammar(str:Reader) {
     }
@@ -147,7 +147,7 @@ class Grammar<TNode> {
                 }
                 //trace('aaaa');
                 return gen(results, conv);
-            case Term.TList(item, separator, conv):
+            case Term.TList(item, separator, minCount, allowExtraSeparator, conv):
                 var items = [];
                 var count = 0;
                 while (true) {
@@ -165,6 +165,11 @@ class Grammar<TNode> {
                             default:
                         }
                     }
+                }
+                if (count < minCount) {
+                    var lastPos = reader.pos;
+                    reader.pos = start;
+                    return Result.RUnmatched(count, lastPos);
                 }
                 return gen(items, conv);
             default:
@@ -219,7 +224,7 @@ enum Term {
     TSure;
     TSeq(items:Array<Term>, ?conv: Dynamic -> Dynamic);
     TOpt(term:Term, errorMessage:String);
-    TList(item:Term, separator:Term, conv:Dynamic -> Dynamic);
+    TList(item:Term, separator:Term, minCount:Int, allowExtraSeparator:Bool, conv:Dynamic -> Dynamic);
 }
 
 
