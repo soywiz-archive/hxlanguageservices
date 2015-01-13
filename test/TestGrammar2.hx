@@ -176,7 +176,7 @@ class TestGrammar2 extends TestCase {
         assert(hg.program, 'class Test {', '[12:12:expected "}"]');
         //trace(hg.parseStringNode(hg.program, 'class Test {', 'file.hx'));
         assert(hg.program, 'class Test { }', '[]');
-        assert(hg.program, 'class Test extends { public var test; }', '[18:18:expected identifier or "{",28:28:expected "{"]');
+        assert(hg.program, 'class Test extends { public var test; }', '[18:18:expected identifier or "{",28:28:expected "{",28:28:unexpected end of file]');
     }
 
     public function testLocateNodeByIndex() {

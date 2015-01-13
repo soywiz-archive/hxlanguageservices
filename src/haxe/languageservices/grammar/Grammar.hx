@@ -61,9 +61,17 @@ class Grammar<TNode> {
             default: return '???';
         }
     }
-
+    
     public function parse(t:Term, reader:Reader, ?errors:HaxeErrors):Result {
         if (errors == null) errors = new HaxeErrors();
+        var result = _parse(t, reader, errors);
+        if (!reader.eof()) {
+            errors.add(new ParserError(reader.createPos(), 'unexpected end of file'));
+        }
+        return result;
+    }
+
+    private function _parse(t:Term, reader:Reader, errors:HaxeErrors):Result {
         skipNonGrammar(reader);
         var start:Int = reader.pos;
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
@@ -74,9 +82,9 @@ class Grammar<TNode> {
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);
             case Term.TReg(name, reg, conv): return gen(reader.matchEReg(reg), conv);
-            case Term.TRef(ref): return parse(ref.term, reader, errors);
+            case Term.TRef(ref): return _parse(ref.term, reader, errors);
             case Term.TOpt(item, error):
-                switch (parse(item, reader, errors)) {
+                switch (_parse(item, reader, errors)) {
                     case Result.RMatchedValue(v): return Result.RMatchedValue(v);
                     case Result.RUnmatched(_, _):
                         if (error != null) {
@@ -91,7 +99,7 @@ class Grammar<TNode> {
                 var maxValidPos = start;
                 var maxTerm = null;
                 for (item in items) {
-                    var r = parse(item, reader, errors);
+                    var r = _parse(item, reader, errors);
                     switch (r) {
                         case Result.RUnmatched(validCount, lastPos):
                             if (validCount > maxValidCount) {
@@ -119,7 +127,7 @@ class Grammar<TNode> {
                         continue;
                     }
                     var itemIndex = reader.pos;
-                    var r = parse(item, reader, errors);
+                    var r = _parse(item, reader, errors);
                     switch (r) {
                         case Result.RUnmatched(validCount, lastPos):
                             if (sure) {
@@ -142,7 +150,7 @@ class Grammar<TNode> {
                 var items = [];
                 var count = 0;
                 while (true) {
-                    var resultItem = parse(item, reader, errors);
+                    var resultItem = _parse(item, reader, errors);
                     switch (resultItem) {
                         case Result.RUnmatched(_): break;
                         case Result.RMatched:
@@ -150,7 +158,7 @@ class Grammar<TNode> {
                     }
                     count++;
                     if (separator != null) {
-                        var resultSep = parse(separator, reader, errors);
+                        var resultSep = _parse(separator, reader, errors);
                         switch (resultSep) {
                             case Result.RUnmatched(_): break;
                             default:

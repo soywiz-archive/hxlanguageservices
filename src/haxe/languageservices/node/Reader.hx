@@ -1,7 +1,7 @@
 package haxe.languageservices.node;
 
 class Reader {
-    private var str:String;
+    public var str(default, null):String;
     public var file(default, null):String;
     public var pos:Int;
 
@@ -10,8 +10,14 @@ class Reader {
         this.file = file;
         this.pos = 0;
     }
+    
+    public function eof() {
+        return this.pos >= this.str.length;
+    }
 
-    public function createPos(start:Int, end:Int):Position {
+    public function createPos(?start:Int, ?end:Int):Position {
+        if (start == null) start = this.pos;
+        if (end == null) end = this.pos;
         return new Position(start, end, this);
     }
     
