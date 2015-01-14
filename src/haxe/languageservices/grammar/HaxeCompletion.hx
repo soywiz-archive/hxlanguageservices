@@ -1,5 +1,7 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.grammar.Grammar.NNode;
 import haxe.languageservices.node.Const;
@@ -115,7 +117,7 @@ class CompletionUsage {
 }
 
 class CompletionEntryArrayElement extends CompletionEntry {
-    override public function getType():HaxeType {
+    override public function getType():SpecificHaxeType {
         return scope.types.getArrayElement(super.getType());
     }
 }
@@ -136,11 +138,11 @@ class CompletionEntry {
         this.name = name;
     }
 
-    public function getType():HaxeType {
-        var ctype:HaxeType = null;
-        if (type != null) ctype = scope.types.getType(type.pos.text);
+    public function getType():SpecificHaxeType {
+        var ctype:SpecificHaxeType = null;
+        if (type != null) ctype = new SpecificHaxeType(scope.types.getType(type.pos.text));
         if (expr != null) ctype = scope.getNodeType(expr);
-        if (ctype == null) ctype = scope.types.typeDynamic;
+        if (ctype == null) ctype = scope.types.specTypeDynamic;
         return ctype;
     }
 
@@ -193,7 +195,7 @@ class CompletionScope {
         return this;
     }
 
-    public function getNodeType(znode:ZNode):HaxeType {
+    public function getNodeType(znode:ZNode):SpecificHaxeType {
         if (Std.is(znode.node, NNode)) return getNodeType(cast(znode.node));
         switch (znode.node) {
             case Node.NList(values):
@@ -201,25 +203,25 @@ class CompletionScope {
             case Node.NArray(values):
                 var elementType = types.unify([for (value in values) getNodeType(value)]);
                 return types.createArray(elementType);
-            case Node.NConst(Const.CInt(_)): return types.typeInt;
-            case Node.NConst(Const.CFloat(_)): return types.typeFloat;
+            case Node.NConst(Const.CInt(_)): return types.specTypeInt;
+            case Node.NConst(Const.CFloat(_)): return types.specTypeFloat;
             case Node.NIf(code, trueExpr, falseExpr):
                 return types.unify([getNodeType(trueExpr), getNodeType(falseExpr)]);
             case Node.NId(str):
                 switch (str) {
-                    case 'true', 'false': return types.typeBool;
-                    case 'null': return types.typeDynamic;
+                    case 'true', 'false': return types.specTypeBool;
+                    case 'null': return types.specTypeDynamic;
                     default:
                         var local = getLocal(str);
                         if (local != null) return local.getType();
-                        return types.typeDynamic;
+                        return types.specTypeDynamic;
                 }
             default:
                 throw new js.Error('Not implemented getNodeType() $znode');
                 //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));
         }
 
-        return completion.types.typeDynamic;
+        return completion.types.specTypeDynamic;
     }
 
     public function getLocals():Array<CompletionEntry> {

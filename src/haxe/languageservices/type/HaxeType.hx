@@ -44,6 +44,23 @@ class HaxeType {
     }
 }
 
+class SpecificHaxeType {
+    public var type:HaxeType;
+    public var parameters:Array<SpecificHaxeType>;
+    public function new(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
+        if (parameters == null) parameters = [];
+        this.type = type;
+        this.parameters = parameters;
+    }
+    public function toString() {
+        var res = '${type.fqName}';
+        if (parameters.length > 0) {
+            res += '<' + parameters.join(',') + '>';
+        }
+        return res;
+    }
+}
+
 class TypeReference {
     public var types:HaxeTypes;
     public var fqName:String;

@@ -44,7 +44,7 @@ class HaxeLanguageServices {
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getLocals();
-        return new CompList([for (l in locals) new CompEntry(l.name, new CompType(l.getType().fqName))]);
+        return new CompList([for (l in locals) new CompEntry(l.name, new CompType(l.getType().type.fqName))]);
     }
     
     public function getReferencesAt(path:String, offset:Int):Array<CompReference> {

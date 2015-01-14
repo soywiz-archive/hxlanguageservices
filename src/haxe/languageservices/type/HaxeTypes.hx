@@ -1,5 +1,8 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeType.ClassHaxeType;
@@ -13,6 +16,11 @@ class HaxeTypes {
     public var typeFloat(default, null):HaxeType;
     public var typeArray(default, null):HaxeType;
 
+    public var specTypeDynamic(default, null):SpecificHaxeType;
+    public var specTypeBool(default, null):SpecificHaxeType;
+    public var specTypeInt(default, null):SpecificHaxeType;
+    public var specTypeFloat(default, null):SpecificHaxeType;
+
     public function new() {
         rootPackage = new HaxePackage(this, '');
         typeDynamic = rootPackage.accessTypeCreate('Dynamic', new Position(0, 0, new Reader('', 'Dynamic.hx')), ClassHaxeType);
@@ -20,11 +28,15 @@ class HaxeTypes {
         typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
         typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
         typeArray = rootPackage.accessTypeCreate('Array', new Position(0, 0, new Reader('', 'Array.hx')), ClassHaxeType);
+        specTypeDynamic = new SpecificHaxeType(typeDynamic);
+        specTypeBool = new SpecificHaxeType(typeBool);
+        specTypeInt = new SpecificHaxeType(typeInt);
+        specTypeFloat = new SpecificHaxeType(typeFloat);
     }
 
-    public function unify(types:Array<HaxeType>):HaxeType {
+    public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
         // @TODO
-        if (types.length == 0) return typeDynamic;
+        if (types.length == 0) return new SpecificHaxeType(typeDynamic);
         return types[0];
     }
 
@@ -38,14 +50,13 @@ class HaxeTypes {
         return Std.instance(getType(path), InterfaceHaxeType);
     }
     
-    public function createArray(elementType:HaxeType):HaxeType {
-        // @TODO: Generics!
-        return typeArray;
+    public function createArray(elementType:SpecificHaxeType):SpecificHaxeType {
+        return new SpecificHaxeType(typeArray, [elementType]);
     }
     
-    public function getArrayElement(arrayType:HaxeType):HaxeType {
-        // @TODO: Dynamic!
-        return typeDynamic;
+    public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
+        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(typeDynamic);
+        return arrayType.parameters[0];
     }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();

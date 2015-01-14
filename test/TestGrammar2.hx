@@ -133,7 +133,7 @@ class TestGrammar2 extends TestCase {
 
         assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
             assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
-            assertEqualsString('Int', scope.getLocal('z').getType().fqName);
+            assertEqualsString('Int', scope.getLocal('z').getType());
         });
 
         /*
@@ -145,7 +145,7 @@ class TestGrammar2 extends TestCase {
         */
 
         assert('if (z) true else false', function(node:ZNode, scope:CompletionScope) {
-            assertEqualsString('Bool', scope.getNodeType(node).fqName);
+            assertEqualsString('Bool', scope.getNodeType(node));
         });
     }
 
