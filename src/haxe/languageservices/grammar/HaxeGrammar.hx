@@ -98,7 +98,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
-        var binaryOp = any(['+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
+        var binaryOp = any(['=', '+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
         var primaryExpr = createRef();
         
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
@@ -126,7 +126,7 @@ class HaxeGrammar extends Grammar<Node> {
             literal,
         ]));
 
-        setRef(stm, any([
+        setRef(stm, anyRecover([
             varStm,
             ifStm,
             forStm,
@@ -138,7 +138,7 @@ class HaxeGrammar extends Grammar<Node> {
             blockStm,
             switchStm,
             seq([primaryExpr, sure(), ';'], rlist)
-        ]));
+        ], [';', '}']));
 
 
         var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override')]);

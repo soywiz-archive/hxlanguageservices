@@ -33,6 +33,10 @@ class Reader {
         return str.substr(pos, count);
     }
 
+    public function skip(count:Int):Void {
+        pos++;
+    }
+
     public function matchLit(lit:String) {
         if (str.substr(pos, lit.length) != lit) return null;
         pos += lit.length;

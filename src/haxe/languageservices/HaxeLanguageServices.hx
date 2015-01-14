@@ -180,12 +180,14 @@ class CompPosition {
     public var min:Int;
     public var max:Int;
     public function new(min:Int, max:Int) { this.min = min; this.max = max; }
+    public function toString() return '$min:$max';
 }
 
 class CompError {
     public var pos:CompPosition;
     public var text:String;
     public function new(pos:CompPosition, text:String) { this.pos = pos; this.text = text; }
+    public function toString() return '$pos:$text';
 }
 
 class CompArgument {

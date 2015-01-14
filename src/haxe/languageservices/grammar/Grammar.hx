@@ -32,7 +32,8 @@ class Grammar<TNode> {
     private function sure():Term return Term.TSure;
     private function seq(v:Array<Dynamic>, conv: Dynamic -> Dynamic):Term return Term.TSeq(v.map(_term), conv);
     private function seqi(v:Array<Dynamic>):Term return seq(v, function(v) return v[0]);
-    private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term));
+    private function any(v:Array<Dynamic>):Term return Term.TAny(v.map(_term), null);
+    private function anyRecover(v:Array<Dynamic>, recover:Array<Dynamic>):Term return Term.TAny(v.map(_term), recover.map(_term));
     private function opt(v:Dynamic):Term return Term.TOpt(term(v), null);
     private function optError(v:Dynamic, message:String):Term return Term.TOpt(term(v), message);
     private function list(item:Dynamic, separator:Dynamic, minCount:Int, allowExtraSeparator:Bool, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, allowExtraSeparator, conv);
@@ -59,7 +60,7 @@ class Grammar<TNode> {
             case Term.TOpt(item, _): return describe(item);
             case Term.TSeq(items, _): return describe(items[0]);
             case Term.TList(item, _, _, _, _): return describe(item);
-            case Term.TAny(items): return [for (item in items) describe(item)].join(' or ');
+            case Term.TAny(items, _): return [for (item in items) describe(item)].join(' or ');
             default: return '???';
         }
     }
@@ -96,7 +97,7 @@ class Grammar<TNode> {
                     default:
                         return Result.RMatchedValue(null);
                 }
-            case Term.TAny(items):
+            case Term.TAny(items, recover):
                 var maxValidCount = 0;
                 var maxValidPos = start;
                 var maxTerm = null;
@@ -112,6 +113,21 @@ class Grammar<TNode> {
                         default: return r;
                     }
                 }
+                /*
+                if (recover != null) {
+                    while (!reader.eof()) {
+                        for (item in recover) {
+                            var r = _parse(item, reader, errors);
+                            switch (r) {
+                                case Result.RMatched | Result.RMatchedValue(_):
+                                    return Result.RUnmatched(maxValidCount, maxValidPos);
+                                default:
+                            }
+                        }
+                        reader.skip(1);
+                    }
+                }
+                */
                 if (maxValidCount > 0) {
                     //trace('maxValidCount:' + maxValidCount);
                     //trace('maxValidPos:' + maxValidPos);
@@ -123,6 +139,7 @@ class Grammar<TNode> {
                 var results = [];
                 var count = 0;
                 var sure = false;
+                var lastItemIndex = reader.pos;
                 for (item in items) {
                     if (Type.enumEq(item, Term.TSure)) {
                         sure = true;
@@ -133,7 +150,7 @@ class Grammar<TNode> {
                     switch (r) {
                         case Result.RUnmatched(validCount, lastPos):
                             if (sure) {
-                                errors.add(new ParserError(reader.createPos(itemIndex, itemIndex), 'expected ' + describe(item)));
+                                errors.add(new ParserError(reader.createPos(lastItemIndex, lastItemIndex), 'expected ' + describe(item)));
                                 reader.pos = lastPos;
                                 break;
                             } else {
@@ -143,7 +160,9 @@ class Grammar<TNode> {
                         case Result.RMatched:
                         case Result.RMatchedValue(v):
                             results.push(v);
+                            if (v != null) lastItemIndex = v.pos.max;
                     }
+                    
                     count++;
                 }
                 //trace('aaaa');
@@ -244,7 +263,7 @@ enum Term {
     TLit(lit:String, ?conv:Dynamic -> Dynamic);
     TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic);
     TRef(ref:TermRef);
-    TAny(items:Array<Term>);
+    TAny(items:Array<Term>, recover:Array<Term>);
     TSure;
     TSeq(items:Array<Term>, ?conv: Dynamic -> Dynamic);
     TOpt(term:Term, errorMessage:String);

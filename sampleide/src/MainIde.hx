@@ -45,8 +45,7 @@ class MainIde {
         editor.session.setValue(vfs.readString('live.hx'));
         editor.session.selection.moveCursorFileEnd();
         editor.session.selection.on('changeCursor', function(e) {
-            updateAutocompletion();
-            updateLive();
+            updateIde();
             return null;
         });
         editor.session.on('change', function(e) {
@@ -54,23 +53,8 @@ class MainIde {
             return null;
         });
 
-        /*
-        trace(langTools);
-
-        langTools.addCompleter({
-            getCompletions: function(editor, session, pos, prefix, callback) {
-                //if (prefix.length === 0) { callback(null, []); return }
-                //$.getJSON(jsonUrl, function(wordList) {
-                //    callback(null, wordList.map(function(ea)  {
-                //        return {name: ea.word, value: ea.word, meta: "optional text"}
-                //    }));
-                //})
-                callback(null, []);
-            }
-        });
-        */
-
-        updateContentLive();
+        updateFile();
+        
     }
     
     private var updateTimeout:Int = -1;
@@ -82,18 +66,12 @@ class MainIde {
         }
         updateTimeout = Browser.window.setTimeout(function() {
             updateTimeout = -1;
-            updateContentLive();
-            updateAutocompletion();
-            updateLive();
+            vfs.set('live.hx', editor.session.getValue());
+            setProgram();
+            updateFile();
         }, 100);
     }
-    
-    private function updateContentLive() {
-        vfs.set('live.hx', editor.session.getValue());
-        setProgram();
-        updateLive();
-    }
-    
+
     private function getCursorIndex():Int {
         var cursor = editor.session.selection.getCursor();
         return editor.session.doc.positionToIndex(cursor, 0);
@@ -101,7 +79,24 @@ class MainIde {
     
     private var references:Array<CompReference> = [];
     
-    private function updateAutocompletion() {
+
+    private var markerIds = new Array<Int>();
+    private var errors = new Array<CompError>();
+    
+    private function updateFile() {
+        errors = [];
+        try {
+            services.updateHaxeFile('live.hx');
+            errors = services.getErrors('live.hx');
+        } catch (e:CompError) {
+            errors.push(e);
+        } catch (e:Dynamic) {
+            trace(e);
+        }
+        updateIde();
+    }
+    
+    private function updateIde() {
         var cursorIndex = getCursorIndex();
         var cursor = editor.session.selection.getCursor();
         var index = editor.session.doc.positionToIndex(cursor, 0);
@@ -135,26 +130,22 @@ class MainIde {
                     references.push({ pos : id.pos, type: CompReferenceType.Read });
                 }
 
-                //trace(references);
+//trace(references);
             }
-            //trace('Identifier:' + id);
+//trace('Identifier:' + id);
         } catch (e:Dynamic) {
             trace(e);
         }
         if (show) {
-            //autocompletionElement.style.visibility = 'visible';
-            //autocompletionElement.style.opacity = '0.5';
+//autocompletionElement.style.visibility = 'visible';
+//autocompletionElement.style.opacity = '0.5';
         }
-    }
 
-    private var markerIds = new Array<Int>();
-
-    private function updateLive() {
         for (id in markerIds) editor.session.removeMarker(id);
 
         var annotations = new Array<Ace.Annotation>();
         function addError(e:CompError) {
-            trace(e);
+            //trace(e);
             var min = e.pos.min;
             var max = e.pos.max;
             if (max == min) max++;
@@ -182,16 +173,9 @@ class MainIde {
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), str, str, false));
 
         }
-
-        try {
-            services.updateHaxeFile('live.hx');
-            for (error in services.getErrors('live.hx')) {
-                addError(error);
-            }
-        } catch (e:CompError) {
-            addError(e);
-        } catch (e:Dynamic) {
-            trace(e);
+        
+        for (error in errors) {
+            addError(error);
         }
 
         editor.session.setAnnotations(annotations);
