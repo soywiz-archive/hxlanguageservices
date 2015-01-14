@@ -6,6 +6,12 @@ class Test {
 		r.add(new TestProject());
 		r.add(new TestLanguageServices());
 		r.add(new TestGrammar2());
-		r.run();
+		var result = r.run();
+		var code = result ? 0 : -1;
+		#if js
+		untyped process.exit(code);
+		#else
+		Sys.exit(code);
+		#end
 	}
 }

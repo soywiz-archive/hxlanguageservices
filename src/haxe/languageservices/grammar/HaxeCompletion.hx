@@ -147,12 +147,24 @@ class CompletionEntry {
     public function getType():SpecificHaxeType {
         var ctype:SpecificHaxeType = null;
         if (type != null) ctype = new SpecificHaxeType(scope.types.getType(type.pos.text));
-        if (expr != null) ctype = scope.getNodeType(expr);
+        if (expr != null) ctype = scope.getNodeType(expr).type;
         if (ctype == null) ctype = scope.types.specTypeDynamic;
         return ctype;
     }
 
     public function toString() return '$name@$pos';
+}
+
+class ExpressionResult {
+    public var type:SpecificHaxeType;
+    public var hasValue:Bool;
+    public var value:Dynamic;
+
+    public function new(type:SpecificHaxeType, hasValue:Bool, value:Dynamic) {
+        this.type = type;
+        this.hasValue = hasValue;
+        this.value = value;
+    }
 }
 
 class CompletionScope {
@@ -201,33 +213,34 @@ class CompletionScope {
         return this;
     }
 
-    public function getNodeType(znode:ZNode):SpecificHaxeType {
+    public function getNodeType(znode:ZNode):ExpressionResult {
         if (Std.is(znode.node, NNode)) return getNodeType(cast(znode.node));
         switch (znode.node) {
             case Node.NList(values):
-                return types.unify([for (value in values) getNodeType(value)]);
+                return new ExpressionResult(types.unify([for (value in values) getNodeType(value).type]), false, null);
             case Node.NArray(values):
-                var elementType = types.unify([for (value in values) getNodeType(value)]);
-                return types.createArray(elementType);
-            case Node.NConst(Const.CInt(_)): return types.specTypeInt;
-            case Node.NConst(Const.CFloat(_)): return types.specTypeFloat;
+                var elementType = types.unify([for (value in values) getNodeType(value).type]);
+                return new ExpressionResult(types.createArray(elementType), false, null);
+            case Node.NConst(Const.CInt(value)): return new ExpressionResult(types.specTypeInt, true, value);
+            case Node.NConst(Const.CFloat(value)): return new ExpressionResult(types.specTypeFloat, true, value);
             case Node.NIf(code, trueExpr, falseExpr):
-                return types.unify([getNodeType(trueExpr), getNodeType(falseExpr)]);
+                return new ExpressionResult(types.unify([getNodeType(trueExpr).type, getNodeType(falseExpr).type]), false, null);
             case Node.NId(str):
                 switch (str) {
-                    case 'true', 'false': return types.specTypeBool;
-                    case 'null': return types.specTypeDynamic;
+                    case 'true': return new ExpressionResult(types.specTypeBool, true, true);
+                    case 'false': return new ExpressionResult(types.specTypeBool, true, false);
+                    case 'null': return new ExpressionResult(types.specTypeDynamic, true, null);
                     default:
                         var local = getLocal(str);
-                        if (local != null) return local.getType();
-                        return types.specTypeDynamic;
+                        if (local != null) return new ExpressionResult(local.getType(), false, null);
+                        return new ExpressionResult(types.specTypeDynamic, false, null);
                 }
             default:
                 throw new js.Error('Not implemented getNodeType() $znode');
                 //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));
         }
 
-        return completion.types.specTypeDynamic;
+        return new ExpressionResult(types.specTypeDynamic, false, null);
     }
 
     public function getLocals():Array<CompletionEntry> {
