@@ -44,11 +44,16 @@ class HaxeLanguageServices {
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getLocals();
-        return new CompList([for (l in locals) new CompEntry(l.name, new CompType('???'))]);
+        return new CompList([for (l in locals) new CompEntry(l.name, new CompType(l.getType().fqName))]);
     }
     
     public function getReferencesAt(path:String, offset:Int):Array<CompReference> {
-        return null;
+        var context = getContext(path);
+        var id = getIdAt(path, offset);
+        if (id == null) return null;
+        var entry = context.completionScope.locateIndex(offset).getLocal(id.name);
+        if (entry == null) return null;
+        return [for (usage in entry.usages) { pos : convertPos(usage.node.pos), type: convUsageType(usage.type) }];
     }
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
@@ -87,6 +92,14 @@ class HaxeLanguageServices {
         var context:CompFileContext = contexts[path];
         if (context == null) throw 'Can\'t find context for file $path';
         return context;
+    }
+    
+    static private function convUsageType(type:CompletionUsageType):CompReferenceType {
+        switch (type) {
+            case CompletionUsageType.Declaration: return CompReferenceType.Declaration;
+            case CompletionUsageType.Read: return CompReferenceType.Read;
+            case CompletionUsageType.Write: return CompReferenceType.Update;
+        }
     }
     
     static private function convertPos(pos:Position):CompPosition {

@@ -42,7 +42,9 @@ class HaxeCompletion {
             case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
             case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
             case Node.NVar(name, type, value):
-                scope.addLocal(new CompletionEntry(scope, name.pos, value, NodeTools.getId(name)));
+                var local = new CompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
+                scope.addLocal(local);
+                local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
                 //trace(scope);
                 process(value, scope);
             case Node.NId(value):
@@ -53,7 +55,7 @@ class HaxeCompletion {
                         if (local == null) {
                             errors.add(new ParserError(znode.pos, 'Can\'t find local "$value"'));
                         } else {
-                            local.usages.push(znode);
+                            local.usages.push(new CompletionUsage(znode, CompletionUsageType.Read));
                         }
                 }
             case Node.NUnary(op, value):
@@ -63,10 +65,13 @@ class HaxeCompletion {
                 process(trueExpr, scope);
                 process(falseExpr, scope);
             case Node.NFor(iteratorName, iteratorExpr, body):
-                process(iteratorExpr, scope);
-                var forScope = scope.createChild(body);
-                forScope.addLocal(new CompletionEntry(scope, iteratorName.pos, iteratorExpr, NodeTools.getId(iteratorName)));
-                process(body, forScope);
+                var fullForScope = scope.createChild(znode);
+                var forScope = fullForScope.createChild(body);
+                process(iteratorExpr, fullForScope);
+                var local = new CompletionEntryArrayElement(fullForScope, iteratorName.pos, null, iteratorExpr, NodeTools.getId(iteratorName));
+                local.usages.push(new CompletionUsage(iteratorName, CompletionUsageType.Declaration));
+                fullForScope.addLocal(local);
+                process(body, fullForScope);
             case Node.NConst(_):
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
@@ -91,22 +96,52 @@ class HaxeCompletion {
     }
 }
 
+enum CompletionUsageType {
+    Declaration;
+    Write;
+    Read;
+}
+
+class CompletionUsage {
+    public var node:ZNode;
+    public var type:CompletionUsageType;
+
+    public function new(node:ZNode, type:CompletionUsageType) {
+        this.node = node;
+        this.type = type;
+    }
+
+    public function toString() return '$node:$type';
+}
+
+class CompletionEntryArrayElement extends CompletionEntry {
+    override public function getType():HaxeType {
+        return scope.types.getArrayElement(super.getType());
+    }
+}
+
 class CompletionEntry {
     public var scope:CompletionScope;
     public var pos:Position;
     public var name:String;
+    public var type:ZNode;
     public var expr:ZNode;
-    public var usages = new Array<ZNode>();
+    public var usages = new Array<CompletionUsage>();
 
-    public function new(scope:CompletionScope, pos:Position, expr:ZNode, name:String) {
+    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String) {
         this.scope = scope;
         this.pos = pos;
+        this.type = type;
         this.expr = expr;
         this.name = name;
     }
 
     public function getType():HaxeType {
-        return scope.getNodeType(expr);
+        var ctype:HaxeType = null;
+        if (type != null) ctype = scope.types.getType(type.pos.text);
+        if (expr != null) ctype = scope.getNodeType(expr);
+        if (ctype == null) ctype = scope.types.typeDynamic;
+        return ctype;
     }
 
     public function toString() return '$name@$pos';
@@ -117,7 +152,7 @@ class CompletionScope {
     public var uid:Int = lastUid++;
     public var node:ZNode;
     private var completion:HaxeCompletion;
-    private var types:HaxeTypes;
+    public var types:HaxeTypes;
     private var parent:CompletionScope;
     private var children = new Array<CompletionScope>();
     private var locals:Scope<String, CompletionEntry>;
@@ -137,7 +172,7 @@ class CompletionScope {
     }
 
     public function getIdentifierAt(index:Int):{ pos: Position, name: String } {
-        var znode = getNodeAt(index);
+        var znode = node.locateIndex(index);
         if (znode != null) {
             switch (znode.node) {
                 case Node.NId(v): return { pos : znode.pos, name : v };
@@ -161,6 +196,11 @@ class CompletionScope {
     public function getNodeType(znode:ZNode):HaxeType {
         if (Std.is(znode.node, NNode)) return getNodeType(cast(znode.node));
         switch (znode.node) {
+            case Node.NList(values):
+                return types.unify([for (value in values) getNodeType(value)]);
+            case Node.NArray(values):
+                var elementType = types.unify([for (value in values) getNodeType(value)]);
+                return types.createArray(elementType);
             case Node.NConst(Const.CInt(_)): return types.typeInt;
             case Node.NConst(Const.CFloat(_)): return types.typeFloat;
             case Node.NIf(code, trueExpr, falseExpr):
@@ -175,7 +215,8 @@ class CompletionScope {
                         return types.typeDynamic;
                 }
             default:
-                throw 'Not implemented (I): ${znode}';
+                throw new js.Error('Not implemented getNodeType() $znode');
+                //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));
         }
 
         return completion.types.typeDynamic;

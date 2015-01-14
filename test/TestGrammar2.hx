@@ -51,7 +51,7 @@ class TestGrammar2 extends TestCase {
 
     public function testProgram() {
         assertEqualsString(
-            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([NId(static)@13:19])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([NId(public)@27:33])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
+            'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([NKeyword(static)@13:19])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([NKeyword(public)@27:33])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
             hg.parse(hg.program, new Reader("class Test { static var a; public var b; }"))
         );
 
@@ -102,7 +102,7 @@ class TestGrammar2 extends TestCase {
                     '55:65:package should be first element in the file'
                 ], sem.errors.errors);
                 assertEqualsString('Type("p.T.Test", [Field(z)])', sem.types.rootPackage.accessType('p.T.Test'));
-                assertEqualsString('[Dynamic,Bool,Int,Float,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
+                assertEqualsString('[Dynamic,Bool,Int,Float,Array,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
                 var tc = new HaxeTypeChecker(sem.types, new HaxeErrors());
                 tc.checkType(sem.types.rootPackage.accessType('p.T.Test'));
                 assertEqualsString('[]', tc.errors.errors);
@@ -203,7 +203,7 @@ class TestGrammar2 extends TestCase {
         assertEqualsString('test', scope.getIdentifierAt(12).pos.text);
         assertEqualsString('test@4:8', scope.getLocalAt(5));
         assertEqualsString('test@4:8', scope.getLocalAt(12));
-        assertEqualsString('[NId(test)@11:15]', scope.getLocalAt(5).usages);
+        assertEqualsString('[NId(test)@4:8:Declaration,NId(test)@11:15:Read]', scope.getLocalAt(5).usages);
     }
 
     public function testCompletionLocateNode3() {

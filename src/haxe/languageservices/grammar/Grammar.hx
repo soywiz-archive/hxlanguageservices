@@ -207,6 +207,16 @@ class NNode<T> {
             if (result != null) return result;
             return item;
         }
+        if (Std.is(item, Array)) {
+            //throw 'IS ARRAY!';
+            var array = Std.instance(item, Array);
+            for (item in array) {
+                var result = staticLocateIndex(item, index);
+                if (result != null && result.pos.contains(index)) {
+                    return result;
+                }
+            }
+        }
         if (Type.getEnum(item) != null) {
             var params = Type.enumParameters(item);
             for (param in params) {

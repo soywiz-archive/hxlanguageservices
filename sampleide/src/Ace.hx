@@ -8,9 +8,12 @@ extern class Ace {
 }
 
 class AceTools {
-    static public function createRange(startRow:Int, startColumn:Int, endRow:Int, endColumn:Int):Range {
+    static private function _createRange(startRow:Int, startColumn:Int, endRow:Int, endColumn:Int):Range {
         var vv = untyped ace.require("ace/range").Range;
         return Type.createInstance(vv, [startRow, startColumn, endRow, endColumn]);
+    }
+    static public function createRange(start:Position, end:Position):Range {
+        return _createRange(start.row, start.column, end.row, end.column);
     }
 }
 

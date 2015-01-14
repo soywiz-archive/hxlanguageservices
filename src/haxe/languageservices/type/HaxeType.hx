@@ -26,7 +26,10 @@ class HaxeType {
     
     public function toString() return 'Type("$fqName", $members)';
     
-    public function addMember(member:HaxeMember) {
+    public function existsMember(name:String):Bool return membersByName.exists(name);
+    public function getMember(name:String):HaxeMember return membersByName[name];
+    
+    public function addMember(member:HaxeMember):Void {
         members.push(member);
         membersByName.set(member.name, member);
     }

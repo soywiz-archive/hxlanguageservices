@@ -11,6 +11,7 @@ class HaxeTypes {
     public var typeBool(default, null):HaxeType;
     public var typeInt(default, null):HaxeType;
     public var typeFloat(default, null):HaxeType;
+    public var typeArray(default, null):HaxeType;
 
     public function new() {
         rootPackage = new HaxePackage(this, '');
@@ -18,6 +19,7 @@ class HaxeTypes {
         typeBool = rootPackage.accessTypeCreate('Bool', new Position(0, 0, new Reader('', 'Bool.hx')), ClassHaxeType);
         typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
         typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
+        typeArray = rootPackage.accessTypeCreate('Array', new Position(0, 0, new Reader('', 'Array.hx')), ClassHaxeType);
     }
 
     public function unify(types:Array<HaxeType>):HaxeType {
@@ -34,6 +36,16 @@ class HaxeTypes {
     }
     public function getInterface(path:String):InterfaceHaxeType {
         return Std.instance(getType(path), InterfaceHaxeType);
+    }
+    
+    public function createArray(elementType:HaxeType):HaxeType {
+        // @TODO: Generics!
+        return typeArray;
+    }
+    
+    public function getArrayElement(arrayType:HaxeType):HaxeType {
+        // @TODO: Dynamic!
+        return typeDynamic;
     }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();

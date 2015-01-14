@@ -145,7 +145,7 @@ class HaxeTypeBuilder {
                                         for (part in parts) {
                                             if (ZNode.isValid(part)) {
                                                 switch (part.node) {
-                                                    case Node.NId(z): mods.add(z);
+                                                    case Node.NKeyword(z): mods.add(z);
                                                     default: throw 'Invalid $part';
                                                 }
                                             }
@@ -158,10 +158,16 @@ class HaxeTypeBuilder {
                                     case Node.NVar(vname, vtype, vvalue):
                                         var field = new FieldHaxeMember(member.pos, getId(vname));
                                         field.modifiers = mods;
+                                        if (type.existsMember(field.name)) {
+                                            error(vname.pos, 'redefined member ${field.name}');
+                                        }
                                         type.addMember(field);
                                     case Node.NFunction(vname, vexpr):
                                         var method = new MethodHaxeMember(member.pos, getId(vname));
                                         method.modifiers = mods;
+                                        if (type.existsMember(method.name)) {
+                                            error(vname.pos, 'redefined member ${method.name}');
+                                        }
                                         type.addMember(method);
                                     default:
                                         throw 'Invalid $decl';

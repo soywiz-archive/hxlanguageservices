@@ -4,6 +4,7 @@ import haxe.languageservices.grammar.Grammar.NNode;
 
 enum Node {
     NId(value:String);
+    NKeyword(value:String);
     NOp(value:String);
     NConst(value:Dynamic);
     NList(value:Array<ZNode>);

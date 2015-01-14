@@ -45,13 +45,12 @@ class MainIde {
         editor.session.setValue(vfs.readString('live.hx'));
         editor.session.selection.moveCursorFileEnd();
         editor.session.selection.on('changeCursor', function(e) {
-            //updateLive();
             updateAutocompletion();
+            updateLive();
             return null;
         });
         editor.session.on('change', function(e) {
             queueUpdateContentLive();
-            updateAutocompletion();
             return null;
         });
 
@@ -84,6 +83,8 @@ class MainIde {
         updateTimeout = Browser.window.setTimeout(function() {
             updateTimeout = -1;
             updateContentLive();
+            updateAutocompletion();
+            updateLive();
         }, 100);
     }
     
@@ -98,7 +99,10 @@ class MainIde {
         return editor.session.doc.positionToIndex(cursor, 0);
     }
     
+    private var references:Array<CompReference> = [];
+    
     private function updateAutocompletion() {
+        var cursorIndex = getCursorIndex();
         var cursor = editor.session.selection.getCursor();
         var index = editor.session.doc.positionToIndex(cursor, 0);
         var size = editor.renderer.textToScreenCoordinates(cursor.row, cursor.column);
@@ -111,8 +115,9 @@ class MainIde {
         autocompletionElement.innerHTML = '';
 
         var show = false;
+        var file = 'live.hx';
         try {
-            var items = services.getCompletionAt('live.hx', getCursorIndex());
+            var items = services.getCompletionAt(file, cursorIndex);
             for (item in items.items) {
                 var divitem = document.createElement('div');
                 divitem.innerText = item.name;
@@ -120,8 +125,19 @@ class MainIde {
                 show = true;
             }
             trace('Autocompletion:' + items);
-            var id = services.getIdAt('live.hx', getCursorIndex());
-            trace('Identifier:' + id);
+            var id = services.getIdAt(file, cursorIndex);
+            references = [];
+            if (id != null) {
+                var refs = services.getReferencesAt(file, cursorIndex);
+                if (refs != null) {
+                    for (ref in refs) references.push(ref);
+                } else {
+                    references.push({ pos : id.pos, type: CompReferenceType.Read });
+                }
+
+                //trace(references);
+            }
+            //trace('Identifier:' + id);
         } catch (e:Dynamic) {
             trace(e);
         }
@@ -150,7 +166,21 @@ class MainIde {
             text: e.text,
             type: 'error'
             });
-            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1.row, pos1.column, pos2.row, pos2.column), 'mark_error', 'mark_error', false));
+            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', false));
+        }
+        
+        for (reference in references) {
+            var pos1 = editor.session.doc.indexToPosition(reference.pos.min, 0);
+            var pos2 = editor.session.doc.indexToPosition(reference.pos.max, 0);
+            var str = switch (reference.type) {
+                case CompReferenceType.Declaration | CompReferenceType.Update: 'mark_refwrite';
+                case CompReferenceType.Read: 'mark_refread';
+
+            }
+            //trace('$pos1, $pos2');
+            
+            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), str, str, false));
+
         }
 
         try {

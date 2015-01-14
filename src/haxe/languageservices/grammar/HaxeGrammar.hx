@@ -46,6 +46,7 @@ class HaxeGrammar extends Grammar<Node> {
     }
 
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
+    private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
 
     public function new() {
         function rlist(v) return Node.NList(v);
@@ -145,7 +146,7 @@ class HaxeGrammar extends Grammar<Node> {
         ]));
 
 
-        var memberModifier = any([litS('static'), litS('public'), litS('private'), litS('override')]);
+        var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override')]);
         var functionDecl = seq(['function', sure(), identifier, '(', ')', expr], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varDecl, functionDecl])], buildNode('NMember'));
         
