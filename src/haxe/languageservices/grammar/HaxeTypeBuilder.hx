@@ -162,7 +162,7 @@ class HaxeTypeBuilder {
                                             error(vname.pos, 'redefined member ${field.name}');
                                         }
                                         type.addMember(field);
-                                    case Node.NFunction(vname, vexpr):
+                                    case Node.NFunction(vname, vargs, vret, vexpr):
                                         var method = new MethodHaxeMember(member.pos, getId(vname));
                                         method.modifiers = mods;
                                         if (type.existsMember(method.name)) {

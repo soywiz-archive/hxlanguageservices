@@ -1,5 +1,6 @@
 package haxe.languageservices.node;
 
+import haxe.languageservices.node.ZNode;
 import haxe.languageservices.grammar.Grammar.NNode;
 
 enum Node {
@@ -39,7 +40,8 @@ enum Node {
     NImplements(fqName:ZNode, params:ZNode);
 
     NVar(name:ZNode, type:ZNode, value:ZNode);
-    NFunction(name:ZNode, expr:ZNode);
+    NFunctionArg(opt:ZNode, id:ZNode, type:ZNode, value:ZNode);
+    NFunction(name:ZNode, args:ZNode, ret:ZNode, expr:ZNode);
     NContinue();
     NBreak();
     NReturn(?expr:ZNode);

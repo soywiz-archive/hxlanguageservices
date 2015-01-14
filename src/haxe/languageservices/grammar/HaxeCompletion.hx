@@ -91,7 +91,7 @@ class HaxeCompletion {
             case Node.NEnum(name):
             case Node.NMember(modifiers, decl):
                 process(decl, scope);
-            case Node.NFunction(name, expr):
+            case Node.NFunction(name, args, ret, expr):
                 process(expr, scope.createChild(expr));
             case Node.NReturn(expr):
                 process(expr, scope);

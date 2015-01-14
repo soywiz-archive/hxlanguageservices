@@ -86,8 +86,10 @@ class HaxeGrammar extends Grammar<Node> {
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
         var typeNameList = list(typeName, ',', 0, false, rlist);
         
+        var typeBase = seq([identifier, opt(typeParamDecl)], rlist);
+        
         setRef(type, any([
-            identifier,
+            list(typeBase, '->', 1, false),
             seq([ '{', typeNameList, '}' ], rlist),
         ]));
         
@@ -98,7 +100,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
-        var binaryOp = any(['=', '+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
+        var binaryOp = any(['=', '+', '?', ':', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
         var primaryExpr = createRef();
         
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
@@ -141,8 +143,9 @@ class HaxeGrammar extends Grammar<Node> {
         ], [';', '}']));
 
 
-        var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override')]);
-        var functionDecl = seq(['function', sure(), identifier, '(', ')', stm], buildNode('NFunction'));
+        var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override'), litK('inline')]);
+        var argDecl = seq([opt(litK('?')), identifier, optType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
+        var functionDecl = seq(['function', sure(), identifier, '(', list(argDecl, ',', 0, false), ')', optType, stm], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varStm, functionDecl])], buildNode('NMember'));
         
         var extendsDecl = seq(['extends', sure(), fqName, opt(typeParamDecl)], buildNode('NExtends'));

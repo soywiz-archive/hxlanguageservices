@@ -157,7 +157,7 @@ class MainIde {
             text: e.text,
             type: 'error'
             });
-            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', false));
+            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
         }
         
         for (reference in references) {
