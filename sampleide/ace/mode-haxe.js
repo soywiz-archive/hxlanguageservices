@@ -59,7 +59,7 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var HaxeHighlightRules = function() {
 
     var keywords = (
-        "break|case|cast|catch|class|continue|default|else|enum|extends|for|function|if|implements|using|import|in|inline|interface|new|override|package|private|public|return|static|super|switch|this|throw|trace|try|typedef|untyped|var|while|Array|Void|Bool|Int|UInt|Float|Dynamic|String|List|Hash|IntHash|Error|Unknown|Type|Std"
+        "break|case|cast|catch|class|continue|default|else|enum|extends|for|function|if|implements|using|import|in|inline|interface|new|override|package|private|public|return|static|super|switch|this|throw|trace|try|typedef|untyped|var|do|while|Array|Void|Bool|Int|UInt|Float|Dynamic|String|List|Hash|IntHash|Error|Unknown|Type|Std"
     );
 
     var buildinConstants = (

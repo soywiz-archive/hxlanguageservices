@@ -21,6 +21,10 @@ enum Node {
     NFor(iteratorName:ZNode, iteratorExpr:ZNode, body:ZNode);
     NWhile(cond:ZNode, body:ZNode);
     NDoWhile(body:ZNode, cond:ZNode);
+    NSwitch(subject:ZNode, cases:ZNode);
+
+    NCase(item:ZNode);
+    NDefault();
 
     NPackage(fqName:ZNode);
     NImport(fqName:ZNode);

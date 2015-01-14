@@ -74,6 +74,9 @@ class HaxeCompletion {
                 local.usages.push(new CompletionUsage(iteratorName, CompletionUsageType.Declaration));
                 fullForScope.addLocal(local);
                 process(body, fullForScope);
+            case Node.NWhile(cond, body) | Node.NDoWhile(body, cond):
+                process(cond, scope);
+                process(body, scope);
             case Node.NConst(_):
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
@@ -82,6 +85,9 @@ class HaxeCompletion {
                 process(decls, scope.createChild(decls));
             case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                 process(decls, scope.createChild(decls));
+            case Node.NSwitch(subject, cases):
+                process(subject, scope);
+                process(cases, scope);
             case Node.NEnum(name):
             case Node.NMember(modifiers, decl):
                 process(decl, scope);

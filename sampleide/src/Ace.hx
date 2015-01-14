@@ -1,6 +1,8 @@
 package ;
 
 import js.Browser;
+
+// Misses: do and using keywords
 @:native("ace")
 extern class Ace {
     static public function edit(el:String):Editor;
