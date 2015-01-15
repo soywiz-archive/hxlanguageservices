@@ -35,10 +35,12 @@ enum Node {
     NInterface(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
     NTypedef(name:ZNode);
     NEnum(name:ZNode);
+    NAbstract(name:ZNode);
 
     NExtends(fqName:ZNode, params:ZNode);
     NImplements(fqName:ZNode, params:ZNode);
 
+    NWrapper(node:ZNode);
     NVar(name:ZNode, type:ZNode, value:ZNode);
     NFunctionArg(opt:ZNode, id:ZNode, type:ZNode, value:ZNode);
     NFunction(name:ZNode, args:ZNode, ret:ZNode, expr:ZNode);

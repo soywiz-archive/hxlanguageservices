@@ -67,17 +67,20 @@ class HaxeTypeBuilder {
                     switch (item.node) {
                         case Node.NPackage(name):
                             if (index != 0) {
-                                error(item.pos, 'package should be first element in the file');
+                                error(item.pos, 'Package should be first element in the file');
                             } else {
                                 var pathParts = checkPackage(name);
                                 packag = types.rootPackage.access(pathParts.join('.'), true);
                             }
                         case Node.NImport(name) | Node.NUsing(name):
-                            if (builtTypes.length > 0) error(item.pos, 'import should appear before any type decl');
+                            if (builtTypes.length > 0) error(item.pos, 'Import should appear before any type decl');
                         case Node.NClass(name, typeParams, extendsImplementsList, decls):
                             var typeName = getId(name);
+
+                            checkClassName(name.pos, typeName);
+                            
                             if (packag.accessType(typeName) != null) {
-                                error(item.pos, 'type $typeName already exists');
+                                error(item.pos, 'Type name $typeName is already defined in this module');
                             }
                             var type:ClassHaxeType = packag.accessTypeCreate(typeName, item.pos, ClassHaxeType);
                             builtTypes.push(type);
@@ -107,18 +110,23 @@ class HaxeTypeBuilder {
                             processClass(type, decls);
                         case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                             var typeName = getId(name);
-                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                             var type:InterfaceHaxeType = packag.accessTypeCreate(typeName, item.pos, InterfaceHaxeType);
                             builtTypes.push(type);
                             processClass(type, decls);
                         case Node.NTypedef(name):
                             var typeName = getId(name);
-                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                             var type:TypedefHaxeType = packag.accessTypeCreate(typeName, item.pos, TypedefHaxeType);
+                            builtTypes.push(type);
+                        case Node.NAbstract(name):
+                            var typeName = getId(name);
+                            if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
+                            var type:AbstractHaxeType = packag.accessTypeCreate(typeName, item.pos, AbstractHaxeType);
                             builtTypes.push(type);
                         case Node.NEnum(name):
                             var typeName = getId(name);
-                            if (packag.accessType(typeName) != null) error(item.pos, 'type $typeName already exists');
+                            if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                             var type:EnumHaxeType = packag.accessTypeCreate(typeName, item.pos, EnumHaxeType);
                             builtTypes.push(type);
                         default:
@@ -156,6 +164,7 @@ class HaxeTypeBuilder {
                             if (ZNode.isValid(decl)) {
                                 switch (decl.node) {
                                     case Node.NVar(vname, vtype, vvalue):
+                                        checkType(vtype);
                                         var field = new FieldHaxeMember(member.pos, getId(vname));
                                         field.modifiers = mods;
                                         if (type.existsMember(field.name)) {
@@ -163,12 +172,15 @@ class HaxeTypeBuilder {
                                         }
                                         type.addMember(field);
                                     case Node.NFunction(vname, vargs, vret, vexpr):
+                                        checkFunctionDeclArgs(vargs);
+                                        checkType(vret);
                                         var method = new MethodHaxeMember(member.pos, getId(vname));
                                         method.modifiers = mods;
                                         if (type.existsMember(method.name)) {
                                             error(vname.pos, 'redefined member ${method.name}');
                                         }
                                         type.addMember(method);
+                                        processMethodBody(type, method, vexpr);
                                     default:
                                         throw 'Invalid $decl';
                                 }
@@ -178,6 +190,44 @@ class HaxeTypeBuilder {
                 }
             default:
                 throw 'Invalid $decls';
+        }
+    }
+    
+    private function checkFunctionDeclArgs(znode:ZNode):Void {
+        if (!ZNode.isValid(znode)) return;
+        switch (znode.node) {
+            default: throw 'Invalid $znode';
+        }
+    }
+    
+    private function checkType(znode:ZNode):Void {
+        if (!ZNode.isValid(znode)) return;
+        switch (znode.node) {
+            case Node.NId(name):
+                checkClassName(znode.pos, name);
+            case Node.NWrapper(znode): checkType(znode);
+            case Node.NTypeParams(items):
+            case Node.NList(items): for (item in items) checkType(item);
+            default: throw 'Invalid $znode';
+        }
+        //checkClassName(znode.pos, znode.pos.text);
+    }
+    
+    private function checkClassName(pos:Position, typeName:String):Void {
+        if (!StringUtils.isFirstUpper(typeName)) {
+            error(pos, 'Type name should start with an uppercase letter');
+        }
+    }
+
+    private function processMethodBody(type:HaxeType, method:MethodHaxeMember, expr:ZNode) {
+        if (!ZNode.isValid(expr)) return;
+        switch (expr.node) {
+            case Node.NBlock(items) | Node.NList(items): for (item in items) processMethodBody(type, method, item);
+            case Node.NVar(vname, vtype, vvalue):
+                checkType(vtype);
+                processMethodBody(type, method, vvalue);
+            default:
+                //errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
         }
     }
 }

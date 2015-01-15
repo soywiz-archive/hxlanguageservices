@@ -1,22 +1,10 @@
-import haxe.languageservices.util.MemoryVfs;
-import haxe.languageservices.util.FileSystem2;
-import haxe.Json;
+package ;
 import haxe.languageservices.sdk.HaxeLibrary;
 import haxe.languageservices.sdk.HaxeSdk;
-import haxe.languageservices.HaxeLanguageServices;
 import haxe.unit.TestCase;
+import haxe.languageservices.util.FileSystem2;
 
-class TestLanguageServices extends TestCase {
-    /*
-    public function test1() {
-        var services = new HaxeLanguageServices(new MemoryVfs().set('test.hx', 'var z = 1;'));
-
-        services.updateHaxeScriptFile('test.hx');
-        var completions = services.getCompletionAt('test.hx', 10);
-        assertEquals('false:Bool,null:Dynamic,true:Bool,z:Int', completions.toString());
-    }
-    */
-
+class TestHaxeSdk extends TestCase {
     public function testHaxeVersion() {
         var sdk = new HaxeSdk(new FileSystem2(), 'testassets/fakehaxesdk');
         var sdkVersion = sdk.getVersion();

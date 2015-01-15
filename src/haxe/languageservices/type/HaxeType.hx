@@ -118,6 +118,9 @@ class InterfaceHaxeType extends HaxeType {
 class EnumHaxeType extends HaxeType {
 }
 
+class AbstractHaxeType extends HaxeType {
+}
+
 class TypedefHaxeType extends HaxeType {
     public var destType:HaxeType;
 }

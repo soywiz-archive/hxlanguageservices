@@ -4,8 +4,10 @@ class Test {
 	static function main() {
 		var r = new haxe.unit.TestRunner();
 		r.add(new TestProject());
-		r.add(new TestLanguageServices());
-		r.add(new TestGrammar2());
+		r.add(new TestHaxeSdk());
+		r.add(new TestCompletion());
+		r.add(new TestErrorReporting());
+		r.add(new TestGrammar());
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js

@@ -89,6 +89,7 @@ class HaxeCompletion {
                 process(subject, scope);
                 process(cases, scope);
             case Node.NEnum(name):
+            case Node.NAbstract(name):
             case Node.NMember(modifiers, decl):
                 process(decl, scope);
             case Node.NFunction(name, args, ret, expr):
@@ -147,7 +148,7 @@ class CompletionEntry {
     public function getType():SpecificHaxeType {
         var ctype:SpecificHaxeType = null;
         if (type != null) ctype = new SpecificHaxeType(scope.types.getType(type.pos.text));
-        if (expr != null) ctype = scope.getNodeType(expr).type;
+        if (expr != null) ctype = scope.getNodeType(expr);
         if (ctype == null) ctype = scope.types.specTypeDynamic;
         return ctype;
     }
@@ -213,18 +214,22 @@ class CompletionScope {
         return this;
     }
 
-    public function getNodeType(znode:ZNode):ExpressionResult {
-        if (Std.is(znode.node, NNode)) return getNodeType(cast(znode.node));
+    public function getNodeType(znode:ZNode):SpecificHaxeType {
+        return getNodeResult(znode).type;
+    }
+
+    public function getNodeResult(znode:ZNode):ExpressionResult {
+        if (Std.is(znode.node, NNode)) return getNodeResult(cast(znode.node));
         switch (znode.node) {
             case Node.NList(values):
-                return new ExpressionResult(types.unify([for (value in values) getNodeType(value).type]), false, null);
+                return new ExpressionResult(types.unify([for (value in values) getNodeResult(value).type]), false, null);
             case Node.NArray(values):
-                var elementType = types.unify([for (value in values) getNodeType(value).type]);
+                var elementType = types.unify([for (value in values) getNodeResult(value).type]);
                 return new ExpressionResult(types.createArray(elementType), false, null);
             case Node.NConst(Const.CInt(value)): return new ExpressionResult(types.specTypeInt, true, value);
             case Node.NConst(Const.CFloat(value)): return new ExpressionResult(types.specTypeFloat, true, value);
             case Node.NIf(code, trueExpr, falseExpr):
-                return new ExpressionResult(types.unify([getNodeType(trueExpr).type, getNodeType(falseExpr).type]), false, null);
+                return new ExpressionResult(types.unify([getNodeResult(trueExpr).type, getNodeResult(falseExpr).type]), false, null);
             case Node.NId(str):
                 switch (str) {
                     case 'true': return new ExpressionResult(types.specTypeBool, true, true);

@@ -33,10 +33,10 @@ class HaxeLanguageServices {
             context.setFile(fileContent, path);
             context.update();
         } catch (e:Dynamic) {
-            #if js
-            js.Browser.window.console.error(e);
-            #end
-            trace(e);
+            //#if js
+            //js.Browser.window.console.error(e);
+            //#end
+            //trace(e);
             throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
         }
     }

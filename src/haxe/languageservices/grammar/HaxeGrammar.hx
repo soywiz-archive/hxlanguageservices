@@ -81,7 +81,7 @@ class HaxeGrammar extends Grammar<Node> {
         var typeParamItem = type;
         var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
 
-        var optType = opt(seq([':', sure(), type], identity));
+        var optType = opt(seq([':', sure(), type], buildNode('NWrapper')));
 
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
         var typeNameList = list(typeName, ',', 0, false, rlist);
@@ -89,7 +89,7 @@ class HaxeGrammar extends Grammar<Node> {
         var typeBase = seq([identifier, opt(typeParamDecl)], rlist);
         
         setRef(type, any([
-            list(typeBase, '->', 1, false),
+            list(typeBase, '->', 1, false, rlist),
             seq([ '{', typeNameList, '}' ], rlist),
         ]));
         
@@ -145,7 +145,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override'), litK('inline')]);
         var argDecl = seq([opt(litK('?')), identifier, optType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
-        var functionDecl = seq(['function', sure(), identifier, '(', list(argDecl, ',', 0, false), ')', optType, stm], buildNode('NFunction'));
+        var functionDecl = seq(['function', sure(), identifier, '(', opt(list(argDecl, ',', 0, false)), ')', optType, stm], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varStm, functionDecl])], buildNode('NMember'));
         
         var extendsDecl = seq(['extends', sure(), fqName, opt(typeParamDecl)], buildNode('NExtends'));
@@ -171,7 +171,12 @@ class HaxeGrammar extends Grammar<Node> {
             buildNode('NEnum')
         );
 
-        var typeDecl = any([classDecl, interfaceDecl, typedefDecl, enumDecl]);
+        var abstractDecl = seq(
+            ['abstract', sure(), identifier, '{', '}'],
+            buildNode('NAbstract')
+        );
+
+        var typeDecl = any([classDecl, interfaceDecl, typedefDecl, enumDecl, abstractDecl]);
 
         program = list2(any([packageDecl, importDecl, usingDecl, typeDecl]), 0, buildNode2('NFile'));
     }
