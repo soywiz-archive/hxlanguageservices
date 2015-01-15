@@ -12,6 +12,10 @@ class TestErrorReporting extends TestCase {
         assertEquals('' + errors, '' + services.getErrors(live), p);
     }
 
+    private function assertMethodErrors(body:String, errors:Dynamic, ?p:PosInfos) {
+        assertProgramErrors('class A { function a() { $body }}', errors, p);
+    }
+
     public function testSimpleProgramErrors() {
         assertProgramErrors('class T {}', []);
         assertProgramErrors('class T extends z {}', ['8:18:type z not defined']);
@@ -38,6 +42,11 @@ class TestErrorReporting extends TestCase {
         assertProgramErrors('class B { } class A extends B { override function a() { } }', '[32:57:member a not overriding anything]');
         assertProgramErrors('class B { function a() { } } class A extends B { override function a() { } }', '[]');
         assertProgramErrors('class B { function a() { } } class A extends B { function a() { } }', '[49:65:member a must override]');
-        
+    }
+
+    public function testMethodChecks() {
+        assertMethodErrors('var a = 1;', '[]');
+        assertMethodErrors('var a:bool;', '[31:35:Type name should start with an uppercase letter]');
+        //assertMethodErrors('var a:Bool = 1;', '...');
     }
 }

@@ -27,5 +27,8 @@ class TestCompletion extends TestCase {
         assertFuntionBody('for (a in []) a; ###', '');
         assertFuntionBody('var a = 10; { var a = false; ### }', 'a:Bool');
         assertFuntionBody('var a = 10; { var a = false; } ###', 'a:Int');
+        assertFuntionBody('for (a in [1, 2, 3]) ### a;', 'a:Int');
+        assertFuntionBody('for (a in [false, true, false]) ### a;', 'a:Bool');
+        assertFuntionBody('var a = false; for (a in [1, 2, 3]) a; ###', 'a:Bool');
     }
 }
