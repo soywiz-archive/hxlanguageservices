@@ -168,6 +168,8 @@ class ExpressionResult {
     }
 }
 
+typedef CScope = Scope<CompletionEntry>;
+
 class CompletionScope {
     static private var lastUid = 0;
     public var uid:Int = lastUid++;
@@ -176,7 +178,7 @@ class CompletionScope {
     public var types:HaxeTypes;
     private var parent:CompletionScope;
     private var children = new Array<CompletionScope>();
-    private var locals:Scope<String, CompletionEntry>;
+    private var locals:CScope;
 
     public function new(completion:HaxeCompletion, node:ZNode, ?parent:CompletionScope) {
         this.node = node;
@@ -188,7 +190,7 @@ class CompletionScope {
             this.locals = parent.locals.createChild();
         } else {
             this.parent = null;
-            this.locals = new Scope();
+            this.locals = new CScope();
         }
     }
 

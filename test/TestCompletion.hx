@@ -25,7 +25,7 @@ class TestCompletion extends TestCase {
         assertFuntionBody('var a = 10; ###', 'a:Int');
         assertFuntionBody('for (a in []) ### a;', 'a:Dynamic');
         assertFuntionBody('for (a in []) a; ###', '');
-        //assertFuntionBody('var a = 10; { var a = false; ### }', 'a:Bool');
+        assertFuntionBody('var a = 10; { var a = false; ### }', 'a:Bool');
         assertFuntionBody('var a = 10; { var a = false; } ###', 'a:Int');
     }
 }
