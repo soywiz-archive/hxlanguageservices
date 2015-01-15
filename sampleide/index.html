@@ -53,10 +53,36 @@
             background: #fee;
             border-bottom: 1px solid black;
         }
+        #rightOverlayInfo {
+            position:absolute;
+            top:0;
+            right:0;
+            z-index:9999999;
+            width:320px;
+            background:#eee;
+            padding:16px;
+            min-height:120px;
+            height: 100%;
+        }
+        #rightOverlayInfo h3 { margin: 0; padding: 0; }
+        #autocompletionOverlay, #errorsOverlay {
+            font: 14px monospace;
+            white-space: pre;
+        }
+        #errorsOverlay {
+            color: red;
+        }
     </style>
 </head>
 <body>
-
+    <div id="rightOverlayInfo">
+        <h3>Autocompletion:</h3>
+        <div id="autocompletionOverlay">
+        </div>
+        <h3 style="padding-top:16px;">Errors:</h3>
+        <div id="errorsOverlay">
+        </div>
+    </div>
 
     <div id="editorIn"></div>
 

@@ -249,6 +249,7 @@ class CompEntry {
     public var type:CompType;
 
     public function new(name:String, type:CompType) { this.name = name; this.type = type; }
+    public function toString() return '$name:$type';
 }
 
 class CompType {

@@ -97,8 +97,14 @@ class MainIde {
     }
     
     private function updateIde() {
+        var document = Browser.document;
+
         for (id in markerIds) editor.session.removeMarker(id);
         var annotations = new Array<Ace.Annotation>();
+        var errorsOverlay = document.getElementById('errorsOverlay');
+        var autocompletionOverlay = document.getElementById('autocompletionOverlay');
+        errorsOverlay.innerText = '';
+
         function addError(e:CompError) {
             //trace(e);
             var min = e.pos.min;
@@ -112,6 +118,7 @@ class MainIde {
             text: e.text,
             type: 'error'
             });
+            errorsOverlay.innerText += '${e.pos}:${e.text}\n';
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
         }
 
@@ -121,7 +128,6 @@ class MainIde {
         var index = editor.session.doc.positionToIndex(cursor, 0);
         var size = editor.renderer.textToScreenCoordinates(cursor.row, cursor.column);
 
-        var document = Browser.document;
         var autocompletionElement = document.getElementById('autocompletion');
         autocompletionElement.style.visibility = 'hidden';
         autocompletionElement.style.top = (size.pageY + document.body.scrollTop) + 'px';
@@ -138,7 +144,12 @@ class MainIde {
                 autocompletionElement.appendChild(divitem);
                 show = true;
             }
-            trace('Autocompletion:' + items);
+            if (items.items.length == 0) {
+                autocompletionOverlay.innerText = 'no autocompletion info';
+            } else {
+                autocompletionOverlay.innerText = items.items.join('\n');
+            }
+            //trace('Autocompletion:' + items);
             var id = services.getIdAt(file, cursorIndex);
             references = [];
             if (id != null) {
@@ -172,7 +183,6 @@ class MainIde {
             //trace('$pos1, $pos2');
             
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), str, str, false));
-
         }
         
         for (error in errors) {
