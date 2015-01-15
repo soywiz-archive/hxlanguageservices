@@ -44,6 +44,14 @@ class TestErrorReporting extends TestCase {
         assertProgramErrors('class B { function a() { } } class A extends B { function a() { } }', '[49:65:member a must override]');
     }
 
+    public function testComments() {
+        assertProgramErrors('//', []);
+        assertProgramErrors('class //\nTest {}', []);
+        assertProgramErrors('class Test /* a */ {}', []);
+        assertProgramErrors('class Test {} //', []);
+        //assertProgramErrors('class //Test {}', []);
+    }
+
     public function testMethodChecks() {
         assertMethodErrors('var a = 1;', '[]');
         assertMethodErrors('var a:bool;', '[31:35:Type name should start with an uppercase letter]');

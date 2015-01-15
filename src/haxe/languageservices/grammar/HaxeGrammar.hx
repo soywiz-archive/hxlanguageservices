@@ -100,7 +100,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
-        var binaryOp = any(['=', '+', '?', ':', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||']);
+        var binaryOp = any(['...', '<=', '>=', '&&', '||', '==', '!=', '+', '?', ':', '-', '*', '/', '%', '<', '>', '=']);
         var primaryExpr = createRef();
         
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
@@ -182,9 +182,12 @@ class HaxeGrammar extends Grammar<Node> {
     }
 
     private var spaces = ~/^\s+/;
-    //private var comments = ~/^\/\*(.*)\*\//;
+    private var singleLineComments = ~/^\/\/(.*?)(\n|$)/;
     override private function skipNonGrammar(str:Reader) {
-        //str.matchEReg(comments);
+        str.matchEReg(spaces);
+        str.matchStartEnd('/*', '*/');
+        str.matchEReg(spaces);
+        str.matchEReg(singleLineComments);
         str.matchEReg(spaces);
     }
 }

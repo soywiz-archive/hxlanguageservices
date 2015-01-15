@@ -49,4 +49,14 @@ class Reader {
         pos += m.length;
         return m;
     }
+
+    public function matchStartEnd(start:String, end:String) {
+        if (str.substr(pos, start.length) != start) return null;
+        var startIndex = pos;
+        var index = str.indexOf(end, pos);
+        if (index < 0) return null;
+        //trace(index);
+        pos = index + end.length;
+        return slice(startIndex, pos);
+    }
 }
