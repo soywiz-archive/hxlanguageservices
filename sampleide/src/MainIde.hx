@@ -78,7 +78,7 @@ class MainIde {
     }
     
     private var references:Array<CompReference> = [];
-    
+
 
     private var markerIds = new Array<Int>();
     private var errors = new Array<CompError>();
@@ -97,6 +97,25 @@ class MainIde {
     }
     
     private function updateIde() {
+        for (id in markerIds) editor.session.removeMarker(id);
+        var annotations = new Array<Ace.Annotation>();
+        function addError(e:CompError) {
+            //trace(e);
+            var min = e.pos.min;
+            var max = e.pos.max;
+            if (max == min) max++;
+            var pos1 = editor.session.doc.indexToPosition(min, 0);
+            var pos2 = editor.session.doc.indexToPosition(max, 0);
+            annotations.push({
+            row: pos1.row,
+            column: pos1.column,
+            text: e.text,
+            type: 'error'
+            });
+            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
+        }
+
+
         var cursorIndex = getCursorIndex();
         var cursor = editor.session.selection.getCursor();
         var index = editor.session.doc.positionToIndex(cursor, 0);
@@ -135,31 +154,13 @@ class MainIde {
 //trace('Identifier:' + id);
         } catch (e:Dynamic) {
             trace(e);
+            addError(new CompError(new CompPosition(0, 0), '' + e));
         }
         if (show) {
 //autocompletionElement.style.visibility = 'visible';
 //autocompletionElement.style.opacity = '0.5';
         }
 
-        for (id in markerIds) editor.session.removeMarker(id);
-
-        var annotations = new Array<Ace.Annotation>();
-        function addError(e:CompError) {
-            //trace(e);
-            var min = e.pos.min;
-            var max = e.pos.max;
-            if (max == min) max++;
-            var pos1 = editor.session.doc.indexToPosition(min, 0);
-            var pos2 = editor.session.doc.indexToPosition(max, 0);
-            annotations.push({
-            row: pos1.row,
-            column: pos1.column,
-            text: e.text,
-            type: 'error'
-            });
-            markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
-        }
-        
         for (reference in references) {
             var pos1 = editor.session.doc.indexToPosition(reference.pos.min, 0);
             var pos2 = editor.session.doc.indexToPosition(reference.pos.max, 0);

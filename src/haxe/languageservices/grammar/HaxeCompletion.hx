@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.Reader;
@@ -124,7 +125,7 @@ class CompletionUsage {
 }
 
 class CompletionEntryArrayElement extends CompletionEntry {
-    override public function getType():SpecificHaxeType {
+    override public function getType(?context:ProcessNodeContext):SpecificHaxeType {
         return scope.types.getArrayElement(super.getType());
     }
 }
@@ -145,10 +146,10 @@ class CompletionEntry {
         this.name = name;
     }
 
-    public function getType():SpecificHaxeType {
+    public function getType(?context:ProcessNodeContext):SpecificHaxeType {
         var ctype:SpecificHaxeType = null;
         if (type != null) ctype = new SpecificHaxeType(scope.types.getType(type.pos.text));
-        if (expr != null) ctype = scope.getNodeType(expr);
+        if (expr != null) ctype = scope.getNodeType(expr, context);
         if (ctype == null) ctype = scope.types.specTypeDynamic;
         return ctype;
     }
@@ -216,22 +217,33 @@ class CompletionScope {
         return this;
     }
 
-    public function getNodeType(znode:ZNode):SpecificHaxeType {
-        return getNodeResult(znode).type;
+    public function getNodeType(znode:ZNode, ?context:ProcessNodeContext):SpecificHaxeType {
+        return getNodeResult(znode, context).type;
     }
 
-    public function getNodeResult(znode:ZNode):ExpressionResult {
-        if (Std.is(znode.node, NNode)) return getNodeResult(cast(znode.node));
+    public function getNodeResult(znode:ZNode, ?context:ProcessNodeContext):ExpressionResult {
+        if (context == null) context = new ProcessNodeContext();
+        return _getNodeResult(znode, context);
+    }
+
+    private function _getNodeResult(znode:ZNode, context:ProcessNodeContext):ExpressionResult {
+        //trace(znode);
+        if (context.isExplored(znode)) {
+            context.recursionDetected();
+            return new ExpressionResult(types.specTypeDynamic, false, null);
+        }
+        context.markExplored(znode);
+        if (Std.is(znode.node, NNode)) return _getNodeResult(cast(znode.node), context);
         switch (znode.node) {
             case Node.NList(values):
-                return new ExpressionResult(types.unify([for (value in values) getNodeResult(value).type]), false, null);
+                return new ExpressionResult(types.unify([for (value in values) _getNodeResult(value, context).type]), false, null);
             case Node.NArray(values):
-                var elementType = types.unify([for (value in values) getNodeResult(value).type]);
+                var elementType = types.unify([for (value in values) _getNodeResult(value, context).type]);
                 return new ExpressionResult(types.createArray(elementType), false, null);
             case Node.NConst(Const.CInt(value)): return new ExpressionResult(types.specTypeInt, true, value);
             case Node.NConst(Const.CFloat(value)): return new ExpressionResult(types.specTypeFloat, true, value);
             case Node.NIf(code, trueExpr, falseExpr):
-                return new ExpressionResult(types.unify([getNodeResult(trueExpr).type, getNodeResult(falseExpr).type]), false, null);
+                return new ExpressionResult(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]), false, null);
             case Node.NId(str):
                 switch (str) {
                     case 'true': return new ExpressionResult(types.specTypeBool, true, true);
@@ -239,7 +251,7 @@ class CompletionScope {
                     case 'null': return new ExpressionResult(types.specTypeDynamic, true, null);
                     default:
                         var local = getLocal(str);
-                        if (local != null) return new ExpressionResult(local.getType(), false, null);
+                        if (local != null) return new ExpressionResult(local.getType(context), false, null);
                         return new ExpressionResult(types.specTypeDynamic, false, null);
                 }
             default:
@@ -270,6 +282,7 @@ class CompletionScope {
 
     public function createChild(node:ZNode):CompletionScope return new CompletionScope(this.completion, node, this);
 }
+
 
 
 

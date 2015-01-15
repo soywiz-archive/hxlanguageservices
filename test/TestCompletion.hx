@@ -31,4 +31,8 @@ class TestCompletion extends TestCase {
         assertFuntionBody('for (a in [false, true, false]) ### a;', 'a:Bool');
         assertFuntionBody('var a = false; for (a in [1, 2, 3]) a; ###', 'a:Bool');
     }
+
+    public function test2() {
+        assertFuntionBody('var a = a; ###', 'a:Dynamic');
+    }
 }
