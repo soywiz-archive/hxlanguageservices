@@ -48,15 +48,20 @@ enum Node {
     NContinue();
     NBreak();
     NReturn(?expr:ZNode);
-    NAccess(node:ZNode);
-    NCall(node:ZNode);
+
+    NAccessPath(node:ZNode);
+    NCallPart(node:ZNode);
+    NBinOpPart(op:ZNode, expr:ZNode);
+
+    NCall(left:ZNode, args:ZNode);
+    NBinOp(left:ZNode, op:String, right:ZNode);
+    
     NAccessList(node:ZNode, accessors:ZNode);
     NMember(modifiers:ZNode, decl:ZNode);
     NNew(id:ZNode, call:ZNode);
     NUnary(op:ZNode, value:ZNode);
     NIdWithType(id:ZNode, type:ZNode);
     NTypeParams(items:Array<ZNode>);
-    NBinOpPart(op:ZNode, expr:ZNode);
     NFile(decls:Array<ZNode>);
 }
 

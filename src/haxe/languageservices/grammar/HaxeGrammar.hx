@@ -1,5 +1,8 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.NodeTools;
+import haxe.languageservices.node.Position;
+import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.node.ZNode;
@@ -26,12 +29,28 @@ class HaxeGrammar extends Grammar<Node> {
     }
     
     override private function simplify(znode:ZNode, term:Term):ZNode {
+        //if (znode == null) return null;
+        //if (znode.node == null) return null;
         if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
         switch (znode.node) {
             case NAccessList(node, accessors):
                 switch (accessors.node) {
                     case Node.NList([]): return node;
-                    default:
+                    case Node.NList(items):
+                        var lnode = node;
+                        for (item in items) {
+                            var lpos = Position.combine(lnode.pos, item.pos);
+                            switch (item.node) {
+                                case Node.NCallPart(rnode):
+                                    lnode = new ZNode(lpos, Node.NCall(lnode, rnode));
+                                case Node.NBinOpPart(op, rnode):
+                                    // @TODO: Operator priority
+                                    lnode = new ZNode(lpos, Node.NBinOp(lnode, NodeTools.getId(op), rnode));
+                                default: throw 'simplify (I): $item';
+                            }
+                        }
+                        return lnode;
+                    default: throw 'simplify (II): $accessors';
                 }
             default:
         }
@@ -97,7 +116,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
-        var binaryOp = any(['...', '<=', '>=', '&&', '||', '==', '!=', '+', '?', ':', '-', '*', '/', '%', '<', '>', '=']);
+        var binaryOp = any([for (i in ['...', '<=', '>=', '&&', '||', '==', '!=', '+', '?', ':', '-', '*', '/', '%', '<', '>', '=']) operator(i)]);
         var primaryExpr = createRef();
         
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
@@ -105,9 +124,9 @@ class HaxeGrammar extends Grammar<Node> {
     
         var exprCommaList = list(expr, ',', 1, false, rlist);
 
-        var arrayAccess = seq(['[', expr, ']'], buildNode('NAccess'));
-        var fieldAccess = seq(['.', identifier], buildNode('NAccess'));
-        var callPart = seq(['(', exprCommaList, ')'], buildNode('NCall'));
+        var arrayAccess = seq(['[', expr, ']'], buildNode('NAccessPart'));
+        var fieldAccess = seq(['.', identifier], buildNode('NAccessPart'));
+        var callPart = seq(['(', exprCommaList, ')'], buildNode('NCallPart'));
         var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));
 
         setRef(primaryExpr, any([

@@ -52,9 +52,19 @@ class TestErrorReporting extends TestCase {
         //assertProgramErrors('class //Test {}', []);
     }
 
+    public function testMethodCalling() {
+        assertProgramErrors('class Test { public function test(a) { test(1); } }', []);
+    }
+
+    public function testMethodBinop() {
+        assertProgramErrors('class Test { public function test(a) { 1+2+3; } }', []);
+    }
+
     public function testMethodChecks() {
         assertMethodErrors('var a = 1;', '[]');
         assertMethodErrors('var a:bool;', '[31:35:Type name should start with an uppercase letter]');
+        assertMethodErrors('var a = 1; if (a) 1; else 2;', '[40:41:If condition must be Bool but was Int]');
+        assertMethodErrors('var a = true; if (a) 1; else 2;', '[]');
         //assertMethodErrors('var a:Bool = 1;', '...');
     }
 }

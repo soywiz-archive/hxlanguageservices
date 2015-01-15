@@ -61,8 +61,13 @@ class HaxeCompletion {
                 }
             case Node.NUnary(op, value):
                 process(value, scope);
-            case Node.NIf(code, trueExpr, falseExpr):
-                process(code, scope);
+            case Node.NIf(condExpr, trueExpr, falseExpr):
+                var condType = scope.getNodeType(condExpr, new ProcessNodeContext());
+                if (condType.type.fqName != 'Bool') {
+                    errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + condType));
+                }
+                //trace(condType);
+                process(condExpr, scope);
                 process(trueExpr, scope);
                 process(falseExpr, scope);
             case Node.NFor(iteratorName, iteratorExpr, body):
@@ -77,6 +82,17 @@ class HaxeCompletion {
                 process(cond, scope);
                 process(body, scope);
             case Node.NConst(_):
+            case Node.NCall(_, _):
+            case Node.NBinOp(left, op, right):
+                process(left, scope);
+                process(right, scope);
+                var ltype = scope.getNodeType(left);
+                var rtype = scope.getNodeType(right);
+                /*
+                switch (op) {
+                    case '':
+                }
+                */
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
             case Node.NUsing(fqName):
@@ -108,7 +124,7 @@ class HaxeCompletion {
                 process(expr, scope);
             //case Node.NPackage()
             default:
-                errors.add(new ParserError(znode.pos, 'Unhandled completion ${znode}'));
+                errors.add(new ParserError(znode.pos, 'Unhandled completion (II) ${znode}'));
                 //throw ;
         }
         return scope;
@@ -125,8 +141,8 @@ class HaxeCompletion {
                 scope.addLocal(e);
                 e.usages.push(new CompletionUsage(id, CompletionUsageType.Declaration));
             default:
-                throw 'Unhandled completion $znode';
-                errors.add(new ParserError(znode.pos, 'Unhandled completion $znode'));
+                throw 'Unhandled completion (I) $znode';
+                errors.add(new ParserError(znode.pos, 'Unhandled completion (I) $znode'));
         }
     }
 }
@@ -280,6 +296,16 @@ class CompletionScope {
         context.markExplored(znode);
         switch (znode.node) {
             case Node.NBlock(values):
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
+            case Node.NBinOp(left, op, right):
+                var lv = _getNodeResult(left, context);
+                var rv = _getNodeResult(right, context);
+                switch (op) {
+                    case '==', '!=':
+                        return ExpressionResult.withoutValue(types.specTypeBool);
+                    case '+': return ExpressionResult.withoutValue(types.specTypeInt);
+                    default:
+                }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NList(values):
                 return ExpressionResult.withoutValue(types.unify([for (value in values) _getNodeResult(value, context).type]));

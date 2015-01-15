@@ -5,7 +5,8 @@ class NodeTools {
         switch (znode.node) {
             case Node.NId(v): return v;
             case Node.NKeyword(v): return v;
-            default: throw 'Invalid id';
+            case Node.NOp(v): return v;
+            default: throw 'Invalid id: $znode';
         }
     }
 
