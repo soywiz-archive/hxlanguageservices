@@ -1,0 +1,3 @@
+pushd sampleide
+./build
+popd

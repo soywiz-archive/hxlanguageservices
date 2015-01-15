@@ -113,10 +113,8 @@ class MainIde {
             var pos1 = editor.session.doc.indexToPosition(min, 0);
             var pos2 = editor.session.doc.indexToPosition(max, 0);
             annotations.push({
-            row: pos1.row,
-            column: pos1.column,
-            text: e.text,
-            type: 'error'
+                row: pos1.row, column: pos1.column,
+                text: e.text, type: 'error'
             });
             errorsOverlay.innerText += '${e.pos}:${e.text}\n';
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));

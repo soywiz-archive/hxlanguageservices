@@ -102,6 +102,8 @@ class HaxeCompletion {
                 //scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String
                 bodyScope.addLocal(new CompletionEntryThis(scope, new Position(0, 0, new Reader('')), null, null, 'this'));
 
+                processFunctionArgs(args, bodyScope, scope);
+
                 process(expr, bodyScope);
             case Node.NReturn(expr):
                 process(expr, scope);
@@ -111,6 +113,24 @@ class HaxeCompletion {
                 //throw ;
         }
         return scope;
+    }
+
+    private function processFunctionArgs(znode:ZNode, scope:CompletionScope, scope2:CompletionScope):Void {
+        if (znode == null || znode.node == null) return;
+        //if (!ZNode.isValid(znode)) return;
+        if (Std.is(znode.node, NNode)) return processFunctionArgs(cast(znode.node), scope, scope2);
+        switch (znode.node) {
+            case Node.NList(items): for (item in items) processFunctionArgs(item, scope, scope2);
+            case Node.NFunctionArg(opt, id, type, value):
+                //trace(type);
+                var e = new CompletionEntry(scope2, id.pos, type, value, NodeTools.getId(id));
+                //trace(e.getType(new ProcessNodeContext()));
+                scope.addLocal(e);
+                e.usages.push(new CompletionUsage(id, CompletionUsageType.Declaration));
+            default:
+                throw 'Unhandled completion $znode';
+                errors.add(new ParserError(znode.pos, 'Unhandled completion $znode'));
+        }
     }
 }
 
@@ -168,7 +188,12 @@ class CompletionEntry {
 
     public function getType(?context:ProcessNodeContext):SpecificHaxeType {
         var ctype:SpecificHaxeType = null;
-        if (type != null) ctype = new SpecificHaxeType(scope.types.getType(type.pos.text));
+        if (type != null) {
+            //trace(type.pos.text);
+            //NodeTools.getId
+            ctype = new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text));
+            //trace('::::: $ctype');
+        }
         if (expr != null) ctype = scope.getNodeType(expr, context);
         if (ctype == null) ctype = scope.types.specTypeDynamic;
         return ctype;

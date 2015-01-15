@@ -16,6 +16,10 @@ class TestCompletion extends TestCase {
         var services = new HaxeLanguageServices(vfs);
         services.updateHaxeFile(live);
 
+        for (error in services.getErrors(live)) {
+            trace(error);
+        }
+
         var items = services.getCompletionAt(live, index).items;
         for (i in include) {
             var included = Lambda.exists(items, function(e:CompEntry) { return i == e.toString(); });
@@ -44,6 +48,9 @@ class TestCompletion extends TestCase {
 
     public function test1() {
         assertFuntionBody('var a = 10; ###', ['a:Int'], []);
+        assertFuntionBody('var a = [1,2,3]; ###', ['a:Array<Int>'], []);
+        assertFuntionBody('var a = []; ###', ['a:Array<Dynamic>'], []);
+        assertFuntionBody('var a = [false]; ###', ['a:Array<Bool>'], []);
         assertFuntionBody('for (a in []) ### a;', ['a:Dynamic'], []);
         assertFuntionBody('for (a in []) a; ###', [], ['a']);
         assertFuntionBody('var a = 10; { var a = false; ### }', ['a:Bool'], []);
@@ -59,5 +66,9 @@ class TestCompletion extends TestCase {
 
     public function test3() {
         assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Dynamic', 'b:Dynamic', 'this:Dynamic'], []);
+    }
+
+    public function testArguments() {
+        assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { ### } }', ['a:Int', 'b:Int', 'c:Dynamic', 'd:Bool'], []);
     }
 }

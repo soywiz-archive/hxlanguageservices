@@ -154,11 +154,11 @@ class HaxeTypeBuilder {
                                             if (ZNode.isValid(part)) {
                                                 switch (part.node) {
                                                     case Node.NKeyword(z): mods.add(z);
-                                                    default: throw 'Invalid $part';
+                                                    default: throw 'Invalid (I) $part';
                                                 }
                                             }
                                         }
-                                    default: throw 'Invalid $modifiers';
+                                    default: throw 'Invalid (II) $modifiers';
                                 }
                             }
                             if (ZNode.isValid(decl)) {
@@ -182,21 +182,23 @@ class HaxeTypeBuilder {
                                         type.addMember(method);
                                         processMethodBody(type, method, vexpr);
                                     default:
-                                        throw 'Invalid $decl';
+                                        throw 'Invalid (III) $decl';
                                 }
                             }
-                        default: throw 'Invalid $member';
+                        default: throw 'Invalid (IV) $member';
                     }
                 }
             default:
-                throw 'Invalid $decls';
+                throw 'Invalid (V) $decls';
         }
     }
     
     private function checkFunctionDeclArgs(znode:ZNode):Void {
         if (!ZNode.isValid(znode)) return;
         switch (znode.node) {
-            default: throw 'Invalid $znode';
+            case Node.NList(items): for (item in items) checkFunctionDeclArgs(item);
+            case Node.NFunctionArg(opt, id, type, value): checkType(type);
+            default: throw 'Invalid (VI) $znode';
         }
     }
     
@@ -205,10 +207,10 @@ class HaxeTypeBuilder {
         switch (znode.node) {
             case Node.NId(name):
                 checkClassName(znode.pos, name);
-            case Node.NWrapper(znode): checkType(znode);
+            case Node.NWrapper(item): checkType(item);
             case Node.NTypeParams(items):
             case Node.NList(items): for (item in items) checkType(item);
-            default: throw 'Invalid $znode';
+            default: throw 'Invalid (VII) $znode';
         }
         //checkClassName(znode.pos, znode.pos.text);
     }

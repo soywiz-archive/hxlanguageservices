@@ -44,7 +44,11 @@ class HaxeLanguageServices {
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getLocals();
-        return new CompList([for (l in locals) new CompEntry(l.name, new CompType(l.getType().type.fqName))]);
+        return new CompList([for (l in locals) new CompEntry(l.name, convToType(l.getType()))]);
+    }
+    
+    static private function convToType(type:SpecificHaxeType):CompType {
+        return new CompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) convToType(i)] : null);
     }
     
     public function getReferencesAt(path:String, offset:Int):Array<CompReference> {
@@ -254,6 +258,10 @@ class CompEntry {
 
 class CompType {
     public var str:String;
-    public function new(str:String) { this.str = str; }
-    public function toString() return str;
+    public var types:Array<CompType>; 
+    public function new(str:String, types:Array<CompType>) { this.str = str; this.types = types; }
+    public function toString() {
+        if (types != null && types.length > 0) return str + '<' + types.join(',') + '>';
+        return str;
+    }
 }

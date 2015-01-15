@@ -28,19 +28,20 @@ class HaxeTypes {
         typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
         typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
         typeArray = rootPackage.accessTypeCreate('Array', new Position(0, 0, new Reader('', 'Array.hx')), ClassHaxeType);
-        specTypeDynamic = new SpecificHaxeType(typeDynamic);
-        specTypeBool = new SpecificHaxeType(typeBool);
-        specTypeInt = new SpecificHaxeType(typeInt);
-        specTypeFloat = new SpecificHaxeType(typeFloat);
+        specTypeDynamic = new SpecificHaxeType(this, typeDynamic);
+        specTypeBool = new SpecificHaxeType(this, typeBool);
+        specTypeInt = new SpecificHaxeType(this, typeInt);
+        specTypeFloat = new SpecificHaxeType(this, typeFloat);
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
         // @TODO
-        if (types.length == 0) return new SpecificHaxeType(typeDynamic);
+        if (types.length == 0) return new SpecificHaxeType(this, typeDynamic);
         return types[0];
     }
 
     public function getType(path:String):HaxeType {
+        if (path.substr(0, 1) == ':') return getType(path.substr(1));
         return rootPackage.accessType(path);
     }
     public function getClass(path:String):ClassHaxeType {
@@ -51,11 +52,11 @@ class HaxeTypes {
     }
     
     public function createArray(elementType:SpecificHaxeType):SpecificHaxeType {
-        return new SpecificHaxeType(typeArray, [elementType]);
+        return new SpecificHaxeType(this, typeArray, [elementType]);
     }
     
     public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
-        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(typeDynamic);
+        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(this, typeDynamic);
         return arrayType.parameters[0];
     }
 

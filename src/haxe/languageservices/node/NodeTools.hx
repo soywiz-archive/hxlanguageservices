@@ -8,4 +8,14 @@ class NodeTools {
             default: throw 'Invalid id';
         }
     }
+
+    /*
+    static public function getType(znode:ZNode):String {
+        switch (znode.node) {
+            case Node.NId(v): return v;
+            case Node.NKeyword(v): return v;
+            default: throw 'Invalid id';
+        }
+    }
+    */
 }

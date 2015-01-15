@@ -47,7 +47,8 @@ class HaxeType {
 class SpecificHaxeType {
     public var type:HaxeType;
     public var parameters:Array<SpecificHaxeType>;
-    public function new(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
+    public function new(types:HaxeTypes, type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
+        if (type == null) type = types.typeDynamic;
         if (parameters == null) parameters = [];
         this.type = type;
         this.parameters = parameters;
