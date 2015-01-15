@@ -41,7 +41,8 @@ enum Node {
     NImplements(fqName:ZNode, params:ZNode);
 
     NWrapper(node:ZNode);
-    NVar(name:ZNode, type:ZNode, value:ZNode);
+    NProperty(a:ZNode, b:ZNode);
+    NVar(name:ZNode, propertyInfo:ZNode, type:ZNode, value:ZNode);
     NFunctionArg(opt:ZNode, id:ZNode, type:ZNode, value:ZNode);
     NFunction(name:ZNode, args:ZNode, ret:ZNode, expr:ZNode);
     NContinue();

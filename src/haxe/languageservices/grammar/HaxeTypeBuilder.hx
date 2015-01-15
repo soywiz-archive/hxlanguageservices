@@ -163,7 +163,7 @@ class HaxeTypeBuilder {
                             }
                             if (ZNode.isValid(decl)) {
                                 switch (decl.node) {
-                                    case Node.NVar(vname, vtype, vvalue):
+                                    case Node.NVar(vname, propInfo, vtype, vvalue):
                                         checkType(vtype);
                                         var field = new FieldHaxeMember(member.pos, getId(vname));
                                         field.modifiers = mods;
@@ -225,7 +225,7 @@ class HaxeTypeBuilder {
         if (!ZNode.isValid(expr)) return;
         switch (expr.node) {
             case Node.NBlock(items) | Node.NList(items): for (item in items) processMethodBody(type, method, item);
-            case Node.NVar(vname, vtype, vvalue):
+            case Node.NVar(vname, propertyInfo, vtype, vvalue):
                 checkType(vtype);
                 processMethodBody(type, method, vvalue);
             default:

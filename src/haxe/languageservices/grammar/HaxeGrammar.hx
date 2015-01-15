@@ -25,7 +25,8 @@ class HaxeGrammar extends Grammar<Node> {
         return function(v) return Type.createEnum(Node, name, [v]);
     }
     
-    override private function simplify(znode:ZNode):ZNode {
+    override private function simplify(znode:ZNode, term:Term):ZNode {
+        if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
         switch (znode.node) {
             case NAccessList(node, accessors):
                 switch (accessors.node) {
@@ -37,14 +38,8 @@ class HaxeGrammar extends Grammar<Node> {
         return znode;
     }
     
-    private function operator(v:Dynamic):Term {
-        return term(v, buildNode2('NOp'));
-    }
-    
-    private function optError2(tok:String) {
-        return optError(tok, 'expected $tok');
-    }
-
+    private function operator(v:Dynamic):Term return term(v, buildNode2('NOp'));
+    private function optError2(tok:String) return optError(tok, 'expected $tok');
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
     private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
 
@@ -93,7 +88,9 @@ class HaxeGrammar extends Grammar<Node> {
             seq([ '{', typeNameList, '}' ], rlist),
         ]));
         
-        var varStm = seq(['var', sure(), identifier, optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
+        var propertyDecl = seq(['(', sure(), identifier, ',', identifier, ')'], buildNode('NProperty'));
+        
+        var varStm = seq(['var', sure(), identifier, opt(propertyDecl), optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
         var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
         var arrayExpr = seq(['[', list(expr, ',', 0, true, rlist), ']'], buildNode2('NArray'));
@@ -130,15 +127,10 @@ class HaxeGrammar extends Grammar<Node> {
 
         setRef(stm, anyRecover([
             varStm,
-            ifStm,
-            forStm,
-            whileStm,
-            doWhileStm,
-            breakStm,
-            continueStm,
-            returnStm,
             blockStm,
-            switchStm,
+            ifStm, switchStm,
+            forStm,  whileStm,  doWhileStm, breakStm,  continueStm,
+            returnStm,
             seq([primaryExpr, sure(), ';'], rlist)
         ], [';', '}']));
 

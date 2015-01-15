@@ -24,7 +24,7 @@ class Grammar<TNode> {
         }
     }
 
-    private function simplify(znode:NNode<TNode>):NNode<TNode> {
+    private function simplify(znode:NNode<TNode>, term:Term):NNode<TNode> {
         return znode;
     }
 
@@ -80,7 +80,9 @@ class Grammar<TNode> {
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
             if (result == null) return Result.RUnmatched(0, start);
             if (conv == null) return Result.RMatched;
-            return Result.RMatchedValue(simplify(new NNode(reader.createPos(start, reader.pos), conv(result))));
+            var rresult:Dynamic = conv(result);
+            if (Std.is(rresult, NNode)) return Result.RMatchedValue(simplify(rresult, t));
+            return Result.RMatchedValue(simplify(new NNode(reader.createPos(start, reader.pos), rresult), t));
         }
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);

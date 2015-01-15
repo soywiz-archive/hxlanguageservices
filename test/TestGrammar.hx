@@ -66,6 +66,7 @@ class TestGrammar extends TestCase {
     
     */
 
+/*
     public function testProgram() {
         assertEqualsString(
             'RMatchedValue(NFile([NClass(NId(Test)@6:10,null,NList([])@11:11,NList([NMember(NList([NKeyword(static)@13:19])@13:20,NVar(NId(a)@24:25,null,null)@20:26)@13:26,NMember(NList([NKeyword(public)@27:33])@27:34,NVar(NId(b)@38:39,null,null)@34:40)@27:40])@13:41)@0:42])@0:42)',
@@ -82,6 +83,7 @@ class TestGrammar extends TestCase {
             hg.parse(hg.program, new Reader("class A extends B implements C { }"))
         );
     }
+    */
     
     private function assertEqualsString(a:Dynamic, b:Dynamic, ?p:PosInfos) {
         assertEquals('' + a, '' + b, p);

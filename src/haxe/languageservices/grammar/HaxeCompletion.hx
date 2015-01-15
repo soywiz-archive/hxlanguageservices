@@ -38,13 +38,11 @@ class HaxeCompletion {
 
     private function process(znode:ZNode, scope:CompletionScope):CompletionScope {
         if (znode == null || znode.node == null) return scope;
-        // @TODO: Ugly hack!
-        if (Std.is(znode.node, NNode)) return process(cast(znode.node), scope);
 
         switch (znode.node) {
             case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
             case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
-            case Node.NVar(name, type, value):
+            case Node.NVar(name, propertyInfo, type, value):
                 var local = new CompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
                 scope.addLocal(local);
                 local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
@@ -94,15 +92,16 @@ class HaxeCompletion {
             case Node.NMember(modifiers, decl):
                 process(decl, scope);
             case Node.NFunction(name, args, ret, expr):
+                var funcScope =  scope.createChild(expr);
                 var local = new CompletionEntryFunctionElement(scope, name.pos, ret, expr, NodeTools.getId(name));
                 scope.addLocal(local);
                 local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
-                var bodyScope = scope.createChild(expr);
+                var bodyScope = funcScope.createChild(expr);
 
                 //scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String
                 bodyScope.addLocal(new CompletionEntryThis(scope, new Position(0, 0, new Reader('')), null, null, 'this'));
 
-                processFunctionArgs(args, bodyScope, scope);
+                processFunctionArgs(args, funcScope, funcScope);
 
                 process(expr, bodyScope);
             case Node.NReturn(expr):
@@ -117,8 +116,6 @@ class HaxeCompletion {
 
     private function processFunctionArgs(znode:ZNode, scope:CompletionScope, scope2:CompletionScope):Void {
         if (znode == null || znode.node == null) return;
-        //if (!ZNode.isValid(znode)) return;
-        if (Std.is(znode.node, NNode)) return processFunctionArgs(cast(znode.node), scope, scope2);
         switch (znode.node) {
             case Node.NList(items): for (item in items) processFunctionArgs(item, scope, scope2);
             case Node.NFunctionArg(opt, id, type, value):
@@ -281,7 +278,6 @@ class CompletionScope {
             return ExpressionResult.withoutValue(types.specTypeDynamic);
         }
         context.markExplored(znode);
-        if (Std.is(znode.node, NNode)) return _getNodeResult(cast(znode.node), context);
         switch (znode.node) {
             case Node.NBlock(values):
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
