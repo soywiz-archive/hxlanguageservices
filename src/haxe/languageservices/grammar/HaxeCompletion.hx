@@ -83,6 +83,9 @@ class HaxeCompletion {
                 process(body, scope);
             case Node.NConst(_):
             case Node.NCall(_, _):
+            case Node.NAccess(left, index):
+                process(left, scope);
+                process(index, scope);
             case Node.NBinOp(left, op, right):
                 process(left, scope);
                 process(right, scope);
@@ -321,6 +324,13 @@ class CompletionScope {
                     case '*': return operator(function(a, b) return a * b);
                     default:
                         throw 'Unknown operator $op';
+                }
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
+            case Node.NAccess(left, index):
+                var lresult = _getNodeResult(left, context);
+                var iresult = _getNodeResult(left, context);
+                if (lresult.type.type.fqName == 'Array') {
+                    return ExpressionResult.withoutValue(types.getArrayElement(lresult.type));
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NList(values):

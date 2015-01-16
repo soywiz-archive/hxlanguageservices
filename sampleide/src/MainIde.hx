@@ -38,8 +38,8 @@ class MainIde {
         var langTools:Dynamic = Ace.require("ace/ext/language_tools");
         editor = Ace.edit("editorIn");
         editor.setOptions({
-            //enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true
+            enableBasicAutocompletion: true,
+            //enableLiveAutocompletion: true,
         });
         editor.setTheme("ace/theme/xcode");
         editor.getSession().setMode("ace/mode/haxe");

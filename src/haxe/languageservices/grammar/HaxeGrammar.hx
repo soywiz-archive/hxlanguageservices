@@ -52,6 +52,8 @@ class HaxeGrammar extends Grammar<Node> {
                         for (item in items) {
                             var lpos = Position.combine(lnode.pos, item.pos);
                             switch (item.node) {
+                                case Node.NAccessPart(rnode):
+                                    lnode = simplify(new ZNode(lpos, Node.NAccess(lnode, rnode)), term);
                                 case Node.NCallPart(rnode):
                                     lnode = simplify(new ZNode(lpos, Node.NCall(lnode, rnode)), term);
                                 case Node.NBinOpPart(op, rnode):
