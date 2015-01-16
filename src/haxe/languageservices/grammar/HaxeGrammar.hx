@@ -50,12 +50,12 @@ class HaxeGrammar extends Grammar<Node> {
                     case Node.NList(items):
                         var lnode = node;
                         for (item in items) {
-                            var lpos = Position.combine(lnode.pos, item.pos);
+                            var cpos = Position.combine(lnode.pos, item.pos);
                             switch (item.node) {
                                 case Node.NAccessPart(rnode):
-                                    lnode = simplify(new ZNode(lpos, Node.NAccess(lnode, rnode)), term);
+                                    lnode = simplify(new ZNode(cpos, Node.NAccess(lnode, rnode)), term);
                                 case Node.NCallPart(rnode):
-                                    lnode = simplify(new ZNode(lpos, Node.NCall(lnode, rnode)), term);
+                                    lnode = simplify(new ZNode(cpos, Node.NCall(lnode, rnode)), term);
                                 case Node.NBinOpPart(op, rnode):
                                     var opp = NodeTools.getId(op);
                                     switch (rnode.node) {
@@ -64,14 +64,14 @@ class HaxeGrammar extends Grammar<Node> {
                                             var newPriority = opsPriority[opp];
                                             if (oldPriority < newPriority) {
                                                 //trace('[1]');
-                                                lnode = simplify(new ZNode(lpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
                                             } else {
                                                 //trace('[2] $l :::: $r :::: $lnode');
-                                                lnode = simplify(new ZNode(lpos, Node.NBinOp(new ZNode(lpos, Node.NBinOp(lnode, opp, l)), opp, r)), term);
+                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(new ZNode(cpos, Node.NBinOp(lnode, opp, l)), o, r)), term);
                                             }
                                         default:
                                             //trace('[3]: $lnode ||| $opp ||| $rnode');
-                                            lnode = simplify(new ZNode(lpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                            lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
                                     }
                                 default: throw 'simplify (I): $item';
                             }

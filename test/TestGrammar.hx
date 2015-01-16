@@ -62,7 +62,7 @@ class TestGrammar extends TestCase {
         //trace(NodeTools.dump(hg.parseStringNode(hg.expr, '7 * 3 + 2', 'test.hx')).toString());
 
         assertExpr("7 + 9", 'RMatchedValue(NBinOp(NConst(CInt(7))@0:1,+,NConst(CInt(9))@4:5)@0:5)');
-        assertExpr("7 * 9 + 2", 'RMatchedValue(NBinOp(NBinOp(NConst(CInt(7))@0:1,*,NConst(CInt(9))@4:5)@0:9,*,NConst(CInt(2))@8:9)@0:9)');
+        assertExpr("7 * 9 + 2", 'RMatchedValue(NBinOp(NBinOp(NConst(CInt(7))@0:1,*,NConst(CInt(9))@4:5)@0:9,+,NConst(CInt(2))@8:9)@0:9)');
         assertExpr("7 + 9 * 2", 'RMatchedValue(NBinOp(NConst(CInt(7))@0:1,+,NBinOp(NConst(CInt(9))@4:5,*,NConst(CInt(2))@8:9)@4:9)@0:9)');
         //assertProgram('class A { function a() { 1 + 2; } }', '');
         /*
