@@ -1,5 +1,7 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
@@ -100,7 +102,10 @@ class HaxeCompletion {
             case Node.NImport(fqName):
             case Node.NUsing(fqName):
             case Node.NClass(name, typeParams, extendsImplementsList, decls):
-                process(decls, scope.createChild(decls));
+                var classScope = scope.createChild(decls);
+                var clazz = scope.types.getClass(NodeTools.getId(name));
+                classScope.currentClass = clazz;
+                process(decls, classScope);
             case Node.NInterface(name, typeParams, extendsImplementsList, decls):
                 process(decls, scope.createChild(decls));
             case Node.NSwitch(subject, cases):
@@ -118,7 +123,9 @@ class HaxeCompletion {
                 var bodyScope = funcScope.createChild(expr);
 
                 //scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String
-                bodyScope.addLocal(new CompletionEntryThis(scope, new Position(0, 0, new Reader('')), null, null, 'this'));
+                if (scope.currentClass != null) {
+                    bodyScope.addLocal(new CompletionEntryThis(scope, scope.currentClass));
+                } 
 
                 processFunctionArgs(args, funcScope, funcScope);
 
@@ -175,14 +182,24 @@ class CompletionEntryArrayElement extends CompletionEntry {
 }
 
 class CompletionEntryFunctionElement extends CompletionEntry {
+    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String) {
+        super(scope, pos, type, expr, name);
+    }
+
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        //return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, new FunctionHaxeType(scope.types.rootPackage, pos, name)));
         return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
     }
 }
 
 class CompletionEntryThis extends CompletionEntry {
+    public function new(scope:CompletionScope, type:HaxeType) {
+        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', type);
+    
+    }
+
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
-        return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
+        return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, type2));
     }
 }
 
@@ -191,13 +208,15 @@ class CompletionEntry {
     public var pos:Position;
     public var name:String;
     public var type:ZNode;
+    public var type2:HaxeType;
     public var expr:ZNode;
     public var usages = new Array<CompletionUsage>();
 
-    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String) {
+    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:HaxeType) {
         this.scope = scope;
         this.pos = pos;
         this.type = type;
+        this.type2 = type2;
         this.expr = expr;
         this.name = name;
     }
@@ -207,6 +226,7 @@ class CompletionEntry {
 
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         var ctype:ExpressionResult = null;
+        if (type2 != null) return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, type2));
         if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text)));
         if (expr != null) ctype = scope.getNodeResult(expr, context);
         if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
@@ -244,6 +264,7 @@ class CompletionScope {
     public var node:ZNode;
     private var completion:HaxeCompletion;
     public var types:HaxeTypes;
+    public var currentClass:HaxeType;
     private var parent:CompletionScope;
     private var children = new Array<CompletionScope>();
     private var locals:CScope;
@@ -255,6 +276,7 @@ class CompletionScope {
         if (parent != null) {
             this.parent = parent;
             this.parent.children.push(this);
+            this.currentClass = parent.currentClass;
             this.locals = parent.locals.createChild();
         } else {
             this.parent = null;
@@ -342,6 +364,8 @@ class CompletionScope {
             case Node.NConst(Const.CFloat(value)): return ExpressionResult.withValue(types.specTypeFloat, value);
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
+            case Node.NCall(left, args):
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NId(str):
                 switch (str) {
                     case 'true': return ExpressionResult.withValue(types.specTypeBool, true);

@@ -65,11 +65,15 @@ class TestCompletion extends TestCase {
     }
 
     public function test3() {
-        assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Dynamic', 'b:Dynamic', 'this:Dynamic'], []);
+        assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Dynamic', 'b:Dynamic', 'this:Test'], []);
     }
 
-    public function test4() {
-        assertFuntionBody('var array = [[1],[2],[3]]; var item = array[0]; ###', ['item:Array<Int>'], []);
+    public function testArrayAccess() {
+        assertFuntionBody('var array = [[1],[2],[3]]; var item = array[0]; var item2 = array[0][0]; ###', ['item:Array<Int>', 'item2:Int'], []);
+    }
+
+    public function testCall() {
+        assertProgramBody('class A { function a() { var result = b(); ### } function b() return 1; }', ['result:Dynamic'], []);
     }
 
     public function testArguments() {

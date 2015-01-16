@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import js.html.svg.AnimatedBoolean;
 import haxe.languageservices.type.HaxeType.ClassHaxeType;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Position;
@@ -124,4 +125,40 @@ class AbstractHaxeType extends HaxeType {
 
 class TypedefHaxeType extends HaxeType {
     public var destType:HaxeType;
+}
+
+class StructHaxeType extends HaxeType {
+    public var keys = new Map<String, HaxeType>();
+}
+
+class FunctionArgument {
+    public var opt:Bool;
+    public var name:String;
+    public var fqName:String;
+    public var defaultValue:ZNode;
+    public var doc:String;
+
+    public function new(opt:Bool, name:String, fqName:String, defaultValue:ZNode, doc:String) {
+        this.opt = opt;
+        this.name = name;
+        this.fqName = fqName;
+        this.defaultValue = defaultValue;
+        this.doc = doc;
+    }
+}
+
+class FunctionRetval {
+    public var fqName:String;
+    public var doc:String;
+
+    public function new(fqName:String, doc:String) {
+        this.fqName = fqName;
+        this.doc = doc;
+    }
+}
+
+class FunctionHaxeType extends HaxeType {
+    public var args = new Array<FunctionArgument>();
+    public var body:ZNode;
+    public var retval:FunctionRetval;
 }

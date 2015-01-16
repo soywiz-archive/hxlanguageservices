@@ -179,17 +179,18 @@ class HaxeGrammar extends Grammar<Node> {
     
         var exprCommaList = list(expr, ',', 1, false, rlist);
 
-        var arrayAccess = seq(['[', expr, ']'], buildNode('NAccessPart'));
+        var arrayAccess = seq(['[', sure(), expr, ']'], buildNode('NAccessPart'));
         var fieldAccess = seq(['.', identifier], buildNode('NAccessPart'));
+        var callEmptyPart = seq(['(', ')'], buildNode('NCallPart'));
         var callPart = seq(['(', exprCommaList, ')'], buildNode('NCallPart'));
         var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));
 
         setRef(primaryExpr, any([
             parenExpr,
             unaryExpr,
-            seq(['new', sure(), identifier, callPart], buildNode('NNew')),
+            seq(['new', sure(), identifier, callEmptyPart, callPart], buildNode('NNew')),
             seq(
-                [constant, list2(any([fieldAccess, arrayAccess, callPart, binaryPart]), 0, rlist)],
+                [constant, list2(any([fieldAccess, arrayAccess, callEmptyPart, callPart, binaryPart]), 0, rlist)],
                 buildNode('NAccessList')
             ),
         ]));
