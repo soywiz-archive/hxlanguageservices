@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>ACE in Action</title>
+    <title>hxlanguageservices ACE demo</title>
     <style type="text/css" media="screen">
         #editorIn, #editorOut {
             position: absolute;
@@ -10,7 +10,7 @@
             bottom: 0;
             left: 0;
         }
-        .mark_error {position:absolute; margin-top:-2px; border-bottom:1px solid red;}
+        .mark_error {position:absolute; margin-top:0.1em; background:url('errorbg.png'); background-repeat: repeat-x; background-position: bottom left;}
         .mark_refread {position:absolute; /*border: 1px solid green;*/ border-radius:2px;background: #ddf;}
         .mark_refwrite {position:absolute; /*border: 1px solid green;*/ border-radius:2px;background: #fdd;margin-left:-2px;padding:0 2px;}
         .error {
@@ -53,10 +53,36 @@
             background: #fee;
             border-bottom: 1px solid black;
         }
+        #rightOverlayInfo {
+            position:absolute;
+            top:0;
+            right:0;
+            z-index:9999999;
+            width:320px;
+            background:#eee;
+            padding:16px;
+            min-height:120px;
+            height: 100%;
+        }
+        #rightOverlayInfo h3 { margin: 0; padding: 0; }
+        #autocompletionOverlay, #errorsOverlay {
+            font: 14px monospace;
+            white-space: pre;
+        }
+        #errorsOverlay {
+            color: red;
+        }
     </style>
 </head>
 <body>
-
+    <div id="rightOverlayInfo">
+        <h3>Autocompletion:</h3>
+        <div id="autocompletionOverlay">
+        </div>
+        <h3 style="padding-top:16px;">Errors:</h3>
+        <div id="errorsOverlay">
+        </div>
+    </div>
 
     <div id="editorIn"></div>
 
