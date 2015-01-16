@@ -29,6 +29,7 @@ extern class Editor {
 
 typedef Options = {
     ?enableBasicAutocompletion:Bool,
+    ?enableLiveAutocompletion:Bool,
 };
 
 extern class Document {

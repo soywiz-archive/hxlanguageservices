@@ -37,27 +37,20 @@ class MainIde {
 
         var langTools:Dynamic = Ace.require("ace/ext/language_tools");
         editor = Ace.edit("editorIn");
-        editor.setOptions({enableBasicAutocompletion: true});
+        editor.setOptions({
+            //enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true
+        });
         editor.setTheme("ace/theme/xcode");
         editor.getSession().setMode("ace/mode/haxe");
-
-        langTools.addCompleter({
-            getCompletions: function(editor, session, pos, prefix:String, callback) {
-                callback(null, getAutocompletion());
-                /*
-                $.getJSON(
-                    "http://rhymebrain.com/talk?function=getRhymes&word=" + prefix,
-                    function(wordList) {
-                    // wordList like [{"word":"flow","freq":24,"score":300,"flags":"bc","syllables":"1"}]
-                    callback(null, wordList.map(function(ea) {
-                    return {name: ea.word, value: ea.word, score: ea.score, meta: "rhyme"}
-                    }));
-                })
-                */
+        cast(editor).completers = [
+            {
+                getCompletions: function(editor, session, pos, prefix:String, callback) {
+                    callback(null, getAutocompletion());
+                }
             }
-        });
+        ];
 
-//editor.session.setValue(Browser.window.localStorage.getItem('hxprogram'));
         editor.session.setValue(vfs.readString('live.hx'));
         editor.session.selection.moveCursorFileEnd();
         editor.session.selection.on('changeCursor', function(e) {
@@ -66,6 +59,13 @@ class MainIde {
         });
         editor.session.on('change', function(e) {
             queueUpdateContentLive();
+            /*
+            cast(editor).completer.autoInsert = false;
+            cast(editor).completer.autoSelect = true;
+            cast(editor).completer.showPopup(editor);
+            cast(editor).completer.cancelContextMenu();
+            */
+
             return null;
         });
 
