@@ -44,7 +44,11 @@ class HaxeLanguageServices {
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getLocals();
-        return new CompList([for (l in locals) new CompEntry(l.name, convToType(l.getType()))]);
+        return new CompList([for (l in locals) convToEntry(l.name, l.getResult())]);
+    }
+
+    static private function convToEntry(name:String, result:ExpressionResult):CompEntry {
+        return new CompEntry(name, convToType(result.type), result.hasValue, result.value);
     }
     
     static private function convToType(type:SpecificHaxeType):CompType {
@@ -251,14 +255,24 @@ class CompList {
 class CompEntry {
     public var name:String;
     public var type:CompType;
+    public var hasValue:Bool;
+    public var value:Dynamic;
 
-    public function new(name:String, type:CompType) { this.name = name; this.type = type; }
-    public function toString() return '$name:$type';
+    public function new(name:String, type:CompType, hasValue:Bool, value:Dynamic) {
+        this.name = name;
+        this.type = type;
+        this.hasValue = hasValue;
+        this.value = value;
+    }
+    public function toString() {
+        if (hasValue) return '$name:$type = $value';
+        return '$name:$type';
+    }
 }
 
 class CompType {
     public var str:String;
-    public var types:Array<CompType>; 
+    public var types:Array<CompType>;
     public function new(str:String, types:Array<CompType>) { this.str = str; this.types = types; }
     public function toString() {
         if (types != null && types.length > 0) return str + '<' + types.join(',') + '>';

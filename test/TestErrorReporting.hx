@@ -67,4 +67,9 @@ class TestErrorReporting extends TestCase {
         assertMethodErrors('var a = true; if (a) 1; else 2;', '[]');
         //assertMethodErrors('var a:Bool = 1;', '...');
     }
+
+    public function testIfCheck() {
+        assertMethodErrors('if (true) 1; else 2;', '[]');
+        assertMethodErrors('if (1) 1; else 2;', '[29:30:If condition must be Bool but was Int]');
+    }
 }

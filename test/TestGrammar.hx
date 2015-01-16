@@ -152,7 +152,7 @@ class TestGrammar extends TestCase {
 
         assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
             assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
-            assertEqualsString('Int', scope.getLocal('z').getType());
+            assertEqualsString('Int = 10', scope.getLocal('z').getResult());
         });
 
         /*

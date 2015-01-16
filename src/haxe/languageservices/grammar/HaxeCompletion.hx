@@ -166,20 +166,20 @@ class CompletionUsage {
 }
 
 class CompletionEntryArrayElement extends CompletionEntry {
-    override public function getType(?context:ProcessNodeContext):SpecificHaxeType {
-        return scope.types.getArrayElement(super.getType());
+    override public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        return ExpressionResult.withoutValue(scope.types.getArrayElement(super.getResult().type));
     }
 }
 
 class CompletionEntryFunctionElement extends CompletionEntry {
-    override public function getType(?context:ProcessNodeContext):SpecificHaxeType {
-        return scope.types.specTypeDynamic;
+    override public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
     }
 }
 
 class CompletionEntryThis extends CompletionEntry {
-    override public function getType(?context:ProcessNodeContext):SpecificHaxeType {
-        return scope.types.specTypeDynamic;
+    override public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
     }
 }
 
@@ -199,16 +199,14 @@ class CompletionEntry {
         this.name = name;
     }
 
-    public function getType(?context:ProcessNodeContext):SpecificHaxeType {
-        var ctype:SpecificHaxeType = null;
-        if (type != null) {
-            //trace(type.pos.text);
-            //NodeTools.getId
-            ctype = new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text));
-            //trace('::::: $ctype');
-        }
-        if (expr != null) ctype = scope.getNodeType(expr, context);
-        if (ctype == null) ctype = scope.types.specTypeDynamic;
+    //public function getNodeResult(?context:ProcessNodeContext):Noderesult {
+    //}
+
+    public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        var ctype:ExpressionResult = null;
+        if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text)));
+        if (expr != null) ctype = scope.getNodeResult(expr, context);
+        if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
         return ctype;
     }
 
@@ -224,6 +222,11 @@ class ExpressionResult {
         this.type = type;
         this.hasValue = hasValue;
         this.value = value;
+    }
+    
+    public function toString() {
+        if (hasValue) return '$type = $value';
+        return '$type';
     }
 
     static public function withoutValue(type:SpecificHaxeType):ExpressionResult return new ExpressionResult(type, false, null);
@@ -300,11 +303,24 @@ class CompletionScope {
             case Node.NBinOp(left, op, right):
                 var lv = _getNodeResult(left, context);
                 var rv = _getNodeResult(right, context);
+                
+                function operator(doOp: Dynamic -> Dynamic -> Dynamic) {
+                    if (lv.hasValue && rv.hasValue) {
+                        return ExpressionResult.withValue(lv.type, doOp(lv.value, rv.value));
+                    }
+                    return ExpressionResult.withoutValue(types.specTypeInt);
+                }
+                
                 switch (op) {
                     case '==', '!=':
                         return ExpressionResult.withoutValue(types.specTypeBool);
-                    case '+': return ExpressionResult.withoutValue(types.specTypeInt);
+                    case '+': return operator(function(a, b) return a + b);
+                    case '-': return operator(function(a, b) return a - b);
+                    case '%': return operator(function(a, b) return a % b);
+                    case '/': return operator(function(a, b) return a / b);
+                    case '*': return operator(function(a, b) return a * b);
                     default:
+                        throw 'Unknown operator $op';
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NList(values):
@@ -323,7 +339,7 @@ class CompletionScope {
                     case 'null': return ExpressionResult.withValue(types.specTypeDynamic, null);
                     default:
                         var local = getLocal(str);
-                        if (local != null) return ExpressionResult.withoutValue(local.getType(context));
+                        if (local != null) return local.getResult(context);
                         return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
             default:
