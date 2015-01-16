@@ -8,16 +8,18 @@ using StringTools;
 using Lambda;
 
 class TestCompletion extends TestCase {
-    private function assertProgramBody(prg:String, include:Array<String>, exclude:Array<String>, ?p:PosInfos) {
+    private function assertProgramBody(prg:String, include:Array<String>, exclude:Array<String>, ?errors:Dynamic, ?p:PosInfos) {
         var index = prg.indexOf('###');
         prg = prg.replace('###', '');
         var live = 'live.hx';
         var vfs = new MemoryVfs().set(live, prg);
         var services = new HaxeLanguageServices(vfs);
         services.updateHaxeFile(live);
-
-        for (error in services.getErrors(live)) {
-            trace(error);
+        
+        if (errors != null) {
+            assertEquals('' + errors, '' + services.getErrors(live));
+        } else {
+            for (error in services.getErrors(live)) trace(error);
         }
 
         var items = services.getCompletionAt(live, index).items;
@@ -42,8 +44,8 @@ class TestCompletion extends TestCase {
         //assertEquals('' + completion, '' + services.getCompletionAt(live, index), p);
     }
 
-    private function assertFuntionBody(func:String, included:Array<String>, excluded:Array<String>, ?p:PosInfos) {
-        assertProgramBody('class Test { function funcname() { ' + func + ' } }', included, excluded, p);
+    private function assertFuntionBody(func:String, included:Array<String>, excluded:Array<String>, ?errors:Dynamic, ?p:PosInfos) {
+        assertProgramBody('class Test { function funcname() { ' + func + ' } }', included, excluded, errors, p);
     }
 
     public function test1() {
@@ -78,5 +80,9 @@ class TestCompletion extends TestCase {
 
     public function testArguments() {
         assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { ### } }', ['a:Int', 'b:Int', 'c:Dynamic', 'd:Bool'], []);
+    }
+
+    public function testFieldAccessCompletion() {
+        assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], ['38:38:expected identifier']);
     }
 }

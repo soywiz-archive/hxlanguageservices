@@ -85,9 +85,25 @@ class HaxeCompletion {
                 process(body, scope);
             case Node.NConst(_):
             case Node.NCall(_, _):
-            case Node.NAccess(left, index):
+            case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
+            case Node.NFieldAccess(left, id):
+                process(left, scope);
+                var lvalue = scope.getNodeResult(left);
+            
+                //if (id == null) {
+                    var l:ZNode = left;
+                    //trace('id:null');
+                    var p = l.pos.reader.createPos(l.pos.max, l.pos.max + 2);
+                    var cscope = scope.createChild(new ZNode(p, null));
+                    cscope.unlinkFromParent();
+                    for (m in lvalue.type.type.members) {
+                        cscope.addLocal(new CompletionEntry(cscope, p, null, null, m.name));
+                    }
+                //}
+                //process(id, scope);
+                //left.
             case Node.NBinOp(left, op, right):
                 process(left, scope);
                 process(right, scope);
@@ -268,6 +284,11 @@ class CompletionScope {
     private var parent:CompletionScope;
     private var children = new Array<CompletionScope>();
     private var locals:CScope;
+    
+    public function unlinkFromParent() {
+        this.parent = null;
+        this.locals.parent = null;
+    }
 
     public function new(completion:HaxeCompletion, node:ZNode, ?parent:CompletionScope) {
         this.node = node;
@@ -348,7 +369,7 @@ class CompletionScope {
                         throw 'Unknown operator $op';
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
-            case Node.NAccess(left, index):
+            case Node.NArrayAccess(left, index):
                 var lresult = _getNodeResult(left, context);
                 var iresult = _getNodeResult(left, context);
                 if (lresult.type.type.fqName == 'Array') {

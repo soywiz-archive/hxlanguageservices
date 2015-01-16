@@ -52,8 +52,10 @@ class HaxeGrammar extends Grammar<Node> {
                         for (item in items) {
                             var cpos = Position.combine(lnode.pos, item.pos);
                             switch (item.node) {
-                                case Node.NAccessPart(rnode):
-                                    lnode = simplify(new ZNode(cpos, Node.NAccess(lnode, rnode)), term);
+                                case Node.NArrayAccessPart(rnode):
+                                    lnode = simplify(new ZNode(cpos, Node.NArrayAccess(lnode, rnode)), term);
+                                case Node.NFieldAccessPart(rnode):
+                                    lnode = simplify(new ZNode(cpos, Node.NFieldAccess(lnode, rnode)), term);
                                 case Node.NCallPart(rnode):
                                     lnode = simplify(new ZNode(cpos, Node.NCall(lnode, rnode)), term);
                                 case Node.NBinOpPart(op, rnode):
@@ -179,8 +181,8 @@ class HaxeGrammar extends Grammar<Node> {
     
         var exprCommaList = list(expr, ',', 1, false, rlist);
 
-        var arrayAccess = seq(['[', sure(), expr, ']'], buildNode('NAccessPart'));
-        var fieldAccess = seq(['.', identifier], buildNode('NAccessPart'));
+        var arrayAccess = seq(['[', sure(), expr, ']'], buildNode('NArrayAccessPart'));
+        var fieldAccess = seq(['.', sure(), identifier], buildNode('NFieldAccessPart'));
         var callEmptyPart = seq(['(', ')'], buildNode('NCallPart'));
         var callPart = seq(['(', exprCommaList, ')'], buildNode('NCallPart'));
         var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));

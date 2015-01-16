@@ -49,11 +49,13 @@ enum Node {
     NBreak();
     NReturn(?expr:ZNode);
 
-    NAccessPart(node:ZNode);
+    NArrayAccessPart(node:ZNode);
+    NFieldAccessPart(node:ZNode);
     NCallPart(node:ZNode);
     NBinOpPart(op:ZNode, expr:ZNode);
 
-    NAccess(left:ZNode, index:ZNode);
+    NArrayAccess(left:ZNode, index:ZNode);
+    NFieldAccess(left:ZNode, id:ZNode);
     NCall(left:ZNode, args:ZNode);
     NBinOp(left:ZNode, op:String, right:ZNode);
     

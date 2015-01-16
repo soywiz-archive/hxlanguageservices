@@ -4,6 +4,7 @@ import haxe.languageservices.grammar.Grammar.NNode;
 import haxe.languageservices.util.IndentWriter;
 class NodeTools {
     static public function getId(znode:ZNode):String {
+        if (znode == null) return null;
         switch (znode.node) {
             case Node.NId(v): return v;
             case Node.NKeyword(v): return v;
