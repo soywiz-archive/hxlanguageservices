@@ -1,0 +1,13 @@
+{
+  "name": "hxlanguageservices",
+  "license": "MIT",
+  "classPath": "src",
+  "tags": ["completion"],
+  "description": "Haxe Language Services",
+  "contributors": ["soywiz"],
+  "releasenote": "",
+  "version": "0.0.1",
+  "url": "https://github.com/soywiz/hxlanguageservices",
+  "dependencies": {
+  }
+}
