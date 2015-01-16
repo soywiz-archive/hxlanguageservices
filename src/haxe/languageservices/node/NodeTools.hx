@@ -1,5 +1,7 @@
 package haxe.languageservices.node;
 
+import haxe.languageservices.grammar.Grammar.NNode;
+import haxe.languageservices.util.IndentWriter;
 class NodeTools {
     static public function getId(znode:ZNode):String {
         switch (znode.node) {
@@ -8,6 +10,32 @@ class NodeTools {
             case Node.NOp(v): return v;
             default: throw 'Invalid id: $znode';
         }
+    }
+
+    static public function dump(znode:ZNode, ?iw:IndentWriter):IndentWriter {
+        if (iw == null) iw = new IndentWriter();
+        _dump(znode, iw);
+        return iw;
+    }
+
+    static private function _dump(item:Dynamic, iw:IndentWriter):Void {
+        if (Std.is(item, NNode)) {
+            //trace('[1]');
+            _dump(Std.instance(item, NNode).node, iw);
+        } else if (Std.is(item, Node)) {
+            //trace('[2]');
+            iw.write(item + '{\n');
+            iw.indent(function() {
+                for (i in Type.enumParameters(item)) {
+                    _dump(i, iw);
+                    //iw.write('\n');
+                }
+            });
+            iw.write('\n}\n');
+        } else {
+            iw.write('' + item);
+        }
+        //trace(item);
     }
 
     /*

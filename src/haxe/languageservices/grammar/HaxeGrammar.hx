@@ -28,12 +28,23 @@ class HaxeGrammar extends Grammar<Node> {
         return function(v) return Type.createEnum(Node, name, [v]);
     }
     
+    /*
+    private function accessList(items:Array<ZNode>):Array<ZNode> {
+        switch (znode.node) {
+            case Node.NList(items): return items;
+            case Node.NList(items): return items;
+        }
+    }
+    */
+    
     override private function simplify(znode:ZNode, term:Term):ZNode {
         //if (znode == null) return null;
         //if (znode.node == null) return null;
         if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
         switch (znode.node) {
-            case NAccessList(node, accessors):
+            //case Node.NList(items): return new ZNode(znode.pos, Node.NList([for (n in items) simplify(n, term)]));
+            case Node.NWrapper(n): return simplify(n, term);
+            case Node.NAccessList(node, accessors):
                 switch (accessors.node) {
                     case Node.NList([]): return node;
                     case Node.NList(items):
@@ -42,10 +53,24 @@ class HaxeGrammar extends Grammar<Node> {
                             var lpos = Position.combine(lnode.pos, item.pos);
                             switch (item.node) {
                                 case Node.NCallPart(rnode):
-                                    lnode = new ZNode(lpos, Node.NCall(lnode, rnode));
+                                    lnode = simplify(new ZNode(lpos, Node.NCall(lnode, rnode)), term);
                                 case Node.NBinOpPart(op, rnode):
-                                    // @TODO: Operator priority
-                                    lnode = new ZNode(lpos, Node.NBinOp(lnode, NodeTools.getId(op), rnode));
+                                    var opp = NodeTools.getId(op);
+                                    switch (rnode.node) {
+                                        case Node.NBinOp(l, o, r):
+                                            var oldPriority = opsPriority[o];
+                                            var newPriority = opsPriority[opp];
+                                            if (oldPriority < newPriority) {
+                                                //trace('[1]');
+                                                lnode = simplify(new ZNode(lpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                            } else {
+                                                //trace('[2] $l :::: $r :::: $lnode');
+                                                lnode = simplify(new ZNode(lpos, Node.NBinOp(new ZNode(lpos, Node.NBinOp(lnode, opp, l)), opp, r)), term);
+                                            }
+                                        default:
+                                            //trace('[3]: $lnode ||| $opp ||| $rnode');
+                                            lnode = simplify(new ZNode(lpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                    }
                                 default: throw 'simplify (I): $item';
                             }
                         }
@@ -61,8 +86,36 @@ class HaxeGrammar extends Grammar<Node> {
     private function optError2(tok:String) return optError(tok, 'expected $tok');
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
     private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
+    
+    static private var opsPriority:Map<String, Int>;
 
     public function new() {
+        if (opsPriority == null) {
+            opsPriority = new Map();
+
+            var oops = [
+            ["%"],
+            ["*", "/"],
+            ["+", "-"],
+            ["<<", ">>", ">>>"],
+            ["|", "&", "^"],
+            ["==", "!=", ">", "<", ">=", "<="],
+            ["..."],
+            ["&&"],
+            ["||"],
+            ["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^="],
+            ];
+
+            for (priority in 0 ... oops.length) {
+                for (i in oops[priority]) {
+                    opsPriority[i] = priority;
+                }
+            }
+
+            //trace(opsPriority);
+        }
+
+        
         function rlist(v) return Node.NList(v);
         //function rlist2(v) return Node.NListDummy(v);
 

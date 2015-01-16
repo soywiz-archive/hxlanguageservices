@@ -8,6 +8,7 @@ class Test {
 		r.add(new TestCompletion());
 		r.add(new TestErrorReporting());
 		r.add(new TestGrammar());
+		r.add(new TestIndentWriter());
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js

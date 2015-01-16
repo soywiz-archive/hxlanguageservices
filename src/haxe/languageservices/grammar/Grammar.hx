@@ -81,7 +81,10 @@ class Grammar<TNode> {
             if (result == null) return Result.RUnmatched(0, start);
             if (conv == null) return Result.RMatched;
             var rresult:Dynamic = conv(result);
-            if (Std.is(rresult, NNode)) return Result.RMatchedValue(simplify(rresult, t));
+            if (Std.is(rresult, NNode)) {
+                //rresult = new NNode(Position.combine(rresult.pos, result.pos), rresult.node);
+                return Result.RMatchedValue(simplify(rresult, t));
+            }
             return Result.RMatchedValue(simplify(new NNode(reader.createPos(start, reader.pos), rresult), t));
         }
         switch (t) {

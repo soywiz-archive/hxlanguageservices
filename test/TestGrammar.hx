@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.grammar.HaxeErrors;
 import haxe.languageservices.node.ZNode;
@@ -50,10 +51,21 @@ class TestGrammar extends TestCase {
             '' + hg.parse(hg.expr, new Reader("{1; 2;}"))
         );
     }
+    */
 
     public function testExpressions() {
         function assertExpr(str, expected, ?p) assertEqualsString(expected, hg.parse(hg.expr, new Reader(str)), p);
         function assertStm(str, expected, ?p) assertEqualsString(expected, hg.parse(hg.stm, new Reader(str)), p);
+        function assertProgram(str, expected, ?p) assertEqualsString(expected, hg.parse(hg.program, new Reader(str)), p);
+
+        //trace(NodeTools.dump(hg.parseStringNode(hg.expr, '7 + 3 * 2', 'test.hx')).toString());
+        //trace(NodeTools.dump(hg.parseStringNode(hg.expr, '7 * 3 + 2', 'test.hx')).toString());
+
+        assertExpr("7 + 9", 'RMatchedValue(NBinOp(NConst(CInt(7))@0:1,+,NConst(CInt(9))@4:5)@0:5)');
+        assertExpr("7 * 9 + 2", 'RMatchedValue(NBinOp(NBinOp(NConst(CInt(7))@0:1,*,NConst(CInt(9))@4:5)@0:9,*,NConst(CInt(2))@8:9)@0:9)');
+        assertExpr("7 + 9 * 2", 'RMatchedValue(NBinOp(NConst(CInt(7))@0:1,+,NBinOp(NConst(CInt(9))@4:5,*,NConst(CInt(2))@8:9)@4:9)@0:9)');
+        //assertProgram('class A { function a() { 1 + 2; } }', '');
+        /*
         assertExpr("a.b[777]", 'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8])@1:8)@0:8)');
         assertExpr("a.b[777](1, 2)", 'RMatchedValue(NAccessList(NId(a)@0:1,NList([NAccess(NId(b)@2:3)@1:3,NAccess(NConst(CInt(777))@4:7)@3:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13])@9:13)@8:14])@1:14)@0:14)');
         assertExpr("new Test(1, 2, 3)", 'RMatchedValue(NNew(NId(Test)@4:8,NCall(NList([NConst(CInt(1))@9:10,NConst(CInt(2))@12:13,NConst(CInt(3))@15:16])@9:16)@8:17)@0:17)');
@@ -62,9 +74,9 @@ class TestGrammar extends TestCase {
         assertExpr("7 + 9 + 3", 'RMatchedValue(NAccessList(NConst(CInt(7))@0:1,NList([NBinOpPart(NAccessList(NConst(CInt(9))@4:5,NList([NBinOpPart(NConst(CInt(3))@8:9,null)@6:9])@6:9)@4:9,null)@2:9])@2:9)@0:9)');
         assertExpr("-7", 'RMatchedValue(NUnary(NOp(-)@0:1,NConst(CInt(7))@1:2)@0:2)');
         assertExpr("-(test)", 'RMatchedValue(NUnary(NOp(-)@0:1,NId(test)@2:6@1:7)@0:7)');
+        */
     }
     
-    */
 
 /*
     public function testProgram() {
