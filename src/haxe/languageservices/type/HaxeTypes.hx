@@ -26,7 +26,11 @@ class HaxeTypes {
         rootPackage = new HaxePackage(this, '');
         typeDynamic = rootPackage.accessTypeCreate('Dynamic', new Position(0, 0, new Reader('', 'Dynamic.hx')), ClassHaxeType);
         typeBool = rootPackage.accessTypeCreate('Bool', new Position(0, 0, new Reader('', 'Bool.hx')), ClassHaxeType);
+        typeBool.addMember(new MethodHaxeMember(typeBool.pos, 'testBoolMethod'));
+        typeBool.addMember(new MethodHaxeMember(typeBool.pos, 'testBoolMethod2'));
         typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
+        typeInt.addMember(new MethodHaxeMember(typeInt.pos, 'testIntMethod'));
+        typeInt.addMember(new MethodHaxeMember(typeInt.pos, 'testIntMethod2'));
         typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
         typeArray = rootPackage.accessTypeCreate('Array', new Position(0, 0, new Reader('', 'Array.hx')), ClassHaxeType);
         typeArray.addMember(new MethodHaxeMember(typeArray.pos, 'indexOf'));

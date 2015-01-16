@@ -387,6 +387,8 @@ class CompletionScope {
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
             case Node.NCall(left, args):
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
+            case Node.NFieldAccess(left, id):
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NId(str):
                 switch (str) {
                     case 'true': return ExpressionResult.withValue(types.specTypeBool, true);

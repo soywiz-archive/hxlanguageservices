@@ -84,5 +84,6 @@ class TestCompletion extends TestCase {
 
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], ['38:38:expected identifier']);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], []);
     }
 }

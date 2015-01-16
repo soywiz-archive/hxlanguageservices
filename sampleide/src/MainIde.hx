@@ -57,6 +57,13 @@ class MainIde {
             updateIde();
             return null;
         });
+        cast(editor).commands.on("afterExec", function(e, t) {
+            if (e.command.name == "insertstring" && e.args == "." ) {
+                Browser.window.setTimeout(function() {
+                    e.editor.execCommand("startAutocomplete");
+                }, 100);
+            }
+        });
         editor.session.on('change', function(e) {
             queueUpdateContentLive();
             /*
@@ -97,7 +104,7 @@ class MainIde {
             vfs.set('live.hx', editor.session.getValue());
             setProgram();
             updateFile();
-        }, 100);
+        }, 80);
     }
 
     private function getCursorIndex():Int {
