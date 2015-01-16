@@ -35,11 +35,27 @@ class MainIde {
         vfs.set('live.hx', getProgram());
         services = new HaxeLanguageServices(vfs);
 
-        var langTools = Ace.require("ace/ext/language_tools");
+        var langTools:Dynamic = Ace.require("ace/ext/language_tools");
         editor = Ace.edit("editorIn");
         editor.setOptions({enableBasicAutocompletion: true});
         editor.setTheme("ace/theme/xcode");
         editor.getSession().setMode("ace/mode/haxe");
+
+        langTools.addCompleter({
+            getCompletions: function(editor, session, pos, prefix:String, callback) {
+                callback(null, getAutocompletion());
+                /*
+                $.getJSON(
+                    "http://rhymebrain.com/talk?function=getRhymes&word=" + prefix,
+                    function(wordList) {
+                    // wordList like [{"word":"flow","freq":24,"score":300,"flags":"bc","syllables":"1"}]
+                    callback(null, wordList.map(function(ea) {
+                    return {name: ea.word, value: ea.word, score: ea.score, meta: "rhyme"}
+                    }));
+                })
+                */
+            }
+        });
 
 //editor.session.setValue(Browser.window.localStorage.getItem('hxprogram'));
         editor.session.setValue(vfs.readString('live.hx'));
@@ -54,7 +70,19 @@ class MainIde {
         });
 
         updateFile();
-        
+    }
+    
+    private function getAutocompletion():Array<{name: String, value: String, score: Float, meta: String}> {
+        var comp = new Array<{name: String, value: String, score: Float, meta: String}>();
+        for (item in services.getCompletionAt('live.hx', getCursorIndex()).items) {
+            comp.push({
+                name: item.name,
+                value: item.name,
+                score: 1000,
+                meta: item.type.toString()
+            });
+        }
+        return comp;
     }
     
     private var updateTimeout:Int = -1;
