@@ -220,7 +220,7 @@ MainIde.prototype = {
 		this.services = new haxe.languageservices.HaxeLanguageServices(this.vfs);
 		var langTools = ace.require("ace/ext/language_tools");
 		this.editor = ace.edit("editorIn");
-		this.editor.setOptions({ enableLiveAutocompletion : true});
+		this.editor.setOptions({ enableBasicAutocompletion : true});
 		this.editor.setTheme("ace/theme/xcode");
 		this.editor.getSession().setMode("ace/mode/haxe");
 		this.editor.completers = [{ getCompletions : function(editor,session,pos,prefix,callback) {
