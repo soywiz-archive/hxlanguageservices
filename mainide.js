@@ -220,9 +220,12 @@ MainIde.prototype = {
 		this.services = new haxe.languageservices.HaxeLanguageServices(this.vfs);
 		var langTools = ace.require("ace/ext/language_tools");
 		this.editor = ace.edit("editorIn");
-		this.editor.setOptions({ enableBasicAutocompletion : true});
+		this.editor.setOptions({ enableLiveAutocompletion : true});
 		this.editor.setTheme("ace/theme/xcode");
 		this.editor.getSession().setMode("ace/mode/haxe");
+		this.editor.completers = [{ getCompletions : function(editor,session,pos,prefix,callback) {
+			callback(null,_g.getAutocompletion());
+		}}];
 		this.editor.session.setValue(this.vfs.readString("live.hx"));
 		this.editor.session.selection.moveCursorFileEnd();
 		this.editor.session.selection.on("changeCursor",function(e) {
@@ -234,6 +237,17 @@ MainIde.prototype = {
 			return null;
 		});
 		this.updateFile();
+	}
+	,getAutocompletion: function() {
+		var comp = new Array();
+		var _g = 0;
+		var _g1 = this.services.getCompletionAt("live.hx",this.getCursorIndex()).items;
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			comp.push({ name : item.name, value : item.name, score : 1000, meta : item.type.toString()});
+		}
+		return comp;
 	}
 	,updateTimeout: null
 	,queueUpdateContentLive: function() {
@@ -267,7 +281,7 @@ MainIde.prototype = {
 				this.errors.push(e);
 			} else {
 			var e1 = $e0;
-			haxe.Log.trace(e1,{ fileName : "MainIde.hx", lineNumber : 94, className : "MainIde", methodName : "updateFile"});
+			haxe.Log.trace(e1,{ fileName : "MainIde.hx", lineNumber : 122, className : "MainIde", methodName : "updateFile"});
 			}
 		}
 		this.updateIde();
@@ -334,7 +348,7 @@ MainIde.prototype = {
 				} else this.references.push({ pos : id1.pos, type : haxe.languageservices.CompReferenceType.Read});
 			}
 		} catch( e1 ) {
-			haxe.Log.trace(e1,{ fileName : "MainIde.hx", lineNumber : 165, className : "MainIde", methodName : "updateIde"});
+			haxe.Log.trace(e1,{ fileName : "MainIde.hx", lineNumber : 193, className : "MainIde", methodName : "updateIde"});
 			addError(new haxe.languageservices.CompError(new haxe.languageservices.CompPosition(0,0),"" + Std.string(e1)));
 		}
 		if(show) {
