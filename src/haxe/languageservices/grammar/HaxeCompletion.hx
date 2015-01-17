@@ -1,5 +1,8 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.SpecificHaxeType;
+import haxe.languageservices.type.HaxeType.FunctionHaxeType;
 import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
@@ -85,7 +88,32 @@ class HaxeCompletion {
                 process(cond, scope);
                 process(body, scope);
             case Node.NConst(_):
-            case Node.NCall(_, _):
+            case Node.NCall(left, args):
+                var lvalue = scope.getNodeResult(left);
+                if (!Std.is(lvalue.type.type, FunctionHaxeType)) {
+                    //trace(Type.getClassName(Type.getClass(lvalue.type)));
+                    errors.add(new ParserError(znode.pos, 'Trying to call a non function expression'));
+                } else {
+                    var f:FunctionHaxeType = Std.instance(lvalue.type.type, FunctionHaxeType);
+
+                    var argcount = 0;
+                    if (args != null) {
+                        switch (args.node) {
+                            case Node.NList(items): argcount = items.length;
+                            default: throw 'Invalid args: ' + args;
+                        }
+                    } else {
+                        argcount = 0;
+                    }
+
+                    if (argcount != f.args.length) {
+                        errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argcount + ' arguments but required ' + f.args.length));
+                    }
+                }
+                
+                //trace(lvalue);
+                process(left, scope);
+                process(args, scope);
             case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
@@ -130,8 +158,29 @@ class HaxeCompletion {
             case Node.NMember(modifiers, decl):
                 process(decl, scope);
             case Node.NFunction(name, args, ret, expr):
-                var funcScope =  scope.createChild(expr);
-                var local = new CompletionEntryFunctionElement(scope, name.pos, ret, expr, NodeTools.getId(name));
+                var funcScope = scope.createChild(expr);
+                //packag:HaxePackage, pos:Position, name:String
+                var functionType:FunctionHaxeType = new FunctionHaxeType(scope.types.rootPackage, znode.pos, NodeTools.getId(name));
+                if (args != null) {
+                    
+                    switch (args.node) {
+                        case Node.NList(items):
+                            for (item in items) {
+                                switch (item.node) {
+                                    case Node.NFunctionArg(opt, name, type, value):
+                                        functionType.args.push(new FunctionArgument(
+                                            false,  NodeTools.getId(name),
+                                            'Dynamic', null, ''
+                                        ));
+                                        //trace('farg: ' + id);
+                                        //trace('farg: ' + type);
+                                    default: throw 'HaxeCompletion (V) ' + item;
+                                }
+                            }
+                        default: throw 'HaxeCompletion (IV) ' + args;
+                    }
+                }
+                var local = new CompletionEntryFunctionElement(scope, name.pos, ret, expr, NodeTools.getId(name), new SpecificHaxeType(scope.types, functionType));
                 scope.addLocal(local);
                 local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
                 var bodyScope = funcScope.createChild(expr);
@@ -196,24 +245,21 @@ class CompletionEntryArrayElement extends CompletionEntry {
 }
 
 class CompletionEntryFunctionElement extends CompletionEntry {
-    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String) {
-        super(scope, pos, type, expr, name);
-    }
-
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
         //return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, new FunctionHaxeType(scope.types.rootPackage, pos, name)));
-        return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
+        //return ExpressionResult.withoutValue(scope.types.specTypeDynamic);
+        return ExpressionResult.withoutValue(type2);
     }
 }
 
 class CompletionEntryThis extends CompletionEntry {
     public function new(scope:CompletionScope, type:HaxeType) {
-        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', type);
+        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', new SpecificHaxeType(scope.types, type));
     
     }
 
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
-        return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, type2));
+        return ExpressionResult.withoutValue(type2);
     }
 }
 
@@ -222,11 +268,11 @@ class CompletionEntry {
     public var pos:Position;
     public var name:String;
     public var type:ZNode;
-    public var type2:HaxeType;
+    public var type2:SpecificHaxeType;
     public var expr:ZNode;
     public var usages = new Array<CompletionUsage>();
 
-    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:HaxeType) {
+    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:SpecificHaxeType) {
         this.scope = scope;
         this.pos = pos;
         this.type = type;
@@ -240,7 +286,7 @@ class CompletionEntry {
 
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         var ctype:ExpressionResult = null;
-        if (type2 != null) return ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, type2));
+        if (type2 != null) return ExpressionResult.withoutValue(type2);
         if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text)));
         if (expr != null) ctype = scope.getNodeResult(expr, context);
         if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
@@ -384,6 +430,7 @@ class CompletionScope {
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
             case Node.NCall(left, args):
+                var value = _getNodeResult(left, context);
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NFieldAccess(left, id):
                 return ExpressionResult.withoutValue(types.specTypeDynamic);

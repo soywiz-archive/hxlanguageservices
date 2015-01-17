@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.HaxeLanguageServices.FunctionCompType;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.grammar.Grammar.Result;
@@ -61,7 +62,11 @@ class HaxeLanguageServices {
     }
     
     static private function convToType(type:SpecificHaxeType):CompType {
-        return new CompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) convToType(i)] : null);
+        if (Std.is(type.type, FunctionHaxeType)) {
+            var ftype = cast(type.type, FunctionHaxeType);
+            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.retval.fqName));
+        }
+        return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) convToType(i)] : null);
     }
     
     public function getReferencesAt(path:String, offset:Int):Array<CompReference> {
@@ -279,12 +284,33 @@ class CompEntry {
     }
 }
 
-class CompType {
+interface CompType {
+    function toString():String;
+}
+
+class BaseCompType implements CompType {
     public var str:String;
     public var types:Array<CompType>;
-    public function new(str:String, types:Array<CompType>) { this.str = str; this.types = types; }
+    public function new(str:String, ?types:Array<CompType>) {
+        if (types == null) types = [];
+        this.str = str;
+        this.types = types;
+    }
     public function toString() {
         if (types != null && types.length > 0) return str + '<' + types.join(',') + '>';
         return str;
+    }
+}
+
+class FunctionCompType implements CompType {
+    public var args:Array<CompType>;
+    public var retval:CompType;
+    public function new(args:Array<CompType>, retval:CompType) {
+        this.args = args;
+        this.retval = retval;
+    }
+    public function toString() {
+        if (args.length == 0) return 'Void -> ' + retval;
+        return args.concat([retval]).join(' -> ');
     }
 }

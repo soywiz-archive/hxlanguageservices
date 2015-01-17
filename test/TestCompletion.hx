@@ -38,7 +38,7 @@ class TestCompletion extends TestCase {
         if (errors != null) {
             assertEquals('' + errors, '' + services.getErrors(live));
         } else {
-            for (error in services.getErrors(live)) trace(error);
+            for (error in services.getErrors(live)) haxe.Log.trace(error, p);
         }
 
 //assertEquals('' + completion, '' + services.getCompletionAt(live, index), p);
@@ -67,7 +67,7 @@ class TestCompletion extends TestCase {
     }
 
     public function test3() {
-        assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Dynamic', 'b:Dynamic', 'this:Test'], []);
+        assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Void -> Dynamic', 'b:Void -> Dynamic', 'this:Test'], []);
     }
 
     public function testArrayAccess() {
@@ -75,7 +75,7 @@ class TestCompletion extends TestCase {
     }
 
     public function testCall() {
-        assertProgramBody('class A { function a() { var result = b(); ### } function b() return 1; }', ['result:Dynamic'], []);
+        assertProgramBody('class A { function b() return 1; function a() { var result = b(); ### } }', ['result:Dynamic'], []);
     }
 
     public function testArguments() {

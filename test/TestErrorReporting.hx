@@ -72,4 +72,11 @@ class TestErrorReporting extends TestCase {
         assertMethodErrors('if (true) 1; else 2;', '[]');
         assertMethodErrors('if (1) 1; else 2;', '[29:30:If condition must be Bool but was Int]');
     }
+
+    public function testCallCount() {
+        assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2,3); } }', '[]');
+        assertProgramErrors('class A { function b(a, b, c) { } function a() { b(); } }', '[49:50:Trying to call function with 0 arguments but required 3]');
+        assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2); } }', '[51:54:Trying to call function with 2 arguments but required 3]');
+        assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2,3,4); } }', '[51:58:Trying to call function with 4 arguments but required 3]');
+    }
 }

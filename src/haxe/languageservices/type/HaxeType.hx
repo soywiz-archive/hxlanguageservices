@@ -31,8 +31,9 @@ class HaxeType {
         this.fqName = (packag.fqName != '') ? '${packag.fqName}.$name' : name;
     }
     
-    public function toString() return 'Type("$fqName", $members)';
-    
+    public function getName() return 'Type("$fqName", $members)';
+    public function toString() return '$fqName';
+
     public function existsMember(name:String):Bool return membersByName.exists(name);
     public function getMember(name:String):HaxeMember return membersByName[name];
     
@@ -61,7 +62,7 @@ class SpecificHaxeType {
         this.parameters = parameters;
     }
     public function toString() {
-        var res = '${type.fqName}';
+        var res = '$type';
         if (parameters.length > 0) {
             res += '<' + parameters.join(',') + '>';
         }
@@ -157,6 +158,8 @@ class FunctionArgument {
         this.defaultValue = defaultValue;
         this.doc = doc;
     }
+
+    public function toString() return '$name:$fqName';
 }
 
 class FunctionRetval {
@@ -167,10 +170,13 @@ class FunctionRetval {
         this.fqName = fqName;
         this.doc = doc;
     }
+    public function toString() return fqName;
 }
 
 class FunctionHaxeType extends HaxeType {
     public var args = new Array<FunctionArgument>();
     public var body:ZNode;
-    public var retval:FunctionRetval;
+    public var retval:FunctionRetval = new FunctionRetval('Dynamic', '');
+
+    override public function toString() return 'FunctionType(' + args.join(',') + '):' + retval;
 }
