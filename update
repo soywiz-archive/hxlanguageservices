@@ -1,6 +1,4 @@
 pushd ../hxlanguageservices
 ./build_ide
 popd
-cp ../hxlanguageservices/sampleide/index.html .
-cp ../hxlanguageservices/sampleide/mainide.js .
-cp ../hxlanguageservices/sampleide/mainide.js.map .
+cp -rf ../hxlanguageservices/sampleide/* .
