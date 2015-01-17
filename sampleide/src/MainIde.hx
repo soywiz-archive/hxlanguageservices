@@ -43,12 +43,13 @@ class MainIde {
         });
         editor.setTheme("ace/theme/xcode");
         editor.getSession().setMode("ace/mode/haxe");
-        var completer = {
-            getCompletions: function(editor, session, pos, prefix:String, callback) {
-                callback(null, getAutocompletion());
+        cast(editor).completers = [
+            {
+                getCompletions: function(editor, session, pos, prefix:String, callback) {
+                    callback(null, getAutocompletion());
+                }
             }
-        };
-        langTools.addCompleter(completer);
+        ];
 
         editor.session.setValue(vfs.readString('live.hx'));
         editor.session.selection.moveCursorFileEnd();

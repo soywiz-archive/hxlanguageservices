@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Position;
 import haxe.languageservices.node.ZNode;
@@ -26,64 +27,6 @@ class HaxeGrammar extends Grammar<Node> {
 
     private function buildNode2(name:String): Dynamic -> Dynamic {
         return function(v) return Type.createEnum(Node, name, [v]);
-    }
-    
-    /*
-    private function accessList(items:Array<ZNode>):Array<ZNode> {
-        switch (znode.node) {
-            case Node.NList(items): return items;
-            case Node.NList(items): return items;
-        }
-    }
-    */
-    
-    override private function simplify(znode:ZNode, term:Term):ZNode {
-        //if (znode == null) return null;
-        //if (znode.node == null) return null;
-        if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
-        switch (znode.node) {
-            //case Node.NList(items): return new ZNode(znode.pos, Node.NList([for (n in items) simplify(n, term)]));
-            case Node.NWrapper(n): return simplify(n, term);
-            case Node.NAccessList(node, accessors):
-                switch (accessors.node) {
-                    case Node.NList([]): return node;
-                    case Node.NList(items):
-                        var lnode = node;
-                        for (item in items) {
-                            var cpos = Position.combine(lnode.pos, item.pos);
-                            switch (item.node) {
-                                case Node.NArrayAccessPart(rnode):
-                                    lnode = simplify(new ZNode(cpos, Node.NArrayAccess(lnode, rnode)), term);
-                                case Node.NFieldAccessPart(rnode):
-                                    lnode = simplify(new ZNode(cpos, Node.NFieldAccess(lnode, rnode)), term);
-                                case Node.NCallPart(rnode):
-                                    lnode = simplify(new ZNode(cpos, Node.NCall(lnode, rnode)), term);
-                                case Node.NBinOpPart(op, rnode):
-                                    var opp = NodeTools.getId(op);
-                                    switch (rnode.node) {
-                                        case Node.NBinOp(l, o, r):
-                                            var oldPriority = opsPriority[o];
-                                            var newPriority = opsPriority[opp];
-                                            if (oldPriority < newPriority) {
-                                                //trace('[1]');
-                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
-                                            } else {
-                                                //trace('[2] $l :::: $r :::: $lnode');
-                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(new ZNode(cpos, Node.NBinOp(lnode, opp, l)), o, r)), term);
-                                            }
-                                        default:
-                                            //trace('[3]: $lnode ||| $opp ||| $rnode');
-                                            lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
-                                    }
-                                default: throw 'simplify (I): $item';
-                            }
-                        }
-                        return lnode;
-                    default: throw 'simplify (II): $accessors';
-                }
-            default:
-        }
-        return znode;
     }
     
     private function operator(v:Dynamic):Term return term(v, buildNode2('NOp'));
@@ -123,9 +66,13 @@ class HaxeGrammar extends Grammar<Node> {
         function rlist(v) return Node.NList(v);
         //function rlist2(v) return Node.NListDummy(v);
 
-
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
-        var identifier = Term.TReg('identifier', ~/^[a-zA-Z]\w*/, function(v) return Node.NId(v));
+        var identifier = Term.TReg(
+            'identifier',
+            ~/^[a-zA-Z]\w*/,
+            function(v) return Node.NId(v),
+            function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
+        );
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));
         packageDecl = seq(['package', sure(), fqName, ';'], buildNode('NPackage'));
@@ -250,6 +197,52 @@ class HaxeGrammar extends Grammar<Node> {
         program = list2(any([packageDecl, importDecl, usingDecl, typeDecl]), 0, buildNode2('NFile'));
     }
 
+    override private function simplify(znode:ZNode, term:Term):ZNode {
+//if (znode == null) return null;
+//if (znode.node == null) return null;
+        if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
+        switch (znode.node) {
+//case Node.NList(items): return new ZNode(znode.pos, Node.NList([for (n in items) simplify(n, term)]));
+            case Node.NWrapper(n): return simplify(n, term);
+            case Node.NAccessList(node, accessors):
+                switch (accessors.node) {
+                    case Node.NList([]): return node;
+                    case Node.NList(items):
+                        var lnode = node;
+                        for (item in items) {
+                            var cpos = Position.combine(lnode.pos, item.pos);
+                            switch (item.node) {
+                                case Node.NArrayAccessPart(rnode):
+                                    lnode = simplify(new ZNode(cpos, Node.NArrayAccess(lnode, rnode)), term);
+                                case Node.NFieldAccessPart(rnode):
+                                    lnode = simplify(new ZNode(cpos, Node.NFieldAccess(lnode, rnode)), term);
+                                case Node.NCallPart(rnode):
+                                    lnode = simplify(new ZNode(cpos, Node.NCall(lnode, rnode)), term);
+                                case Node.NBinOpPart(op, rnode):
+                                    var opp = NodeTools.getId(op);
+                                    switch (rnode.node) {
+                                        case Node.NBinOp(l, o, r):
+                                            var oldPriority = opsPriority[o];
+                                            var newPriority = opsPriority[opp];
+                                            if (oldPriority < newPriority) {
+                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                            } else {
+                                                lnode = simplify(new ZNode(cpos, Node.NBinOp(new ZNode(cpos, Node.NBinOp(lnode, opp, l)), o, r)), term);
+                                            }
+                                        default:
+                                            lnode = simplify(new ZNode(cpos, Node.NBinOp(lnode, opp, rnode)), term);
+                                    }
+                                default: throw 'simplify (I): $item';
+                            }
+                        }
+                        return lnode;
+                    default: throw 'simplify (II): $accessors';
+                }
+            default:
+        }
+        return znode;
+    }
+    
     private var spaces = ~/^\s+/;
     private var singleLineComments = ~/^\/\/(.*?)(\n|$)/;
     override private function skipNonGrammar(str:Reader) {

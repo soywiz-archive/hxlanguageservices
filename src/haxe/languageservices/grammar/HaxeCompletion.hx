@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.ProcessNodeContext;
@@ -88,22 +89,19 @@ class HaxeCompletion {
             case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
-            case Node.NFieldAccess(left, id):
+            case Node.NFieldAccess(_left, _id):
+                var left:ZNode = _left;
+                var id:ZNode = _id; 
                 process(left, scope);
                 var lvalue = scope.getNodeResult(left);
-            
-                //if (id == null) {
-                    var l:ZNode = left;
-                    //trace('id:null');
-                    var p = l.pos.reader.createPos(l.pos.max, l.pos.max + 2);
-                    var cscope = scope.createChild(new ZNode(p, null));
-                    cscope.unlinkFromParent();
-                    for (m in lvalue.type.type.members) {
-                        cscope.addLocal(new CompletionEntry(cscope, p, null, null, m.name));
-                    }
-                //}
-                //process(id, scope);
-                //left.
+                var l:ZNode = left;
+                var p = l.pos.reader.createPos(l.pos.max, l.pos.max + 2);
+                if (id != null) p = id.pos;
+                var cscope = scope.createChild(new ZNode(p, null));
+                cscope.unlinkFromParent();
+                for (m in lvalue.type.type.getAllMembers()) {
+                    cscope.addLocal(new CompletionEntry(cscope, p, null, null, m.name));
+                }
             case Node.NBinOp(left, op, right):
                 process(left, scope);
                 process(right, scope);
@@ -390,14 +388,17 @@ class CompletionScope {
             case Node.NFieldAccess(left, id):
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NId(str):
-                switch (str) {
-                    case 'true': return ExpressionResult.withValue(types.specTypeBool, true);
-                    case 'false': return ExpressionResult.withValue(types.specTypeBool, false);
-                    case 'null': return ExpressionResult.withValue(types.specTypeDynamic, null);
-                    default:
-                        var local = getLocal(str);
-                        if (local != null) return local.getResult(context);
-                        return ExpressionResult.withoutValue(types.specTypeDynamic);
+                if (ConstTools.isPredefinedConstant(str)) {
+                    switch (str) {
+                        case 'true': return ExpressionResult.withValue(types.specTypeBool, true);
+                        case 'false': return ExpressionResult.withValue(types.specTypeBool, false);
+                        case 'null': return ExpressionResult.withValue(types.specTypeDynamic, null);
+                        default: throw 'Invalid HaxeCompletion predefined constant';
+                    }
+                } else {
+                    var local = getLocal(str);
+                    if (local != null) return local.getResult(context);
+                    return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
             default:
                 throw new js.Error('Not implemented getNodeResult() $znode');

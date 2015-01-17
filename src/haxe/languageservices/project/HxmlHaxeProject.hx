@@ -6,7 +6,7 @@ import haxe.languageservices.util.PathUtils;
 import haxe.io.Path;
 import haxe.languageservices.util.Vfs;
 import haxe.languageservices.sdk.HaxeSdk;
-import haxe.languageservices.util.FileSystem2;
+import haxe.languageservices.util.LocalVfs;
 
 using StringTools;
 

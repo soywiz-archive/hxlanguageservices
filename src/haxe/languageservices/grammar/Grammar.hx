@@ -55,7 +55,7 @@ class Grammar<TNode> {
     private function describe(t:Term):String {
         switch (t) {
             case Term.TLit(lit, _): return '"$lit"';
-            case Term.TReg(name, _, _): return '$name';
+            case Term.TReg(name, _, _, _): return '$name';
             case Term.TRef(ref): return describe(ref.term);
             case Term.TOpt(item, _): return describe(item);
             case Term.TSeq(items, _): return describe(items[0]);
@@ -89,7 +89,16 @@ class Grammar<TNode> {
         }
         switch (t) {
             case Term.TLit(lit, conv): return gen(reader.matchLit(lit), conv);
-            case Term.TReg(name, reg, conv): return gen(reader.matchEReg(reg), conv);
+            case Term.TReg(name, reg, conv, checker):
+                var res = reader.matchEReg(reg);
+                if (checker != null) {
+                    if (!checker(res)) {
+                        //reader.pos = start;
+                        errors.add(new ParserError(reader.createPos(start, reader.pos), 'identifier ' + res + ' is a keyword'));
+                        //return Result.RUnmatched(0, start);
+                    }
+                }
+                return gen(res, conv);
             case Term.TRef(ref): return _parse(ref.term, reader, errors);
             case Term.TOpt(item, error):
                 switch (_parse(item, reader, errors)) {
@@ -266,7 +275,7 @@ enum Result {
 
 enum Term {
     TLit(lit:String, ?conv:Dynamic -> Dynamic);
-    TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic);
+    TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic, ?checker: String -> Bool);
     TRef(ref:TermRef);
     TAny(items:Array<Term>, recover:Array<Term>);
     TSure;

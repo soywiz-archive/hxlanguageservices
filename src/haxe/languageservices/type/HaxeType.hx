@@ -16,6 +16,12 @@ class HaxeType {
     public var membersByName = new Map<String, HaxeMember>();
 
     public var node:ZNode;
+    
+    public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
+        if (out == null) out = [];
+        for (member in members) out.push(member);
+        return out;
+    }
 
     public function new(packag:HaxePackage, pos:Position, name:String) {
         this.packag = packag;
@@ -80,6 +86,12 @@ class ClassHaxeType extends HaxeType {
     private function getExtending():ClassHaxeType {
         if (extending == null) return null;
         return extending.getClass();
+    }
+
+    override public function getAllMembers(?out2:Array<HaxeMember>):Array<HaxeMember> {
+        var out = super.getAllMembers(out2);
+        if (extending != null) getExtending().getAllMembers(out);
+        return out;
     }
 
     public function getAncestorMembers():Map<String, HaxeMember> {

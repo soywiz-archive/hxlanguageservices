@@ -1,7 +1,7 @@
 import haxe.languageservices.util.Vfs;
 import haxe.languageservices.project.LimeXmlHaxeProject;
 import haxe.languageservices.sdk.HaxeSdk;
-import haxe.languageservices.util.FileSystem2;
+import haxe.languageservices.util.LocalVfs;
 import haxe.languageservices.project.HxmlHaxeProject;
 import haxe.unit.TestCase;
 
@@ -11,7 +11,7 @@ class TestProject extends TestCase {
     
     public function new() {
         super();
-        testassets = new FileSystem2().access('testassets');
+        testassets = new LocalVfs().access('testassets');
         sdk = new HaxeSdk(testassets, 'fakehaxesdk');
     }
 

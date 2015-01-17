@@ -1,7 +1,7 @@
 package haxe.languageservices.sdk;
 
 import haxe.languageservices.util.Vfs;
-import haxe.languageservices.util.FileSystem2;
+import haxe.languageservices.util.LocalVfs;
 
 using StringTools;
 

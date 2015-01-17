@@ -1,6 +1,6 @@
 package haxe.languageservices.util;
 
-class FileSystem2 extends Vfs {
+class LocalVfs extends Vfs {
     public function new() { super(); }
 
     override private function _readString(path:String):String {
