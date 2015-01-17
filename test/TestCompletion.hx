@@ -16,12 +16,6 @@ class TestCompletion extends TestCase {
         var services = new HaxeLanguageServices(vfs);
         services.updateHaxeFile(live);
         
-        if (errors != null) {
-            assertEquals('' + errors, '' + services.getErrors(live));
-        } else {
-            for (error in services.getErrors(live)) trace(error);
-        }
-
         var items = services.getCompletionAt(live, index).items;
         for (i in include) {
             var included = Lambda.exists(items, function(e:CompEntry) { return i == e.toString(); });
@@ -41,7 +35,13 @@ class TestCompletion extends TestCase {
             }
         }
 
-        //assertEquals('' + completion, '' + services.getCompletionAt(live, index), p);
+        if (errors != null) {
+            assertEquals('' + errors, '' + services.getErrors(live));
+        } else {
+            for (error in services.getErrors(live)) trace(error);
+        }
+
+//assertEquals('' + completion, '' + services.getCompletionAt(live, index), p);
     }
 
     private function assertFuntionBody(func:String, included:Array<String>, excluded:Array<String>, ?errors:Dynamic, ?p:PosInfos) {
@@ -85,5 +85,10 @@ class TestCompletion extends TestCase {
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], ['38:38:expected identifier']);
         assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], []);
+        assertProgramBody(
+            'class A extends B { function a() { this.###; } } class B { function b() {} }',
+            ['a:Dynamic', 'b:Dynamic'], [],
+            '[39:39:expected identifier]'
+        );
     }
 }

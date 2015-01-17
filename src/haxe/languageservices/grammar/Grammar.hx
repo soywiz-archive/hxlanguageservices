@@ -94,7 +94,7 @@ class Grammar<TNode> {
                 if (checker != null) {
                     if (!checker(res)) {
                         //reader.pos = start;
-                        errors.add(new ParserError(reader.createPos(start, reader.pos), 'identifier ' + res + ' is a keyword'));
+                        //errors.add(new ParserError(reader.createPos(start, reader.pos), 'identifier ' + res + ' is a keyword'));
                         //return Result.RUnmatched(0, start);
                     }
                 }

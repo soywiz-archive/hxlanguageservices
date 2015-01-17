@@ -41,6 +41,15 @@ class HaxeLanguageServices {
         }
     }
     
+    public function getFileTypes(path:String):Array<CompType> {
+        var context = getContext(path);
+        return null;
+    }
+
+    public function getTypeMembers(path:String):Array<String> {
+        return null;
+    }
+    
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getLocals();
