@@ -20,7 +20,7 @@ class NodeTypeTools {
                 }
                 return getTypeDeclType(types, items[0]);
             case Node.NId(name):
-                return new SpecificHaxeType(types.getType(name));
+                return types.createSpecific(types.getType(name));
             default: throw 'Invalid $typeDecl';
         }
         return types.specTypeDynamic;

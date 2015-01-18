@@ -36,12 +36,12 @@ class HaxeTypes {
         typeArray = rootPackage.accessTypeCreate('Array', typesPos, ClassHaxeType);
         typeString = rootPackage.accessTypeCreate('String', typesPos, ClassHaxeType);
 
-        specTypeVoid = new SpecificHaxeType(typeVoid);
-        specTypeDynamic = new SpecificHaxeType(typeDynamic);
-        specTypeBool = new SpecificHaxeType(typeBool);
-        specTypeInt = new SpecificHaxeType(typeInt);
-        specTypeFloat = new SpecificHaxeType(typeFloat);
-        specTypeString = new SpecificHaxeType(typeString);
+        specTypeVoid = createSpecific(typeVoid);
+        specTypeDynamic = createSpecific(typeDynamic);
+        specTypeBool = createSpecific(typeBool);
+        specTypeInt = createSpecific(typeInt);
+        specTypeFloat = createSpecific(typeFloat);
+        specTypeString = createSpecific(typeString);
         
 
         function nameNode(name:String) return new ZNode(typesPos, Node.NId(name));
@@ -56,7 +56,7 @@ class HaxeTypes {
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
         // @TODO
-        if (types.length == 0) return new SpecificHaxeType(typeDynamic);
+        if (types.length == 0) return specTypeDynamic;
         return types[0];
     }
 
@@ -72,11 +72,15 @@ class HaxeTypes {
     }
     
     public function createArray(elementType:SpecificHaxeType):SpecificHaxeType {
-        return new SpecificHaxeType(typeArray, [elementType]);
+        return createSpecific(typeArray, [elementType]);
+    }
+    
+    public function createSpecific(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
+        return new SpecificHaxeType(this, type, parameters);
     }
     
     public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
-        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(typeDynamic);
+        if (arrayType == null || arrayType.parameters.length < 1) return specTypeDynamic;
         return arrayType.parameters[0];
     }
 

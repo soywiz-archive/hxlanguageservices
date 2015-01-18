@@ -71,6 +71,7 @@ class HaxeGrammar extends Grammar<Node> {
             return s.substr(1, s.length - 2);
         }
 
+        var float = Term.TReg('float', ~/^(\d+\.\d*|\d*\.\d+)/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
         var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
@@ -101,7 +102,7 @@ class HaxeGrammar extends Grammar<Node> {
         var switchDefaultStm = seq(['default', sure(), ':'], buildNode2('NDefault'));
         var switchStm = seq(['switch', sure(), '(', expr, ')', '{', list2(any([switchCaseStm, switchDefaultStm, stm]), 0), '}'], buildNode2('NSwitch'));
         var parenExpr = seqi(['(', sure(), expr, ')']);
-        var constant = any([ int, stringDqLit, stringSqLit, identifier ]);
+        var constant = any([ float, int, stringDqLit, stringSqLit, identifier ]);
         var type = createRef();
         var typeParamItem = type;
         var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));

@@ -84,4 +84,9 @@ class TestErrorReporting extends HLSTestCase {
         assertProgramErrors('class A { function a() { } function a() { } }', '[36:37:Duplicate class field declaration : a]');
         assertProgramErrors('class A { var a; function a() { } }', '[26:27:Duplicate class field declaration : a]');
     }
+
+    public function testCallTypes() {
+        assertProgramErrors('class A { function b(a:String) { } function a() { b("hi"); } }', '[]');
+        assertProgramErrors('class A { function b(a:String) { } function a() { b(1); } }', '[52:53:Invalid argument a expected String but found Int = 1]');
+    }
 }

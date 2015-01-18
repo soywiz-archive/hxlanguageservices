@@ -100,18 +100,28 @@ class HaxeCompletion {
                 } else {
                     var f:FunctionHaxeType = Std.instance(lvalue.type.type, FunctionHaxeType);
 
-                    var argcount = 0;
-                    if (args != null) {
-                        switch (args.node) {
-                            case Node.NList(items): argcount = items.length;
-                            default: throw 'Invalid args: ' + args;
-                        }
-                    } else {
-                        argcount = 0;
+                    var argnodes:Array<ZNode> = [];
+                    if (args != null) switch (args.node) {
+                        case Node.NList(items):
+                            argnodes = items;
+                        default: throw 'Invalid args: ' + args;
                     }
 
-                    if (argcount != f.args.length) {
-                        errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argcount + ' arguments but required ' + f.args.length));
+                    if (argnodes.length != f.args.length) {
+                        errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argnodes.length + ' arguments but required ' + f.args.length));
+                    }
+                    
+                    for (n in 0 ... argnodes.length) {
+                        var argnode = argnodes[n];
+                        var arg = f.args[n];
+                        if (argnode != null && arg != null) {
+                            var argResult = scope.getNodeResult(argnode);
+                            var expectedArgType = arg.getSpecType(types);
+                            var callArgType = argResult.type;
+                            if (!expectedArgType.canAssign(callArgType)) {
+                                errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
+                            }
+                        }
                     }
                 }
                 
@@ -260,7 +270,7 @@ class CompletionEntryFunctionElement extends BaseCompletionEntry {
 
 class CompletionEntryThis extends BaseCompletionEntry {
     public function new(scope:CompletionScope, type:HaxeType) {
-        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', new SpecificHaxeType(type));
+        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', type.types.createSpecific(type));
     
     }
 
@@ -326,7 +336,7 @@ class BaseCompletionEntry implements HaxeCompilerElement {
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         var ctype:ExpressionResult = null;
         if (type2 != null) return ExpressionResult.withoutValue(type2);
-        if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types.getType(type.pos.text)));
+        if (type != null) ctype = ExpressionResult.withoutValue(scope.types.createSpecific(scope.types.getType(type.pos.text)));
         if (expr != null) ctype = scope.getNodeResult(expr, context);
         if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
         return ctype;
@@ -457,6 +467,11 @@ class CompletionScope implements CompletionEntryProvider {
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
             case Node.NCall(left, args):
                 var value = _getNodeResult(left, context);
+                if (Std.is(value.type.type, FunctionHaxeType)) {
+                    var retval = cast(value.type.type, FunctionHaxeType).retval;
+                    var type = retval.getSpecType(types);
+                    return ExpressionResult.withoutValue(type);
+                }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NFieldAccess(left, id):
                 if (left != null && id != null) {

@@ -168,6 +168,18 @@ class MainIde {
         updateIde();
     }
     
+    private inline function tryCatchRelease(callback: Void -> Void, handler: Dynamic -> Void) {
+        #if debug
+            callback();
+        #else
+            try {
+                callback();
+            } catch (e:Dynamic) {
+                handler(e);
+            }
+        #end
+    }
+    
     private function updateIde() {
         var document = Browser.document;
 
@@ -200,14 +212,13 @@ class MainIde {
 
         var show = false;
         var file = 'live.hx';
-        try {
+        tryCatchRelease(function() {
             var items = services.getCompletionAt(file, cursorIndex);
             if (items.items.length == 0) {
                 autocompletionOverlay.innerText = 'no autocompletion info';
             } else {
                 autocompletionOverlay.innerText = items.items.join('\n');
             }
-            //trace('Autocompletion:' + items);
             var id = services.getIdAt(file, cursorIndex);
             references = [];
             if (id != null) {
@@ -218,10 +229,10 @@ class MainIde {
                     references.push(new CompReference(id.pos, CompReferenceType.Read));
                 }
             }
-        } catch (e:Dynamic) {
-            trace(e);
+        }, function(e) {
+            Browser.window.console.error(e);
             addError(new CompError(new CompPosition(0, 0), '' + e));
-        }
+        });
 
         for (reference in references) {
             var pos1 = editor.session.doc.indexToPosition(reference.pos.min, 0);

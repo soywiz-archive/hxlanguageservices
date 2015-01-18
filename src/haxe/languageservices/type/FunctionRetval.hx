@@ -8,5 +8,8 @@ class FunctionRetval {
         this.fqName = fqName;
         this.doc = doc;
     }
+    public function getSpecType(types:HaxeTypes):SpecificHaxeType {
+        return types.createSpecific(types.getType(fqName));
+    }
     public function toString() return fqName;
 }

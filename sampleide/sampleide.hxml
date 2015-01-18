@@ -2,5 +2,4 @@
 -cp ../src
 -main MainIde
 -dce no
--debug
 -js mainide.js

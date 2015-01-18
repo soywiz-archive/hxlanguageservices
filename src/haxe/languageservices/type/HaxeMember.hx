@@ -36,10 +36,12 @@ class HaxeMember implements HaxeCompilerElement {
     }
 
     static public function staticIsStatic(member:HaxeMember):Bool {
+        if (member == null) return false;
         return member.modifiers.isStatic;
     }
 
     static public function staticIsNotStatic(member:HaxeMember):Bool {
+        if (member == null) return false;
         return !member.modifiers.isStatic;
     }
 }
@@ -52,7 +54,7 @@ class MethodHaxeMember extends HaxeMember {
     }
     override public function toString() return 'Method($name)';
     override public function getType():SpecificHaxeType {
-        return new SpecificHaxeType(type);
+        return type.types.createSpecific(type);
     }
 }
 

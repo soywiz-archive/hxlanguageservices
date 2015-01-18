@@ -195,8 +195,16 @@ class HaxeTypeBuilder {
                                         }
                                         default: throw 'Invalid (VI) $vargs';
                                     }
+                                    
+                                    var fretval:FunctionRetval;
+                                    if (vret != null) {
+                                        //fretval = new FunctionRetval(NodeTypeTools.getTypeDeclType(types, vret).type.fqName, '');
+                                        fretval = new FunctionRetval(vret.pos.text.trim(), '');
+                                    } else {
+                                        fretval = new FunctionRetval('Dynamic');
+                                    }
 
-                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, vname, ffargs, new FunctionRetval('Dynamic')));
+                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, vname, ffargs, fretval));
                                     method.modifiers = mods;
                                     if (type.existsMember(method.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${method.name}');

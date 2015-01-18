@@ -51,7 +51,10 @@ class HaxeType {
     }
 
     public function canAssign(that:HaxeType):Bool {
-        // @TODO
+        if (this.fqName == 'Float' && that.fqName == 'Int') return true;
+        if (this.fqName == 'Dynamic') return true;
+        if (that.fqName == 'Dynamic') return true;
+        if (this != that) return false;
         return true;
     }
 }

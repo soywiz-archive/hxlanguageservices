@@ -15,6 +15,8 @@ class FunctionArgument {
         this.defaultValue = defaultValue;
         this.doc = doc;
     }
-
+    public function getSpecType(types:HaxeTypes):SpecificHaxeType {
+        return types.createSpecific(types.getType(fqName));
+    }
     public function toString() return '$name:$fqName';
 }
