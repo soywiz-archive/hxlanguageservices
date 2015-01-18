@@ -452,6 +452,7 @@ class CompletionScope implements CompletionEntryProvider {
                 return ExpressionResult.withoutValue(types.createArray(elementType));
             case Node.NConst(Const.CInt(value)): return ExpressionResult.withValue(types.specTypeInt, value);
             case Node.NConst(Const.CFloat(value)): return ExpressionResult.withValue(types.specTypeFloat, value);
+            case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
             case Node.NCall(left, args):

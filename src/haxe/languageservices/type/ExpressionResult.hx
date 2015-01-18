@@ -12,7 +12,10 @@ class ExpressionResult {
     }
 
     public function toString() {
-        if (hasValue) return '$type = $value';
+        if (hasValue) {
+            if (Std.is(value, String)) return '$type = "$value"';
+            return '$type = $value';
+        }
         return '$type';
     }
 

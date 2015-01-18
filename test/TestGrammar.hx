@@ -196,6 +196,11 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString('NConst(CInt(1))@10:11', node.locateIndex(10));
     }
 
+    public function testString() {
+        var node:ZNode = hg.parseStringNode(hg.expr, '"hello world"', 'program.hx');
+        assertEqualsString('NConst(CString(hello world))@0:13', node);
+    }
+
     public function testCompletionLocateNode() {
         var node:ZNode = hg.parseStringNode(hg.stm, 'if (test) demo else 2', 'program.hx');
         var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);

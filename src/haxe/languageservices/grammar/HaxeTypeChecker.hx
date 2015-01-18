@@ -67,14 +67,14 @@ class HaxeTypeChecker {
             if (ancestorMembers.exists(mem.name)) {
                 var ancestorMem:HaxeMember = ancestorMembers[mem.name];
                 if (!mem.modifiers.isOverride) {
-                    errors.add(new ParserError(mem.pos, 'member ${mem.name} must override'));
+                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} should be declared with \'override\' since it is inherited from superclass'));
                 }
                 if (ancestorMem.modifiers.isStatic) {
-                    errors.add(new ParserError(mem.pos, 'static member ${mem.name} cannot be overriden'));
+                    errors.add(new ParserError(mem.nameNode.pos, 'static member ${mem.name} cannot be overriden'));
                 }
             } else {
                 if (mem.modifiers.isOverride) {
-                    errors.add(new ParserError(mem.pos, 'member ${mem.name} not overriding anything'));
+                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} is declared \'override\' but doesn\'t override any field'));
                 }
             }
         }
@@ -96,6 +96,13 @@ class HaxeTypeChecker {
     }
 }
 
-class A {
-    private function test() if (true) 1; else 2;
+/*
+class A extends B {
+    override private function test() if (true) 1; else 2;
+    //function c() {}
 }
+
+class B {
+    function c() {}
+}
+*/

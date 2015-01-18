@@ -1,4 +1,4 @@
 rm deploy.zip
-7z a -tzip -mx=9 deploy.zip README.md haxelib.json include.xml src test testassets sampleide
+7z a -tzip -mx=9 deploy.zip README.md haxelib.json include.xml src
 haxelib submit deploy.zip
 rm deploy.zip

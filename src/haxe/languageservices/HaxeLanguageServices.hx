@@ -300,7 +300,10 @@ class CompEntry {
         this.value = value;
     }
     public function toString() {
-        if (hasValue) return '$name:$type = $value';
+        if (hasValue) {
+            if (Std.is(value, String)) return '$name:$type = "$value"';
+            return '$name:$type = $value';
+        }
         return '$name:$type';
     }
 }

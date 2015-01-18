@@ -60,6 +60,7 @@ class TestCompletion extends HLSTestCase {
         assertFuntionBody('for (a in [1, 2, 3]) ### a;', ['a:Int'], []);
         assertFuntionBody('for (a in [false, true, false]) ### a;', ['a:Bool'], []);
         assertFuntionBody('var a = false; for (a in [1, 2, 3]) a; ###', ['a:Bool = false'], []);
+        assertFuntionBody('var a = "test"; ###', ['a:String = "test"'], []);
     }
 
     public function test2() {

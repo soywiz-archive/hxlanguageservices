@@ -39,9 +39,9 @@ class TestErrorReporting extends HLSTestCase {
     public function testInheritanceChecks() {
         assertProgramErrors('class B { } class A extends B { }', '[]');
         assertProgramErrors('class B { } class A extends B { function a() { } }', '[]');
-        assertProgramErrors('class B { } class A extends B { override function a() { } }', '[32:57:member a not overriding anything]');
+        assertProgramErrors('class B { } class A extends B { override function a() { } }', '[50:51:Field a is declared \'override\' but doesn\'t override any field]');
         assertProgramErrors('class B { function a() { } } class A extends B { override function a() { } }', '[]');
-        assertProgramErrors('class B { function a() { } } class A extends B { function a() { } }', '[49:65:member a must override]');
+        assertProgramErrors('class B { function a() { } } class A extends B { function a() { } }', '[58:59:Field a should be declared with \'override\' since it is inherited from superclass]');
     }
 
     public function testComments() {

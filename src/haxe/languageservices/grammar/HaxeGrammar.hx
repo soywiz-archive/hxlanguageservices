@@ -20,6 +20,7 @@ class HaxeGrammar extends Grammar<Node> {
     public var expr:Term;
     public var stm:Term;
     public var program:Term;
+    public var stringDqLit:Term;
     
     private function buildNode(name:String): Dynamic -> Dynamic {
         return function(v) return Type.createEnum(Node, name, v);
@@ -65,8 +66,14 @@ class HaxeGrammar extends Grammar<Node> {
         
         function rlist(v) return Node.NList(v);
         //function rlist2(v) return Node.NListDummy(v);
+    
+        function parseString(s:String) {
+            return s.substr(1, s.length - 2);
+        }
 
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
+        stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
+        var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
         var identifier = Term.TReg(
             'identifier',
             ~/^[a-zA-Z]\w*/,
@@ -94,7 +101,7 @@ class HaxeGrammar extends Grammar<Node> {
         var switchDefaultStm = seq(['default', sure(), ':'], buildNode2('NDefault'));
         var switchStm = seq(['switch', sure(), '(', expr, ')', '{', list2(any([switchCaseStm, switchDefaultStm, stm]), 0), '}'], buildNode2('NSwitch'));
         var parenExpr = seqi(['(', sure(), expr, ')']);
-        var constant = any([ int, identifier ]);
+        var constant = any([ int, stringDqLit, stringSqLit, identifier ]);
         var type = createRef();
         var typeParamItem = type;
         var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
