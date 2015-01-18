@@ -15,10 +15,20 @@ class Scope<TValue> {
         return false;
     }
 
+    public function existsLocal(key:String):Bool {
+        if (map.exists(key)) return true;
+        return false;
+    }
+
     public function get(key:String):TValue {
         if (map.exists(key)) return map.get(key);
         if (parent != null) return parent.get(key);
         //throw new Error2('Can\'t find "$key"');
+        return null;
+    }
+
+    public function getLocal(key:String):TValue {
+        if (map.exists(key)) return map.get(key);
         return null;
     }
 

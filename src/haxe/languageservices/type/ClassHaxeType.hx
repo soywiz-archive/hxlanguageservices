@@ -15,6 +15,12 @@ class ClassHaxeType extends HaxeType {
         return out;
     }
 
+    override public function getInheritedMemberByName(name:String):HaxeMember {
+        var result = super.getInheritedMemberByName(name);
+        if (result == null && extending != null) return extending.getType().getInheritedMemberByName(name);
+        return result;
+    }
+
     public function getAncestorMembers():Map<String, HaxeMember> {
         if (getExtending() == null) return new Map<String, HaxeMember>();
         return getExtending().getThisAndAncestorMembers();

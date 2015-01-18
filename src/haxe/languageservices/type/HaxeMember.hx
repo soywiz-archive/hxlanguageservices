@@ -20,6 +20,14 @@ class HaxeMember {
     public function toString() return 'Member($name)';
 
     public function getType(types:HaxeTypes):SpecificHaxeType return types.specTypeDynamic;
+
+    static public function staticIsStatic(member:HaxeMember):Bool {
+        return member.modifiers.isStatic;
+    }
+
+    static public function staticIsNotStatic(member:HaxeMember):Bool {
+        return !member.modifiers.isStatic;
+    }
 }
 
 class MethodHaxeMember extends HaxeMember {

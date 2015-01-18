@@ -59,7 +59,7 @@ class HaxeCompletion {
                 switch (value) {
                     case 'true', 'false', 'null':
                     default:
-                        var local = scope.getLocal(value);
+                        var local = scope.getEntryByName(value);
                         if (local == null) {
                             errors.add(new ParserError(znode.pos, 'Can\'t find local "$value"'));
                         } else {
@@ -128,9 +128,8 @@ class HaxeCompletion {
                 if (id != null) p = id.pos;
                 var cscope = scope.createChild(new ZNode(p, null));
                 cscope.unlinkFromParent();
-                for (m in lvalue.type.type.getAllMembers()) {
-                    cscope.addLocal(new BaseCompletionEntry(cscope, p, null, null, m.name, m.getType(types)));
-                }
+
+                cscope.addProvider(new TypeCompletionEntryProvider(lvalue.type.type, HaxeMember.staticIsNotStatic));
             case Node.NBinOp(left, op, right):
                 process(left, scope);
                 process(right, scope);
@@ -249,18 +248,29 @@ class CompletionEntryThis extends BaseCompletionEntry {
 
 interface CompletionEntryProvider {
     function getEntries(?out:Array<CompletionEntry>):Array<CompletionEntry>;
+    function getEntryByName(name:String):CompletionEntry;
 }
 
 class TypeCompletionEntryProvider implements CompletionEntryProvider {
     private var type:HaxeType;
+    private var filter: HaxeMember -> Bool;
 
-    public function new(type:HaxeType) {
+    public function new(type:HaxeType, ?filter: HaxeMember -> Bool) {
         this.type = type;
+        this.filter = filter;
+    }
+
+    public function getEntryByName(name:String):CompletionEntry {
+        var member = type.getInheritedMemberByName(name);
+        if (filter != null && !filter(member)) return null;
+        if (member == null) return null;
+        return new TypeMemberCompletionEntry(member);
     }
 
     public function getEntries(?out:Array<CompletionEntry>):Array<CompletionEntry> {
         if (out == null) out = [];
-        for (member in type.members) {
+        for (member in type.getAllMembers()) {
+            if (filter != null && !filter(member)) continue;
             out.push(new TypeMemberCompletionEntry(member));
         }
         return out;
@@ -448,6 +458,11 @@ class CompletionScope implements CompletionEntryProvider {
                 var value = _getNodeResult(left, context);
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NFieldAccess(left, id):
+                if (left != null && id != null) {
+                    var lvalue = _getNodeResult(left, context);
+                    var member = lvalue.type.type.getMember(NodeTools.getId(id));
+                    return ExpressionResult.withoutValue(member.getType(types));
+                }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NId(str):
                 if (ConstTools.isPredefinedConstant(str)) {
@@ -458,7 +473,7 @@ class CompletionScope implements CompletionEntryProvider {
                         default: throw 'Invalid HaxeCompletion predefined constant';
                     }
                 } else {
-                    var local = getLocal(str);
+                    var local = getEntryByName(str);
                     if (local != null) return local.getResult(context);
                     return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
@@ -484,14 +499,27 @@ class CompletionScope implements CompletionEntryProvider {
         return out;
     }
 
-    public function getLocalAt(index:Int):CompletionEntry {
-        var id = getIdentifierAt(index);
-        if (id == null) return null;
-        return locals.get(id.name);
+    public function getEntryByName(name:String):CompletionEntry {
+        if (locals.existsLocal(name)) return locals.getLocal(name);
+        for (provider in providers) {
+            var result = provider.getEntryByName(name);
+            if (result != null) return result;
+        }
+        if (parent != null) {
+            var result = parent.getEntryByName(name);
+            if (result != null) return result;
+        }
+        return null;
     }
 
     public function getLocal(name:String):CompletionEntry {
         return locals.get(name);
+    }
+
+    public function getLocalAt(index:Int):CompletionEntry {
+        var id = getIdentifierAt(index);
+        if (id == null) return null;
+        return locals.get(id.name);
     }
 
     public function addLocal(entry:CompletionEntry):Void {

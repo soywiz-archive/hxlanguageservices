@@ -12,7 +12,7 @@ class HaxeType {
     
     public var typeParameters = new Array<HaxeTypeParameter>();
     public var members = new Array<HaxeMember>();
-    public var membersByName = new Map<String, HaxeMember>();
+    private var membersByName = new Map<String, HaxeMember>();
 
     public var node:ZNode;
     
@@ -20,6 +20,10 @@ class HaxeType {
         if (out == null) out = [];
         for (member in members) out.push(member);
         return out;
+    }
+    
+    public function getInheritedMemberByName(name:String):HaxeMember {
+        return membersByName[name];
     }
 
     public function new(packag:HaxePackage, pos:Position, name:String) {
