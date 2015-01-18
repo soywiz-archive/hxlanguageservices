@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.Node;
 import haxe.languageservices.type.HaxeMember.MethodHaxeMember;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
@@ -41,13 +42,16 @@ class HaxeTypes {
         specTypeInt = new SpecificHaxeType(typeInt);
         specTypeFloat = new SpecificHaxeType(typeFloat);
         specTypeString = new SpecificHaxeType(typeString);
+        
 
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, 'testBoolMethod', [], new FunctionRetval('Dynamic'))));
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, 'testBoolMethod2', [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, 'testIntMethod', [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, 'testIntMethod2', [], new FunctionRetval('Dynamic'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, 'indexOf', [new FunctionArgument('element', 'Dynamic')], new FunctionRetval('Int'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, 'charAt', [new FunctionArgument('index', 'Int')], new FunctionRetval('String'))));
+        function nameNode(name:String) return new ZNode(typesPos, Node.NId(name));
+
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, nameNode('testBoolMethod'), [], new FunctionRetval('Dynamic'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, nameNode('testBoolMethod2'), [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, nameNode('testIntMethod'), [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, nameNode('testIntMethod2'), [], new FunctionRetval('Dynamic'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, nameNode('indexOf'), [new FunctionArgument('element', 'Dynamic')], new FunctionRetval('Int'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, nameNode('charAt'), [new FunctionArgument('index', 'Int')], new FunctionRetval('String'))));
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {

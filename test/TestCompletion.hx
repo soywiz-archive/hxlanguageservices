@@ -7,7 +7,7 @@ import haxe.unit.TestCase;
 using StringTools;
 using Lambda;
 
-class TestCompletion extends TestCase {
+class TestCompletion extends HLSTestCase {
     private function assertProgramBody(prg:String, include:Array<String>, exclude:Array<String>, ?errors:Dynamic, ?p:PosInfos) {
         var index = prg.indexOf('###');
         prg = prg.replace('###', '');

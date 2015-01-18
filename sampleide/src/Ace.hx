@@ -14,6 +14,11 @@ class AceTools {
         var vv = untyped ace.require("ace/range").Range;
         return Type.createInstance(vv, [startRow, startColumn, endRow, endColumn]);
     }
+    static public function createRangeIndices(editor:Editor, min:Int, max:Int):Range {
+        var pmin = editor.session.doc.indexToPosition(min, 0);
+        var pmax = editor.session.doc.indexToPosition(max, 0);
+        return createRange(pmin, pmax);
+    }
     static public function createRange(start:Position, end:Position):Range {
         return _createRange(start.row, start.column, end.row, end.column);
     }
@@ -22,9 +27,15 @@ class AceTools {
 extern class Editor {
     public var session:Session;
     public var renderer:Renderer;
+    public var commands:Commands;
     public function setTheme(name:String):Void;
     public function setOptions(name:Options):Void;
     public function getSession():Session;
+}
+
+extern class Commands {
+    public function on(event:String, fn:Dynamic -> Dynamic -> Void):Void;
+    public function addCommand(c:{name:String,bindKey:Dynamic,exec:Void -> Void}):Void;
 }
 
 typedef Options = {
@@ -118,6 +129,7 @@ extern class Session {
     public function addMarker(range:Range, clazz:String, type:String, inFront:Bool):Int;
     public function setAnnotations(annotations: Array<Annotation>):Void;
     public function getAnnotations(): Array<Annotation>;
+    public function replace(range: Range, text: String): Void;
 /*
     addDynamicMarker(marker: any, inFront: boolean);
     removeMarker(markerId: number);
@@ -147,7 +159,6 @@ extern class Session {
     undoChanges(deltas: any[], dontSelect: boolean): Range;
     redoChanges(deltas: any[], dontSelect: boolean): Range;
     setUndoSelect(enable: boolean);
-    replace(range: Range, text: string): any;
     moveText(fromRange: Range, toPosition: any): Range;
     indentRows(startRow: number, endRow: number, indentString: string);
     outdentRows(range: Range);

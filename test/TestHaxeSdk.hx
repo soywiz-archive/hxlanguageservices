@@ -4,7 +4,7 @@ import haxe.languageservices.sdk.HaxeSdk;
 import haxe.unit.TestCase;
 import haxe.languageservices.util.LocalVfs;
 
-class TestHaxeSdk extends TestCase {
+class TestHaxeSdk extends HLSTestCase {
     public function testHaxeVersion() {
         var sdk = new HaxeSdk(new LocalVfs(), 'testassets/fakehaxesdk');
         var sdkVersion = sdk.getVersion();

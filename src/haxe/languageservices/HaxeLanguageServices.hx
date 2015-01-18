@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.type.UsageType;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.type.FunctionHaxeType;
 import haxe.languageservices.type.SpecificHaxeType;
@@ -57,28 +58,16 @@ class HaxeLanguageServices {
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         var locals = context.completionScope.locateIndex(offset).getEntries();
-        return new CompList([for (l in locals) convToEntry(l.getName(), l.getResult())]);
+        return new CompList([for (l in locals) Conv.toEntry(l.getName(), l.getResult())]);
     }
 
-    static private function convToEntry(name:String, result:ExpressionResult):CompEntry {
-        return new CompEntry(name, convToType(result.type), result.hasValue, result.value);
-    }
-    
-    static private function convToType(type:SpecificHaxeType):CompType {
-        if (Std.is(type.type, FunctionHaxeType)) {
-            var ftype = cast(type.type, FunctionHaxeType);
-            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.retval.fqName));
-        }
-        return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) convToType(i)] : null);
-    }
-    
-    public function getReferencesAt(path:String, offset:Int):Array<CompReference> {
+    public function getReferencesAt(path:String, offset:Int):CompReferences {
         var context = getContext(path);
         var id = getIdAt(path, offset);
         if (id == null) return null;
-        var entry = context.completionScope.locateIndex(offset).getLocal(id.name);
+        var entry = context.completionScope.locateIndex(offset).getEntryByName(id.name);
         if (entry == null) return null;
-        return [for (usage in entry.getUsages()) { pos : convertPos(usage.node.pos), type: convUsageType(usage.type) }];
+        return new CompReferences(id.name, [for (usage in entry.getReferences().usages) new CompReference(Conv.pos(usage.pos), Conv.usageType(usage.type)) ]);
     }
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
@@ -86,7 +75,7 @@ class HaxeLanguageServices {
         var id = context.completionScope.getIdentifierAt(offset);
         if (id == null) return null;
         return {
-            pos: convertPos(id.pos),
+            pos: Conv.pos(id.pos),
             name: id.name
         };
     }
@@ -110,7 +99,7 @@ class HaxeLanguageServices {
 
     public function getErrors(path:String):Array<CompError> {
         var context:CompFileContext = getContext(path);
-        return [for (error in context.errors.errors) new CompError(convertPos(error.pos), error.message)];
+        return [for (error in context.errors.errors) new CompError(Conv.pos(error.pos), error.message)];
     }
 
     private function getContext(path:String):CompFileContext {
@@ -119,21 +108,35 @@ class HaxeLanguageServices {
         return context;
     }
     
-    static private function convUsageType(type:CompletionUsageType):CompReferenceType {
-        switch (type) {
-            case CompletionUsageType.Declaration: return CompReferenceType.Declaration;
-            case CompletionUsageType.Read: return CompReferenceType.Read;
-            case CompletionUsageType.Write: return CompReferenceType.Update;
-        }
-    }
-    
-    static private function convertPos(pos:Position):CompPosition {
-        return new CompPosition(pos.min, pos.max);
-    }
-
     //static private function convertType(type:CompletionType):CompType {
     //    return new CompType(CompletionTypeUtils.toString(type));
     //}
+}
+
+class Conv {
+    static public function toEntry(name:String, result:ExpressionResult):CompEntry {
+        return new CompEntry(name, Conv.toType(result.type), result.hasValue, result.value);
+    }
+
+    static public function usageType(type:UsageType):CompReferenceType {
+        switch (type) {
+            case UsageType.Declaration: return CompReferenceType.Declaration;
+            case UsageType.Read: return CompReferenceType.Read;
+            case UsageType.Write: return CompReferenceType.Update;
+        }
+    }
+
+    static public function pos(pos:Position):CompPosition {
+        return new CompPosition(pos.min, pos.max);
+    }
+
+    static public function toType(type:SpecificHaxeType):CompType {
+        if (Std.is(type.type, FunctionHaxeType)) {
+            var ftype = cast(type.type, FunctionHaxeType);
+            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.retval.fqName));
+        }
+        return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) Conv.toType(i)] : null);
+    }
 }
 
 class CompFileContext {
@@ -196,9 +199,24 @@ enum CompReferenceType {
     Read;
 }
 
-typedef CompReference = {
-    var pos:CompPosition;
-    var type:CompReferenceType;
+class CompReferences {
+    public var name:String;
+    public var list:Array<CompReference>;
+    public function new(name:String, list:Array<CompReference>) {
+        this.name = name;
+        this.list = list;
+    }
+    public function toString() return '$name:$list';
+}
+
+class CompReference {
+    public var pos:CompPosition;
+    public var type:CompReferenceType;
+    public function new(pos:CompPosition, type:CompReferenceType) {
+        this.pos = pos;
+        this.type = type;
+    }
+    public function toString() return '$pos:$type';
 }
 
 class CompPosition {

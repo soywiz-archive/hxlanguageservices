@@ -1,5 +1,9 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.HaxeCompilerReferences;
+import haxe.languageservices.type.UsageType;
+import haxe.languageservices.node.HaxeElement;
+import haxe.languageservices.type.HaxeCompilerElement;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.type.FunctionArgument;
@@ -52,8 +56,7 @@ class HaxeCompletion {
             case Node.NVar(name, propertyInfo, type, value):
                 var local = new BaseCompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
                 scope.addLocal(local);
-                local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
-                //trace(scope);
+                local.getReferences().addNode(UsageType.Declaration, name);
                 process(value, scope);
             case Node.NId(value):
                 switch (value) {
@@ -63,7 +66,7 @@ class HaxeCompletion {
                         if (local == null) {
                             errors.add(new ParserError(znode.pos, 'Can\'t find local "$value"'));
                         } else {
-                            local.getUsages().push(new CompletionUsage(znode, CompletionUsageType.Read));
+                            local.getReferences().addNode(UsageType.Read, znode);
                         }
                 }
             case Node.NUnary(op, value):
@@ -82,7 +85,7 @@ class HaxeCompletion {
                 var forScope = fullForScope.createChild(body);
                 process(iteratorExpr, fullForScope);
                 var local = new CompletionEntryArrayElement(fullForScope, iteratorName.pos, null, iteratorExpr, NodeTools.getId(iteratorName));
-                local.usages.push(new CompletionUsage(iteratorName, CompletionUsageType.Declaration));
+                local.getReferences().addNode(UsageType.Declaration, iteratorName);
                 fullForScope.addLocal(local);
                 process(body, fullForScope);
             case Node.NWhile(cond, body) | Node.NDoWhile(body, cond):
@@ -121,14 +124,24 @@ class HaxeCompletion {
             case Node.NFieldAccess(_left, _id):
                 var left:ZNode = _left;
                 var id:ZNode = _id; 
+                var idName:String = (id != null) ? id.pos.text : null;
                 process(left, scope);
                 var lvalue = scope.getNodeResult(left);
                 var l:ZNode = left;
-                var p = l.pos.reader.createPos(l.pos.max, l.pos.max + 2);
-                if (id != null) p = id.pos;
-                var cscope = scope.createChild(new ZNode(p, null));
+
+                var tidnode = new ZNode(l.pos.reader.createPos(l.pos.max, (id != null) ? id.pos.max : l.pos.max + 1), null);
+                var cscope = scope.createChild(tidnode);
                 cscope.unlinkFromParent();
 
+                if (idName != null) {
+                    var member = lvalue.type.type.getInheritedMemberByName(idName);
+                    if (member != null) {
+                        member.getReferences().addNode(UsageType.Read, id);
+                        //cscope.addLocal(member);
+                        //trace(member);
+                    }
+                }
+                
                 cscope.addProvider(new TypeCompletionEntryProvider(lvalue.type.type, HaxeMember.staticIsNotStatic));
             case Node.NBinOp(left, op, right):
                 process(left, scope);
@@ -156,19 +169,7 @@ class HaxeCompletion {
             case Node.NEnum(name):
             case Node.NAbstract(name):
             case Node.NMember(modifiers, decl):
-                process(decl, scope);
-            case Node.NFunction(name, args, ret, expr):
-                var funcScope = scope.createChild(expr);
-                var bodyScope = funcScope.createChild(expr);
-
-                if (scope.currentClass != null) {
-                    funcScope.addProvider(new TypeCompletionEntryProvider(scope.currentClass));
-                    bodyScope.addLocal(new CompletionEntryThis(scope, scope.currentClass));
-                }
-                
-                processFunctionArgs(args, funcScope, funcScope);
-
-                process(expr, bodyScope);
+                processMember(decl, modifiers, scope);
             case Node.NReturn(expr):
                 process(expr, scope);
             //case Node.NPackage()
@@ -178,24 +179,46 @@ class HaxeCompletion {
         }
         return scope;
     }
-    
-    private function createCompletionEntryFromNameAndType(name:String, type:HaxeType):CompletionEntry {
-        if (Std.is(type, FunctionHaxeType)) {
-        
-        }
-        throw 'Must implement';
-    }
 
+    private function processMember(znode:ZNode, modifiers:ZNode, scope:CompletionScope):CompletionScope {
+        switch (znode.node) {
+            case Node.NVar(name, propertyInfo, type, value):
+                var local = new BaseCompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
+                scope.addLocal(local);
+                local.getReferences().addNode(UsageType.Declaration, name);
+                process(value, scope);
+            
+            case Node.NFunction(name, args, ret, expr):
+                var funcScope = scope.createChild(znode);
+                var nameScope = scope.createChild(name);
+                //nameScope.addLocal();
+                var bodyScope = funcScope.createChild(expr);
+
+                if (scope.currentClass != null) {
+                    funcScope.addProvider(new TypeCompletionEntryProvider(scope.currentClass));
+                    bodyScope.addLocal(new CompletionEntryThis(scope, scope.currentClass));
+                    nameScope.addLocal(scope.currentClass.getInheritedMemberByName(NodeTools.getId(name)));
+                }
+
+                processFunctionArgs(args, funcScope, funcScope);
+
+                process(expr, bodyScope);
+            default:
+                errors.add(new ParserError(znode.pos, 'Unhandled completion (III) ${znode}'));
+        }
+        return scope;
+    }
+    
     private function processFunctionArgs(znode:ZNode, scope:CompletionScope, scope2:CompletionScope):Void {
         if (znode == null || znode.node == null) return;
         switch (znode.node) {
             case Node.NList(items): for (item in items) processFunctionArgs(item, scope, scope2);
-            case Node.NFunctionArg(opt, id, type, value):
+            case Node.NFunctionArg(opt, name, type, value):
                 //trace(type);
-                var e = new BaseCompletionEntry(scope2, id.pos, type, value, NodeTools.getId(id));
+                var e = new BaseCompletionEntry(scope2, name.pos, type, value, NodeTools.getId(name));
                 //trace(e.getType(new ProcessNodeContext()));
                 scope.addLocal(e);
-                e.getUsages().push(new CompletionUsage(id, CompletionUsageType.Declaration));
+                e.getReferences().addNode(UsageType.Declaration, name);
             default:
                 throw 'Unhandled completion (I) $znode';
                 errors.add(new ParserError(znode.pos, 'Unhandled completion (I) $znode'));
@@ -203,23 +226,23 @@ class HaxeCompletion {
     }
 }
 
-enum CompletionUsageType {
-    Declaration;
-    Write;
-    Read;
-}
-
-class CompletionUsage {
-    public var node:ZNode;
-    public var type:CompletionUsageType;
-
-    public function new(node:ZNode, type:CompletionUsageType) {
-        this.node = node;
-        this.type = type;
+/*
+class LocalVariable implements HaxeCompilerElement {
+    private var refs = new HaxeCompilerReferences();
+    private var name:String;
+    
+    public function new(name:String) {
+        this.name = name;
     }
 
-    public function toString() return '$node:$type';
+    function getPosition():Position {}
+    function getNode():ZNode {}
+    function getName():String return name;
+    function getReferences():HaxeCompilerReferences return refs;
+    function getResult(?context:ProcessNodeContext):ExpressionResult;
+    function toString():String return '$name';
 }
+*/
 
 class CompletionEntryArrayElement extends BaseCompletionEntry {
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
@@ -247,8 +270,8 @@ class CompletionEntryThis extends BaseCompletionEntry {
 }
 
 interface CompletionEntryProvider {
-    function getEntries(?out:Array<CompletionEntry>):Array<CompletionEntry>;
-    function getEntryByName(name:String):CompletionEntry;
+    function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement>;
+    function getEntryByName(name:String):HaxeCompilerElement;
 }
 
 class TypeCompletionEntryProvider implements CompletionEntryProvider {
@@ -260,56 +283,31 @@ class TypeCompletionEntryProvider implements CompletionEntryProvider {
         this.filter = filter;
     }
 
-    public function getEntryByName(name:String):CompletionEntry {
+    public function getEntryByName(name:String):HaxeCompilerElement {
         var member = type.getInheritedMemberByName(name);
         if (filter != null && !filter(member)) return null;
         if (member == null) return null;
-        return new TypeMemberCompletionEntry(member);
+        return member;
     }
 
-    public function getEntries(?out:Array<CompletionEntry>):Array<CompletionEntry> {
+    public function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement> {
         if (out == null) out = [];
         for (member in type.getAllMembers()) {
             if (filter != null && !filter(member)) continue;
-            out.push(new TypeMemberCompletionEntry(member));
+            out.push(member);
         }
         return out;
     }
 }
 
-class TypeMemberCompletionEntry implements CompletionEntry {
-    private var member:HaxeMember;
-    private var types:HaxeTypes;
-    public var usages = new Array<CompletionUsage>();
-
-    public function new(member:HaxeMember) {
-        this.member = member;
-        this.types = member.baseType.types;
-    }
-        
-    public function getName() return member.name;
-    public function getUsages() return usages;
-    public function getResult(?context:ProcessNodeContext):ExpressionResult {
-        return ExpressionResult.withoutValue(member.getType(types));
-    }
-    public function toString():String return member.name;
-}
-
-interface CompletionEntry {
-    function getName():String;
-    function getUsages():Array<CompletionUsage>;
-    function getResult(?context:ProcessNodeContext):ExpressionResult;
-    function toString():String;
-}
-
-class BaseCompletionEntry implements CompletionEntry {
+class BaseCompletionEntry implements HaxeCompilerElement {
     public var scope:CompletionScope;
     public var pos:Position;
     public var name:String;
     public var type:ZNode;
     public var type2:SpecificHaxeType;
     public var expr:ZNode;
-    public var usages = new Array<CompletionUsage>();
+    public var refs = new HaxeCompilerReferences();
 
     public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:SpecificHaxeType) {
         this.scope = scope;
@@ -319,9 +317,11 @@ class BaseCompletionEntry implements CompletionEntry {
         this.expr = expr;
         this.name = name;
     }
-
+    
+    public function getNode() return expr;
+    public function getPosition() return pos;
     public function getName() return name;
-    public function getUsages() return usages;
+    public function getReferences():HaxeCompilerReferences return refs;
 
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         var ctype:ExpressionResult = null;
@@ -336,7 +336,7 @@ class BaseCompletionEntry implements CompletionEntry {
 }
 
 
-typedef CScope = Scope<CompletionEntry>;
+typedef CScope = Scope<HaxeCompilerElement>;
 
 class CompletionScope implements CompletionEntryProvider {
     static private var lastUid = 0;
@@ -461,7 +461,7 @@ class CompletionScope implements CompletionEntryProvider {
                 if (left != null && id != null) {
                     var lvalue = _getNodeResult(left, context);
                     var member = lvalue.type.type.getMember(NodeTools.getId(id));
-                    return ExpressionResult.withoutValue(member.getType(types));
+                    return ExpressionResult.withoutValue(member.getType());
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NId(str):
@@ -485,11 +485,11 @@ class CompletionScope implements CompletionEntryProvider {
         return ExpressionResult.withoutValue(types.specTypeDynamic);
     }
 
-    public function getLocals():Array<CompletionEntry> {
+    public function getLocals():Array<HaxeCompilerElement> {
         return locals.values();
     }
 
-    public function getEntries(?out:Array<CompletionEntry>):Array<CompletionEntry> {
+    public function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement> {
         if (out == null) out = [];
         locals.localValues(out);
         for (provider in providers) {
@@ -499,7 +499,7 @@ class CompletionScope implements CompletionEntryProvider {
         return out;
     }
 
-    public function getEntryByName(name:String):CompletionEntry {
+    public function getEntryByName(name:String):HaxeCompilerElement {
         if (locals.existsLocal(name)) return locals.getLocal(name);
         for (provider in providers) {
             var result = provider.getEntryByName(name);
@@ -512,17 +512,17 @@ class CompletionScope implements CompletionEntryProvider {
         return null;
     }
 
-    public function getLocal(name:String):CompletionEntry {
+    private function getLocal(name:String):HaxeCompilerElement {
         return locals.get(name);
     }
 
-    public function getLocalAt(index:Int):CompletionEntry {
+    public function getLocalAt(index:Int):HaxeCompilerElement {
         var id = getIdentifierAt(index);
         if (id == null) return null;
         return locals.get(id.name);
     }
 
-    public function addLocal(entry:CompletionEntry):Void {
+    public function addLocal(entry:HaxeCompilerElement):Void {
         locals.set(entry.getName(), entry);
     }
 

@@ -14,11 +14,16 @@ class MainIde {
         new MainIde().run();
     }
 
-    public function new() { }
+    public function new() {
+        window = Browser.window;
+        document = Browser.document;
+    }
 
     var editor:Editor;
     var vfs:MemoryVfs;
     var services:HaxeLanguageServices;
+    var window:js.html.DOMWindow;
+    var document:js.html.Document;
     
     private function getProgram():String {
         var item = Browser.window.localStorage.getItem('hxprogram');
@@ -38,7 +43,7 @@ class MainIde {
         var langTools:Dynamic = Ace.require("ace/ext/language_tools");
         editor = Ace.edit("editorIn");
         editor.setOptions({
-            enableBasicAutocompletion: true,
+            enableBasicAutocompletion: true
             //enableLiveAutocompletion: true,
         });
         editor.setTheme("ace/theme/xcode");
@@ -57,13 +62,45 @@ class MainIde {
             updateIde();
             return null;
         });
-        cast(editor).commands.on("afterExec", function(e, t) {
+        editor.commands.on("afterExec", function(e, t) {
             if (e.command.name == "insertstring" && e.args == "." ) {
                 Browser.window.setTimeout(function() {
                     e.editor.execCommand("startAutocomplete");
                 }, 100);
             }
         });
+
+        function renameExec() {
+            var refs = services.getReferencesAt('live.hx', getCursorIndex());
+            if (refs != null && refs.list.length > 0) {
+                var result = window.prompt('Rename:', refs.name);
+                if (result != null) {
+                    var list2:Array<CompReference> = refs.list.slice(0);
+                    list2.sort(function(a:CompReference, b:CompReference) {
+                        return b.pos.min - a.pos.min;
+                    });
+                    
+                    // @TODO: Check result as a valid identifier and not collisioning with other scopes
+                    // probably this should be done in the services part
+
+                    for (item in list2) {
+                        editor.session.replace(
+                            AceTools.createRangeIndices(editor, item.pos.min, item.pos.max),
+                            result
+                        );
+                    }
+                }
+            } else {
+                window.alert('nothing to rename!');
+            }
+        }
+
+        editor.commands.addCommand({
+            name: "rename",
+            bindKey: { win: 'F2', mac: 'Shift+F6' },
+            exec: renameExec
+        });
+
         editor.session.on('change', function(e) {
             queueUpdateContentLive();
             /*
@@ -161,22 +198,10 @@ class MainIde {
         var index = editor.session.doc.positionToIndex(cursor, 0);
         var size = editor.renderer.textToScreenCoordinates(cursor.row, cursor.column);
 
-        var autocompletionElement = document.getElementById('autocompletion');
-        autocompletionElement.style.visibility = 'hidden';
-        autocompletionElement.style.top = (size.pageY + document.body.scrollTop) + 'px';
-        autocompletionElement.style.left = size.pageX + 'px';
-        autocompletionElement.innerHTML = '';
-
         var show = false;
         var file = 'live.hx';
         try {
             var items = services.getCompletionAt(file, cursorIndex);
-            for (item in items.items) {
-                var divitem = document.createElement('div');
-                divitem.innerText = item.name;
-                autocompletionElement.appendChild(divitem);
-                show = true;
-            }
             if (items.items.length == 0) {
                 autocompletionOverlay.innerText = 'no autocompletion info';
             } else {
@@ -188,21 +213,14 @@ class MainIde {
             if (id != null) {
                 var refs = services.getReferencesAt(file, cursorIndex);
                 if (refs != null) {
-                    for (ref in refs) references.push(ref);
+                    for (ref in refs.list) references.push(ref);
                 } else {
-                    references.push({ pos : id.pos, type: CompReferenceType.Read });
+                    references.push(new CompReference(id.pos, CompReferenceType.Read));
                 }
-
-//trace(references);
             }
-//trace('Identifier:' + id);
         } catch (e:Dynamic) {
             trace(e);
             addError(new CompError(new CompPosition(0, 0), '' + e));
-        }
-        if (show) {
-//autocompletionElement.style.visibility = 'visible';
-//autocompletionElement.style.opacity = '0.5';
         }
 
         for (reference in references) {
@@ -211,10 +229,8 @@ class MainIde {
             var str = switch (reference.type) {
                 case CompReferenceType.Declaration | CompReferenceType.Update: 'mark_refwrite';
                 case CompReferenceType.Read: 'mark_refread';
-
             }
-            //trace('$pos1, $pos2');
-            
+
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), str, str, false));
         }
         

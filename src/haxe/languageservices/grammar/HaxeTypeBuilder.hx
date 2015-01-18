@@ -171,7 +171,7 @@ class HaxeTypeBuilder {
                             if (ZNode.isValid(decl)) switch (decl.node) {
                                 case Node.NVar(vname, propInfo, vtype, vvalue):
                                     checkType(vtype);
-                                    var field = new FieldHaxeMember(type, member.pos, getId(vname));
+                                    var field = new FieldHaxeMember(type, member.pos, vname);
                                     field.modifiers = mods;
                                     if (type.existsMember(field.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${field.name}');
@@ -196,7 +196,7 @@ class HaxeTypeBuilder {
                                         default: throw 'Invalid (VI) $vargs';
                                     }
 
-                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, getId(vname), ffargs, new FunctionRetval('Dynamic')));
+                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, vname, ffargs, new FunctionRetval('Dynamic')));
                                     method.modifiers = mods;
                                     if (type.existsMember(method.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${method.name}');

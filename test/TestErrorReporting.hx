@@ -3,7 +3,7 @@ import haxe.languageservices.util.MemoryVfs;
 import haxe.languageservices.HaxeLanguageServices;
 import haxe.unit.TestCase;
 
-class TestErrorReporting extends TestCase {
+class TestErrorReporting extends HLSTestCase {
     private function assertProgramErrors(prg:String, errors:Dynamic, ?p:PosInfos) {
         var live = 'live.hx';
         var vfs = new MemoryVfs().set(live, prg);

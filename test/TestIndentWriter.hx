@@ -2,7 +2,7 @@ package ;
 import haxe.languageservices.util.IndentWriter;
 import haxe.unit.TestCase;
 
-class TestIndentWriter extends TestCase{
+class TestIndentWriter extends HLSTestCase {
     public function test1() {
         var iw = new IndentWriter();
         iw.write('class {\n');

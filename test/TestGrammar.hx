@@ -15,7 +15,7 @@ import haxe.unit.TestCase;
 
 using StringTools;
 
-class TestGrammar extends TestCase {
+class TestGrammar extends HLSTestCase {
     var hg = new HaxeGrammar();
 
     // Unstable tests that won't provide much value and will cost too much to maintain at this point at least
@@ -97,14 +97,6 @@ class TestGrammar extends TestCase {
     }
     */
     
-    private function assertEqualsString(a:Dynamic, b:Dynamic, ?p:PosInfos) {
-        assertEquals('' + a, '' + b, p);
-    }
-
-    private function assertEqualsJson(a:Dynamic, b:Dynamic, ?p:PosInfos) {
-        assertEquals(Json.stringify(a), Json.stringify(b), p);
-    }
-
     public function testSem() {
         function assert(program:String, checker: HaxeTypeBuilder -> Void) {
             var sem = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
@@ -152,7 +144,7 @@ class TestGrammar extends TestCase {
 
         assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
             assertEqualsString('[z]', [for (l in scope.getEntries()) l.getName()]);
-            assertEqualsString('Int = 10', scope.getLocal('z').getResult());
+            assertEqualsString('Int = 10', scope.getEntryByName('z').getResult());
         });
 
         /*
@@ -222,7 +214,7 @@ class TestGrammar extends TestCase {
         assertEqualsString('test', scope.getIdentifierAt(12).pos.text);
         assertEqualsString('test@4:8', scope.getLocalAt(5));
         assertEqualsString('test@4:8', scope.getLocalAt(12));
-        assertEqualsString('[NId(test)@4:8:Declaration,NId(test)@11:15:Read]', scope.getLocalAt(5).getUsages());
+        assertEqualsString('[test:Declaration@4:8,test:Read@11:15]', scope.getLocalAt(5).getReferences().usages);
     }
 
     public function testCompletionLocateNode3() {

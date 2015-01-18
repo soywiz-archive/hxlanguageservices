@@ -5,7 +5,7 @@ import haxe.languageservices.util.LocalVfs;
 import haxe.languageservices.project.HxmlHaxeProject;
 import haxe.unit.TestCase;
 
-class TestProject extends TestCase {
+class TestProject extends HLSTestCase {
     private var testassets:Vfs;
     private var sdk:HaxeSdk;
     

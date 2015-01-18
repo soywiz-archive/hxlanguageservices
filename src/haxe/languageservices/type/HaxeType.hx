@@ -8,6 +8,7 @@ class HaxeType {
     public var packag:HaxePackage;
     public var types:HaxeTypes;
     public var name:String;
+    //public var nameNode:String;
     public var fqName:String;
     
     public var typeParameters = new Array<HaxeTypeParameter>();
