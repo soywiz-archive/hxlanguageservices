@@ -68,7 +68,7 @@ class HaxePackage {
         var packag = accessParts(parts, create);
         var exists = packag.types.exists(typeName);
         if (exists && create) {
-            trace('type already exists, recreating');
+            trace('type "$path" already exists, recreating');
         }
         if (create) return packag.types[typeName] = Type.createInstance(type, [packag, pos, typeName]);
         if (exists) return packag.types[typeName];

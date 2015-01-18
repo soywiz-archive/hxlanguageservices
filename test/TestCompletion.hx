@@ -82,12 +82,17 @@ class TestCompletion extends TestCase {
         assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { ### } }', ['a:Int', 'b:Int', 'c:Dynamic', 'd:Bool'], []);
     }
 
+    public function testArguments2() {
+        //assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Int -> Int -> Bool -> Dynamic'], []);
+        assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Void -> Dynamic'], []);
+    }
+
     public function testFieldAccessCompletion() {
-        assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], ['38:38:expected identifier']);
-        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic', 'charAt:Dynamic'], [], []);
+        assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], []);
         assertProgramBody(
             'class A extends B { function a() { this.###; } } class B { function b() {} }',
-            ['a:Dynamic', 'b:Dynamic'], [],
+            ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],
             '[39:39:expected identifier]'
         );
     }

@@ -1,5 +1,8 @@
 package haxe.languageservices;
 
+import haxe.languageservices.type.ExpressionResult;
+import haxe.languageservices.type.FunctionHaxeType;
+import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.HaxeLanguageServices.FunctionCompType;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;

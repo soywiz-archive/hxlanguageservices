@@ -1,10 +1,17 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.FunctionRetval;
+import haxe.languageservices.type.FunctionHaxeType;
+import haxe.languageservices.type.EnumHaxeType;
+import haxe.languageservices.type.AbstractHaxeType;
+import haxe.languageservices.type.InterfaceHaxeType;
+import haxe.languageservices.type.TypedefHaxeType;
+import haxe.languageservices.type.TypeReference;
+import haxe.languageservices.type.ClassHaxeType;
 import haxe.languageservices.type.HaxeModifiers;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.type.HaxeMember.FieldHaxeMember;
-import haxe.languageservices.type.HaxeType.ClassHaxeType;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
 import haxe.languageservices.grammar.Grammar.Result;
@@ -168,16 +175,16 @@ class HaxeTypeBuilder {
                                         var field = new FieldHaxeMember(member.pos, getId(vname));
                                         field.modifiers = mods;
                                         if (type.existsMember(field.name)) {
-                                            error(vname.pos, 'redefined member ${field.name}');
+                                            error(vname.pos, 'Duplicate class field declaration : ${field.name}');
                                         }
                                         type.addMember(field);
                                     case Node.NFunction(vname, vargs, vret, vexpr):
                                         checkFunctionDeclArgs(vargs);
                                         checkType(vret);
-                                        var method = new MethodHaxeMember(member.pos, getId(vname));
+                                        var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, getId(vname), [], new FunctionRetval('Dynamic')));
                                         method.modifiers = mods;
                                         if (type.existsMember(method.name)) {
-                                            error(vname.pos, 'redefined member ${method.name}');
+                                            error(vname.pos, 'Duplicate class field declaration : ${method.name}');
                                         }
                                         type.addMember(method);
                                         processMethodBody(type, method, vexpr);

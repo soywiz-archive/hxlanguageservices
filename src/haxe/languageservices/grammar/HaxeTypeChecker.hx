@@ -1,4 +1,6 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.InterfaceHaxeType;
+import haxe.languageservices.type.ClassHaxeType;
 import haxe.languageservices.grammar.ParserError;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.type.HaxeMember;

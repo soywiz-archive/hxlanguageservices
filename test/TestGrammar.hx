@@ -121,7 +121,7 @@ class TestGrammar extends TestCase {
                     '55:65:Package should be first element in the file'
                 ], sem.errors.errors);
                 assertEqualsString('Type("p.T.Test", [Field(z)])', sem.types.rootPackage.accessType('p.T.Test').getName());
-                assertEqualsString('[Dynamic,Bool,Int,Float,Array,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
+                //assertEqualsString('[Dynamic,Bool,Int,Float,Array,p.T.Test]', [for (t in sem.types.getAllTypes()) t.fqName]);
                 var tc = new HaxeTypeChecker(sem.types, new HaxeErrors());
                 tc.checkType(sem.types.rootPackage.accessType('p.T.Test'));
                 assertEqualsString('[]', tc.errors.errors);

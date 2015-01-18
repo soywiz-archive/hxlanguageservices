@@ -1,49 +1,58 @@
 package haxe.languageservices.type;
 
 import haxe.languageservices.type.HaxeMember.MethodHaxeMember;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
-import haxe.languageservices.type.HaxeType.ClassHaxeType;
-import haxe.languageservices.type.HaxeType.InterfaceHaxeType;
 import haxe.languageservices.node.Position;
 class HaxeTypes {
     public var rootPackage:HaxePackage;
+
+    public var typeVoid(default, null):HaxeType;
     public var typeDynamic(default, null):HaxeType;
     public var typeBool(default, null):HaxeType;
     public var typeInt(default, null):HaxeType;
     public var typeFloat(default, null):HaxeType;
-    public var typeArray(default, null):HaxeType;
+    public var typeString(default, null):HaxeType;
 
+    public var specTypeVoid(default, null):SpecificHaxeType;
     public var specTypeDynamic(default, null):SpecificHaxeType;
     public var specTypeBool(default, null):SpecificHaxeType;
     public var specTypeInt(default, null):SpecificHaxeType;
     public var specTypeFloat(default, null):SpecificHaxeType;
+    public var specTypeString(default, null):SpecificHaxeType;
+
+    public var typeArray(default, null):HaxeType;
 
     public function new() {
+        var typesPos = new Position(0, 0, new Reader('', '_Types.hx'));
+    
         rootPackage = new HaxePackage(this, '');
-        typeDynamic = rootPackage.accessTypeCreate('Dynamic', new Position(0, 0, new Reader('', 'Dynamic.hx')), ClassHaxeType);
-        typeBool = rootPackage.accessTypeCreate('Bool', new Position(0, 0, new Reader('', 'Bool.hx')), ClassHaxeType);
-        typeBool.addMember(new MethodHaxeMember(typeBool.pos, 'testBoolMethod'));
-        typeBool.addMember(new MethodHaxeMember(typeBool.pos, 'testBoolMethod2'));
-        typeInt = rootPackage.accessTypeCreate('Int', new Position(0, 0, new Reader('', 'Int.hx')), ClassHaxeType);
-        typeInt.addMember(new MethodHaxeMember(typeInt.pos, 'testIntMethod'));
-        typeInt.addMember(new MethodHaxeMember(typeInt.pos, 'testIntMethod2'));
-        typeFloat = rootPackage.accessTypeCreate('Float', new Position(0, 0, new Reader('', 'Float.hx')), ClassHaxeType);
-        typeArray = rootPackage.accessTypeCreate('Array', new Position(0, 0, new Reader('', 'Array.hx')), ClassHaxeType);
-        typeArray.addMember(new MethodHaxeMember(typeArray.pos, 'indexOf'));
-        typeArray.addMember(new MethodHaxeMember(typeArray.pos, 'charAt'));
-        specTypeDynamic = new SpecificHaxeType(this, typeDynamic);
-        specTypeBool = new SpecificHaxeType(this, typeBool);
-        specTypeInt = new SpecificHaxeType(this, typeInt);
-        specTypeFloat = new SpecificHaxeType(this, typeFloat);
+        typeVoid = rootPackage.accessTypeCreate('Void', typesPos, ClassHaxeType);
+        typeDynamic = rootPackage.accessTypeCreate('Dynamic', typesPos, ClassHaxeType);
+        typeBool = rootPackage.accessTypeCreate('Bool', typesPos, ClassHaxeType);
+        typeInt = rootPackage.accessTypeCreate('Int', typesPos, ClassHaxeType);
+        typeFloat = rootPackage.accessTypeCreate('Float', typesPos, ClassHaxeType);
+        typeArray = rootPackage.accessTypeCreate('Array', typesPos, ClassHaxeType);
+        typeString = rootPackage.accessTypeCreate('String', typesPos, ClassHaxeType);
+
+        specTypeVoid = new SpecificHaxeType(typeVoid);
+        specTypeDynamic = new SpecificHaxeType(typeDynamic);
+        specTypeBool = new SpecificHaxeType(typeBool);
+        specTypeInt = new SpecificHaxeType(typeInt);
+        specTypeFloat = new SpecificHaxeType(typeFloat);
+        specTypeString = new SpecificHaxeType(typeString);
+
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, 'testBoolMethod', [], new FunctionRetval('Dynamic'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, 'testBoolMethod2', [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, 'testIntMethod', [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, 'testIntMethod2', [], new FunctionRetval('Dynamic'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, 'indexOf', [new FunctionArgument('element', 'Dynamic')], new FunctionRetval('Int'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, 'charAt', [new FunctionArgument('index', 'Int')], new FunctionRetval('String'))));
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
         // @TODO
-        if (types.length == 0) return new SpecificHaxeType(this, typeDynamic);
+        if (types.length == 0) return new SpecificHaxeType(typeDynamic);
         return types[0];
     }
 
@@ -59,11 +68,11 @@ class HaxeTypes {
     }
     
     public function createArray(elementType:SpecificHaxeType):SpecificHaxeType {
-        return new SpecificHaxeType(this, typeArray, [elementType]);
+        return new SpecificHaxeType(typeArray, [elementType]);
     }
     
     public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
-        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(this, typeDynamic);
+        if (arrayType == null || arrayType.parameters.length < 1) return new SpecificHaxeType(typeDynamic);
         return arrayType.parameters[0];
     }
 

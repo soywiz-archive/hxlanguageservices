@@ -1,14 +1,12 @@
 package haxe.languageservices.grammar;
 
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.FunctionHaxeType;
+import haxe.languageservices.type.ExpressionResult;
+import haxe.languageservices.type.FunctionArgument;
+import haxe.languageservices.type.FunctionRetval;
+import haxe.languageservices.type.FunctionHaxeType;
+import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.node.ConstTools;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.ProcessNodeContext;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
-import haxe.languageservices.type.HaxeType.SpecificHaxeType;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.grammar.Grammar.NNode;
 import haxe.languageservices.node.Const;
@@ -44,6 +42,8 @@ class HaxeCompletion {
 
     private function process(znode:ZNode, scope:CompletionScope):CompletionScope {
         if (znode == null || znode.node == null) return scope;
+        
+        var types = scope.types;
 
         switch (znode.node) {
             case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
@@ -128,7 +128,7 @@ class HaxeCompletion {
                 var cscope = scope.createChild(new ZNode(p, null));
                 cscope.unlinkFromParent();
                 for (m in lvalue.type.type.getAllMembers()) {
-                    cscope.addLocal(new CompletionEntry(cscope, p, null, null, m.name));
+                    cscope.addLocal(new CompletionEntry(cscope, p, null, null, m.name, m.getType(types)));
                 }
             case Node.NBinOp(left, op, right):
                 process(left, scope);
@@ -145,7 +145,7 @@ class HaxeCompletion {
             case Node.NUsing(fqName):
             case Node.NClass(name, typeParams, extendsImplementsList, decls):
                 var classScope = scope.createChild(decls);
-                var clazz = scope.types.getClass(NodeTools.getId(name));
+                var clazz = types.getClass(NodeTools.getId(name));
                 classScope.currentClass = clazz;
                 process(decls, classScope);
             case Node.NInterface(name, typeParams, extendsImplementsList, decls):
@@ -160,7 +160,7 @@ class HaxeCompletion {
             case Node.NFunction(name, args, ret, expr):
                 var funcScope = scope.createChild(expr);
                 //packag:HaxePackage, pos:Position, name:String
-                var functionType:FunctionHaxeType = new FunctionHaxeType(scope.types.rootPackage, znode.pos, NodeTools.getId(name));
+                var functionType:FunctionHaxeType = new FunctionHaxeType(types, znode.pos, NodeTools.getId(name), [], new FunctionRetval('Dynamic'));
                 if (args != null) {
                     
                     switch (args.node) {
@@ -169,8 +169,9 @@ class HaxeCompletion {
                                 switch (item.node) {
                                     case Node.NFunctionArg(opt, name, type, value):
                                         functionType.args.push(new FunctionArgument(
-                                            false,  NodeTools.getId(name),
-                                            'Dynamic', null, ''
+                                            NodeTools.getId(name),
+                                            'Dynamic',
+                                            false, value, ''
                                         ));
                                         //trace('farg: ' + id);
                                         //trace('farg: ' + type);
@@ -180,7 +181,7 @@ class HaxeCompletion {
                         default: throw 'HaxeCompletion (IV) ' + args;
                     }
                 }
-                var local = new CompletionEntryFunctionElement(scope, name.pos, ret, expr, NodeTools.getId(name), new SpecificHaxeType(scope.types, functionType));
+                var local = new CompletionEntryFunctionElement(scope, name.pos, ret, expr, NodeTools.getId(name), new SpecificHaxeType(functionType));
                 scope.addLocal(local);
                 local.usages.push(new CompletionUsage(name, CompletionUsageType.Declaration));
                 var bodyScope = funcScope.createChild(expr);
@@ -201,6 +202,13 @@ class HaxeCompletion {
                 //throw ;
         }
         return scope;
+    }
+    
+    private function createCompletionEntryFromNameAndType(name:String, type:HaxeType):CompletionEntry {
+        if (Std.is(type, FunctionHaxeType)) {
+        
+        }
+        throw 'Must implement';
     }
 
     private function processFunctionArgs(znode:ZNode, scope:CompletionScope, scope2:CompletionScope):Void {
@@ -254,7 +262,7 @@ class CompletionEntryFunctionElement extends CompletionEntry {
 
 class CompletionEntryThis extends CompletionEntry {
     public function new(scope:CompletionScope, type:HaxeType) {
-        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', new SpecificHaxeType(scope.types, type));
+        super(scope, new Position(0, 0, new Reader('')), null, null, 'this', new SpecificHaxeType(type));
     
     }
 
@@ -287,7 +295,7 @@ class CompletionEntry {
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         var ctype:ExpressionResult = null;
         if (type2 != null) return ExpressionResult.withoutValue(type2);
-        if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types, scope.types.getType(type.pos.text)));
+        if (type != null) ctype = ExpressionResult.withoutValue(new SpecificHaxeType(scope.types.getType(type.pos.text)));
         if (expr != null) ctype = scope.getNodeResult(expr, context);
         if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
         return ctype;
@@ -296,25 +304,6 @@ class CompletionEntry {
     public function toString() return '$name@$pos';
 }
 
-class ExpressionResult {
-    public var type:SpecificHaxeType;
-    public var hasValue:Bool;
-    public var value:Dynamic;
-
-    private function new(type:SpecificHaxeType, hasValue:Bool, value:Dynamic) {
-        this.type = type;
-        this.hasValue = hasValue;
-        this.value = value;
-    }
-    
-    public function toString() {
-        if (hasValue) return '$type = $value';
-        return '$type';
-    }
-
-    static public function withoutValue(type:SpecificHaxeType):ExpressionResult return new ExpressionResult(type, false, null);
-    static public function withValue(type:SpecificHaxeType, value:Dynamic):ExpressionResult return new ExpressionResult(type, true, value);
-}
 
 typedef CScope = Scope<CompletionEntry>;
 

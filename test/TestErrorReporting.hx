@@ -79,4 +79,9 @@ class TestErrorReporting extends TestCase {
         assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2); } }', '[51:54:Trying to call function with 2 arguments but required 3]');
         assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2,3,4); } }', '[51:58:Trying to call function with 4 arguments but required 3]');
     }
+
+    public function testDuplicateDeclaration() {
+        assertProgramErrors('class A { function a() { } function a() { } }', '[36:37:Duplicate class field declaration : a]');
+        assertProgramErrors('class A { var a; function a() { } }', '[26:27:Duplicate class field declaration : a]');
+    }
 }

@@ -9,8 +9,7 @@ class HaxeMember {
     public var modifiers = new HaxeModifiers();
     public var typeNode:ZNode;
     public var valueNode:ZNode;
-    public var typeResolver:HaxeTypeResolver;
-    
+
     public function new(pos:Position, name:String) {
         this.pos = pos;
         this.name = name;
@@ -18,11 +17,19 @@ class HaxeMember {
     
     public function toString() return 'Member($name)';
 
-    public function getType():HaxeType return (typeResolver != null) ? typeResolver.resolve() : null;
+    public function getType(types:HaxeTypes):SpecificHaxeType return types.specTypeDynamic;
 }
 
 class MethodHaxeMember extends HaxeMember {
+    private var type:FunctionHaxeType;
+    public function new(type:FunctionHaxeType) {
+        super(type.pos, type.name);
+        this.type = type;
+    }
     override public function toString() return 'Method($name)';
+    override public function getType(types:HaxeTypes):SpecificHaxeType {
+        return new SpecificHaxeType(type);
+    }
 }
 
 class FieldHaxeMember extends HaxeMember {
