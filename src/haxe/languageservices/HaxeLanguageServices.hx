@@ -56,8 +56,8 @@ class HaxeLanguageServices {
     
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
-        var locals = context.completionScope.locateIndex(offset).getLocals();
-        return new CompList([for (l in locals) convToEntry(l.name, l.getResult())]);
+        var locals = context.completionScope.locateIndex(offset).getEntries();
+        return new CompList([for (l in locals) convToEntry(l.getName(), l.getResult())]);
     }
 
     static private function convToEntry(name:String, result:ExpressionResult):CompEntry {
@@ -78,7 +78,7 @@ class HaxeLanguageServices {
         if (id == null) return null;
         var entry = context.completionScope.locateIndex(offset).getLocal(id.name);
         if (entry == null) return null;
-        return [for (usage in entry.usages) { pos : convertPos(usage.node.pos), type: convUsageType(usage.type) }];
+        return [for (usage in entry.getUsages()) { pos : convertPos(usage.node.pos), type: convUsageType(usage.type) }];
     }
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {

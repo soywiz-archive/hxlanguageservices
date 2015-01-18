@@ -84,7 +84,7 @@ class TestCompletion extends TestCase {
 
     public function testArguments2() {
         //assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Int -> Int -> Bool -> Dynamic'], []);
-        assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Void -> Dynamic'], []);
+        assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Int -> Int -> Dynamic -> Bool -> Dynamic'], []);
     }
 
     public function testFieldAccessCompletion() {

@@ -38,6 +38,19 @@ class Scope<TValue> {
         return out;
     }
 
+    public function localKeys(?out:Array<String>):Array<String> {
+        if (out == null) out = [];
+        for (key in map.keys()) {
+            if (out.indexOf(key) < 0) out.push(key);
+        }
+        return out;
+    }
+    public function localValues(?out:Array<TValue>):Array<TValue> {
+        if (out == null) out = [];
+        for (key in this.localKeys()) out.push(get(cast(key)));
+        return out;
+    }
+
     public function createChild():Scope<TValue> return new Scope<TValue>(this);
 
     public function toString() {

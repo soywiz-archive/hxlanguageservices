@@ -4,13 +4,15 @@ import haxe.languageservices.node.Position;
 import haxe.languageservices.node.ZNode;
 
 class HaxeMember {
+    public var baseType:HaxeType;
     public var pos:Position;
     public var name(default, null):String;
     public var modifiers = new HaxeModifiers();
     public var typeNode:ZNode;
     public var valueNode:ZNode;
 
-    public function new(pos:Position, name:String) {
+    public function new(baseType:HaxeType, pos:Position, name:String) {
+        this.baseType = baseType;
         this.pos = pos;
         this.name = name;
     }
@@ -23,7 +25,7 @@ class HaxeMember {
 class MethodHaxeMember extends HaxeMember {
     private var type:FunctionHaxeType;
     public function new(type:FunctionHaxeType) {
-        super(type.pos, type.name);
+        super(type, type.pos, type.name);
         this.type = type;
     }
     override public function toString() return 'Method($name)';

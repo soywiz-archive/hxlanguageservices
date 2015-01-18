@@ -1,4 +1,6 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.tool.NodeTypeTools;
+import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionHaxeType;
 import haxe.languageservices.type.EnumHaxeType;
@@ -154,43 +156,55 @@ class HaxeTypeBuilder {
                     switch (member.node) {
                         case Node.NMember(modifiers, decl):
                             var mods = new HaxeModifiers();
-                            if (ZNode.isValid(modifiers)) {
-                                switch (modifiers.node) {
-                                    case Node.NList(parts):
-                                        for (part in parts) {
-                                            if (ZNode.isValid(part)) {
-                                                switch (part.node) {
-                                                    case Node.NKeyword(z): mods.add(z);
-                                                    default: throw 'Invalid (I) $part';
-                                                }
+                            if (ZNode.isValid(modifiers)) switch (modifiers.node) {
+                                case Node.NList(parts):
+                                    for (part in parts) {
+                                        if (ZNode.isValid(part)) {
+                                            switch (part.node) {
+                                                case Node.NKeyword(z): mods.add(z);
+                                                default: throw 'Invalid (I) $part';
                                             }
                                         }
-                                    default: throw 'Invalid (II) $modifiers';
-                                }
+                                    }
+                                default: throw 'Invalid (II) $modifiers';
                             }
-                            if (ZNode.isValid(decl)) {
-                                switch (decl.node) {
-                                    case Node.NVar(vname, propInfo, vtype, vvalue):
-                                        checkType(vtype);
-                                        var field = new FieldHaxeMember(member.pos, getId(vname));
-                                        field.modifiers = mods;
-                                        if (type.existsMember(field.name)) {
-                                            error(vname.pos, 'Duplicate class field declaration : ${field.name}');
+                            if (ZNode.isValid(decl)) switch (decl.node) {
+                                case Node.NVar(vname, propInfo, vtype, vvalue):
+                                    checkType(vtype);
+                                    var field = new FieldHaxeMember(type, member.pos, getId(vname));
+                                    field.modifiers = mods;
+                                    if (type.existsMember(field.name)) {
+                                        error(vname.pos, 'Duplicate class field declaration : ${field.name}');
+                                    }
+                                    type.addMember(field);
+                                case Node.NFunction(vname, vargs, vret, vexpr):
+                                    checkFunctionDeclArgs(vargs);
+                                    checkType(vret);
+
+                                    var ffargs = [];
+                                    if (ZNode.isValid(vargs)) switch (vargs.node) {
+                                        //case null:
+                                        case Node.NList(_vargs): for (arg in _vargs) {
+                                            if (ZNode.isValid(arg)) switch (arg.node) {
+                                                case Node.NFunctionArg(opt, name, type, value):
+                                                    ffargs.push(new FunctionArgument(NodeTools.getId(name), NodeTypeTools.getTypeDeclType(types, type).type.fqName));
+                                                default:
+                                                    throw 'Invalid (VII) $arg';
+                                            }
+                                            //checkFunctionDeclArgs(item);
                                         }
-                                        type.addMember(field);
-                                    case Node.NFunction(vname, vargs, vret, vexpr):
-                                        checkFunctionDeclArgs(vargs);
-                                        checkType(vret);
-                                        var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, getId(vname), [], new FunctionRetval('Dynamic')));
-                                        method.modifiers = mods;
-                                        if (type.existsMember(method.name)) {
-                                            error(vname.pos, 'Duplicate class field declaration : ${method.name}');
-                                        }
-                                        type.addMember(method);
-                                        processMethodBody(type, method, vexpr);
-                                    default:
-                                        throw 'Invalid (III) $decl';
-                                }
+                                        default: throw 'Invalid (VI) $vargs';
+                                    }
+
+                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, getId(vname), ffargs, new FunctionRetval('Dynamic')));
+                                    method.modifiers = mods;
+                                    if (type.existsMember(method.name)) {
+                                        error(vname.pos, 'Duplicate class field declaration : ${method.name}');
+                                    }
+                                    type.addMember(method);
+                                    processMethodBody(type, method, vexpr);
+                                default:
+                                    throw 'Invalid (III) $decl';
                             }
                         default: throw 'Invalid (IV) $member';
                     }

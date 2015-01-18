@@ -151,7 +151,7 @@ class TestGrammar extends TestCase {
         }
 
         assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
-            assertEqualsString('[z]', [for (l in scope.getLocals()) l.name]);
+            assertEqualsString('[z]', [for (l in scope.getEntries()) l.getName()]);
             assertEqualsString('Int = 10', scope.getLocal('z').getResult());
         });
 
@@ -222,7 +222,7 @@ class TestGrammar extends TestCase {
         assertEqualsString('test', scope.getIdentifierAt(12).pos.text);
         assertEqualsString('test@4:8', scope.getLocalAt(5));
         assertEqualsString('test@4:8', scope.getLocalAt(12));
-        assertEqualsString('[NId(test)@4:8:Declaration,NId(test)@11:15:Read]', scope.getLocalAt(5).usages);
+        assertEqualsString('[NId(test)@4:8:Declaration,NId(test)@11:15:Read]', scope.getLocalAt(5).getUsages());
     }
 
     public function testCompletionLocateNode3() {
