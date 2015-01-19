@@ -108,6 +108,7 @@ class HaxeGrammar extends Grammar<Node> {
         var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
 
         var optType = opt(seq([':', sure(), type], buildNode('NWrapper')));
+        var reqType = seq([':', sure(), type], buildNode('NWrapper'));
 
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
         var typeNameList = list(typeName, ',', 0, false, rlist);
@@ -173,7 +174,8 @@ class HaxeGrammar extends Grammar<Node> {
         var argDecl = seq([opt(litK('?')), identifier, optType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
         var functionDecl = seq(['function', sure(), identifier, '(', opt(list(argDecl, ',', 0, false, rlist)), ')', optType, stm], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varStm, functionDecl])], buildNode('NMember'));
-        var enumMemberDecl = seq([identifier, sure(), opt(seq(['(', opt(list(argDecl, ',', 0, false, rlist)), ')', sure(), ';'], buildNode('NFunctionArg')))], buildNode('NMember'));
+        var enumArgDecl = seq([opt(litK('?')), identifier, reqType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
+        var enumMemberDecl = seq([identifier, sure(), opt(seq(['(', opt(list(enumArgDecl, ',', 0, false, rlist)), ')', sure(), ';'], buildNode('NFunctionArg')))], buildNode('NMember'));
         
         var extendsDecl = seq(['extends', sure(), fqName, opt(typeParamDecl)], buildNode('NExtends'));
         var implementsDecl = seq(['implements', sure(), fqName, opt(typeParamDecl)], buildNode('NImplements'));
