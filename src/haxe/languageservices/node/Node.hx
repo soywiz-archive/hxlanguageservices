@@ -12,8 +12,8 @@ enum Node {
     NListDummy(value:Array<ZNode>);
     NIdList(value:Array<ZNode>);
     NConstList(items:Array<ZNode>);
-    
-    
+
+    NCast(expr:ZNode, ?type:ZNode);
     NIf(cond:ZNode, trueExpr:ZNode, falseExpr:ZNode);
     NArray(items:Array<ZNode>);
     NObjectItem(key:ZNode, value:ZNode);

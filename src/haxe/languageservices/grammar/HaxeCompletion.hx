@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.tool.NodeTypeTools;
 import haxe.languageservices.type.HaxeCompilerReferences;
 import haxe.languageservices.type.UsageType;
 import haxe.languageservices.node.HaxeElement;
@@ -92,6 +93,9 @@ class HaxeCompletion {
                 process(cond, scope);
                 process(body, scope);
             case Node.NConst(_):
+            case Node.NCast(expr, type):
+                process(expr, scope);
+                //process(type, scope);
             case Node.NCall(left, args):
                 var lvalue = scope.getNodeResult(left);
                 var callPos = znode.pos;
@@ -513,6 +517,10 @@ class CompletionScope implements CompletionEntryProvider {
             case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
+            case Node.NCast(expr, type):
+                var evalue = _getNodeResult(expr, context);
+                var type2 = NodeTypeTools.getTypeDeclType(types, type);
+                return ExpressionResult.withoutValue(type2);
             case Node.NCall(left, args):
                 var value = _getNodeResult(left, context);
                 if (Std.is(value.type.type, FunctionHaxeType)) {

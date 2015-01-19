@@ -88,6 +88,10 @@ class TestCompletion extends HLSTestCase {
         assertProgramBody('class A { function method(a:Int, b:Int, c, d:Bool) { this.###method; } }', ['method:Int -> Int -> Dynamic -> Bool -> Dynamic'], []);
     }
 
+    public function testCast() {
+        assertFuntionBody('var a = cast(10, Test); ###', ['a:Test'], []);
+    }
+
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
         assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], []);

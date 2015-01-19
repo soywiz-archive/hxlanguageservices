@@ -124,6 +124,7 @@ class HaxeGrammar extends Grammar<Node> {
         var varStm = seq(['var', sure(), identifier, opt(propertyDecl), optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
         var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
+        var castExpr = seq(['cast', sure(), '(', expr, opt(seq([',', type], rlist)), ')'], buildNode('NCast'));
         var arrayExpr = seq(['[', list(expr, ',', 0, true, rlist), ']'], buildNode2('NArray'));
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
@@ -143,6 +144,7 @@ class HaxeGrammar extends Grammar<Node> {
         var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));
 
         setRef(primaryExpr, any([
+            castExpr,
             parenExpr,
             unaryExpr,
             seq(['new', sure(), identifier, callEmptyPart, callPart], buildNode('NNew')),
