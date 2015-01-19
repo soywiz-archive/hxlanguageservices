@@ -476,7 +476,9 @@ class CompletionScope implements CompletionEntryProvider {
             case Node.NFieldAccess(left, id):
                 if (left != null && id != null) {
                     var lvalue = _getNodeResult(left, context);
-                    var member = lvalue.type.type.getMember(NodeTools.getId(id));
+                    var sid = NodeTools.getId(id);
+                    var member = lvalue.type.type.getInheritedMemberByName(sid);
+                    if (member == null) return ExpressionResult.withoutValue(types.specTypeDynamic);
                     return ExpressionResult.withoutValue(member.getType());
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);

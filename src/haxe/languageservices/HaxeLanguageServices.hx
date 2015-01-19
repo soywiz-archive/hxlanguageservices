@@ -38,9 +38,10 @@ class HaxeLanguageServices {
             context.setFile(fileContent, path);
             context.update();
         } catch (e:Dynamic) {
-            //#if js
-            //js.Browser.window.console.error(e);
-            //#end
+            #if js
+            try { js.Browser.window.console.error(e.stack); } catch (e2:Dynamic) {}
+            js.Browser.window.console.error(e);
+            #end
             //trace(e);
             throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
         }
@@ -57,7 +58,10 @@ class HaxeLanguageServices {
     
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
-        var locals = context.completionScope.locateIndex(offset).getEntries();
+        if (context.completionScope == null) return new CompList([]);
+        var scope2 = context.completionScope.locateIndex(offset);
+        if (scope2 == null) return new CompList([]);
+        var locals = scope2.getEntries();
         return new CompList([for (l in locals) Conv.toEntry(l.getName(), l.getResult())]);
     }
 
@@ -72,6 +76,7 @@ class HaxeLanguageServices {
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
         var context = getContext(path);
+        if (context.completionScope == null) return null;
         var id = context.completionScope.getIdentifierAt(offset);
         if (id == null) return null;
         return {
