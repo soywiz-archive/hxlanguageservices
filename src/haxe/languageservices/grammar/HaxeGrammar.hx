@@ -196,7 +196,7 @@ class HaxeGrammar extends Grammar<Node> {
         );
 
         var enumDecl = seq(
-            ['enum', sure(), identifier, '{', list2(enumMemberDecl, 0, rlist), '}'],
+            ['enum', sure(), identifier, opt(typeParamDecl), '{', list2(enumMemberDecl, 0, rlist), '}'],
             buildNode('NEnum')
         );
 
