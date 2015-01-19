@@ -210,7 +210,7 @@ class HaxeCompletion {
             case Node.NSwitch(subject, cases):
                 process(subject, scope);
                 process(cases, scope);
-            case Node.NEnum(name):
+            case Node.NEnum(name,_):
             case Node.NAbstract(name):
             case Node.NMember(modifiers, decl):
                 processMember(decl, modifiers, scope);
