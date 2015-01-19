@@ -34,7 +34,7 @@ enum Node {
     NClass(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
     NInterface(name:ZNode, typeParams:ZNode, extendsImplementsList:ZNode, decls:ZNode);
     NTypedef(name:ZNode);
-    NEnum(name:ZNode, expr:ZNode);
+    NEnum(name:ZNode);
     NAbstract(name:ZNode);
 
     NExtends(fqName:ZNode, params:ZNode);

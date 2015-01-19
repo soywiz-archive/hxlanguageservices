@@ -133,7 +133,7 @@ class HaxeTypeBuilder {
                             if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                             var type:AbstractHaxeType = packag.accessTypeCreate(typeName, item.pos, AbstractHaxeType);
                             builtTypes.push(type);
-                        case Node.NEnum(name,_):
+                        case Node.NEnum(name):
                             var typeName = getId(name);
                             if (packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                             var type:EnumHaxeType = packag.accessTypeCreate(typeName, item.pos, EnumHaxeType);
