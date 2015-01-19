@@ -19,22 +19,26 @@
         .matching {
             color: purple;
         }
-        .signaturecompletion {
+        #signaturecompletion {
             position:absolute;top:0;left:0;
+            /*
             min-width:320px;
             max-width: 640px;
+            */
+            width:520px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             border: 1px solid #aaa;
             margin-top:1.2em;
             max-height:200px;
             z-index: 10000;
-            visibility: hidden;
             font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
             background: #ffc;
             padding: 4px;
             border-radius: 4px;
+            visibility: hidden;
+            cursor: default;
         }
-        .signaturecompletion strong {
+        #signaturecompletion strong {
             background: #fee;
             border-bottom: 1px solid black;
         }
@@ -59,11 +63,16 @@
         }
         .type {
             color: green;
-            
+        }
+        body.info2 .ace_autocomplete {
+            margin-top: 20px;
+        }
+        .ace_editor.ace_autocomplete {
+            width: 520px !important;
         }
     </style>
 </head>
-<body>
+<body class="info2">
     <div id="rightOverlayInfo">
         <h3>Links</h3>
         <a href="https://github.com/soywiz/hxlanguageservices" target="_blank">Project @github</a> | <a href="http://haxe.org/" target="_blank">Haxe</a> | <a href="http://try.haxe.org/" target="_blank">Compile haxe online</a>
@@ -80,7 +89,7 @@
 
     <div id="editorIn"></div>
 
-    <div id="signaturecompletion" class="signaturecompletion"></div>
+    <div id="signaturecompletion" class="signaturecompletion">hello</div>
 
     <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
     <script src="ace/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>

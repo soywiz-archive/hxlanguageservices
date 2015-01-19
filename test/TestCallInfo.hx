@@ -18,27 +18,34 @@ class TestCallInfo extends HLSTestCase {
     public function test1() {
         assertCallInfo(
             'class Test { function a(test:Int) { a(###1); } }',
-            '0:(test:Int):Dynamic'
+            '0:a(test:Int):Dynamic'
         );
 
         assertCallInfo(
             'class Test { function a(test:Int) { a(###); } }',
-            '0:(test:Int):Dynamic'
+            '0:a(test:Int):Dynamic'
         );
 
         assertCallInfo(
             'class Test { function a(test:Int) { a( ### ); } }',
-            '0:(test:Int):Dynamic'
+            '0:a(test:Int):Dynamic'
         );
 
         assertCallInfo(
             'class Test { function a(test:Int, arg:Int) { a(1, ###2); } }',
-            '1:(test:Int, arg:Int):Dynamic'
+            '1:a(test:Int, arg:Int):Dynamic'
         );
 
         assertCallInfo(
             'class Test { function a(test:Int, arg:Int) { a(1, ###); } }',
+            '1:a(test:Int, arg:Int):Dynamic'
+        );
+
+        /*
+        assertCallInfo(
+            'class Test { function a(test:Int, arg:Int) { a(1,### 2); } }',
             '1:(test:Int, arg:Int):Dynamic'
         );
+        */
     }
 }

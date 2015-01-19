@@ -59,6 +59,7 @@ class MainIde {
         editor.session.setValue(vfs.readString('live.hx'));
         editor.session.selection.moveCursorFileEnd();
         editor.session.selection.on('changeCursor', function(e) {
+
             updateIde();
             return null;
         });
@@ -224,10 +225,20 @@ class MainIde {
             
             // CallInfo
             var call = services.getCallInfoAt(file, cursorIndex);
+            var signaturecompletion = document.getElementById('signaturecompletion');
             if (call != null) {
                 callinfoOverlay.innerHTML = HtmlTools.callToHtml(call);
+                var p = editor.session.doc.indexToPosition(call.startPos, 0);
+                var sp = editor.renderer.textToScreenCoordinates(p.row, p.column);
+                signaturecompletion.style.top = sp.pageY + 'px';
+                signaturecompletion.style.left = sp.pageX + 'px';
+                signaturecompletion.innerHTML = HtmlTools.callToHtml(call);
+                signaturecompletion.style.visibility = 'visible';
+                document.body.className = 'info2';
             } else {
                 callinfoOverlay.innerText = 'no call info';
+                signaturecompletion.style.visibility = 'hidden';
+                document.body.className = '';
             }
         } catch (e:Dynamic) {
             try { Browser.window.console.error(e.stack); } catch (e2:Dynamic) { }

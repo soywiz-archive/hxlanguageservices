@@ -102,7 +102,9 @@ class HaxeLanguageServices {
         var call:CompCall = null;
         if (callInfo != null) {
             var f = callInfo.f;
-            call = new CompCall(callInfo.argindex, conv.func(f));
+            var argStartPos = callInfo.argPosStart;
+            var startPos = callInfo.startPos;
+            call = new CompCall(callInfo.argindex, startPos, argStartPos, conv.func(f));
         }
         return call;
     }
@@ -310,16 +312,20 @@ class CompFunction {
     }
 
     public function toString() {
-        return '(' + args.join(', ') + '):' + ret;
+        return name + '(' + args.join(', ') + '):' + ret;
     }
 }
 
 class CompCall {
     public var argIndex:Int;
+    public var startPos:Int;
+    public var argPos:Int;
     public var func:CompFunction;
     
-    public function new(argIndex:Int, func:CompFunction) {
+    public function new(argIndex:Int, startPos:Int, startIndex:Int, func:CompFunction) {
         this.argIndex = argIndex;
+        this.startPos = startPos;
+        this.argPos = startIndex;
         this.func = func;
     }
 
@@ -328,7 +334,9 @@ class CompCall {
 
 class HtmlTools {
     static public function escape(str:String) {
-        // @TODO: Escape
+        str = new EReg('<', 'g').replace(str, '&lt;');
+        str = new EReg('>', 'g').replace(str, '&gt;');
+        str = new EReg('"', 'g').replace(str, '&quote;');
         return str;
     }
 
@@ -354,7 +362,7 @@ class HtmlTools {
     static public function callToHtml(f:CompCall) {
         var func = f.func;
         var currentIndex = f.argIndex;
-        return '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret);
+        return escape(func.name) + '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret);
     }
 }
 

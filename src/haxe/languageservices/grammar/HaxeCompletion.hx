@@ -99,8 +99,7 @@ class HaxeCompletion {
 
                 var argnodes:Array<ZNode> = [];
                 if (args != null) switch (args.node) {
-                    case Node.NList(items):
-                        argnodes = items;
+                    case Node.NList(items): argnodes = items;
                     default: throw 'Invalid args: ' + args;
                 }
                 
@@ -121,11 +120,13 @@ class HaxeCompletion {
                         errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argnodes.length + ' arguments but required ' + f.args.length));
                     }
                     
+                    var start1 = left.pos.max + 1;
+                    
                     var reader = znode.pos.reader;
                     if (argnodes.length == 0) {
                         var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
                         var argscope = scope.createChild(argnode2);
-                        argscope.callInfo = new CallInfo(0, argnode2, f);
+                        argscope.callInfo = new CallInfo(0, start1, argnode2.pos.min, argnode2, f);
                     } else {
                         var lastIndex = 0;
                         var lastNode:ZNode = null;
@@ -134,7 +135,7 @@ class HaxeCompletion {
                             var argscope = argscopes[n];
                             var arg = f.args[n];
                             if (argscope != null && argnode != null) {
-                                argscope.callInfo = new CallInfo(n, argnode, f);
+                                argscope.callInfo = new CallInfo(n, start1, argnode.pos.min, argnode, f);
                                 lastIndex = n;
                                 lastNode = argnode;
                             }
@@ -152,7 +153,7 @@ class HaxeCompletion {
                             var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
                             var extraNode = new ZNode(extraPos, null);
                             var extraScope = scope.createChild(extraNode);
-                            extraScope.callInfo = new CallInfo(extraIndex, extraNode, f);
+                            extraScope.callInfo = new CallInfo(extraIndex, start1, extraPos.min, extraNode, f);
                         }
                     }
                 }
@@ -165,6 +166,7 @@ class HaxeCompletion {
                 var idName:String = (id != null) ? id.pos.text : null;
                 process(left, scope);
                 var lvalue = scope.getNodeResult(left);
+                
                 var l:ZNode = left;
 
                 var tidnode = new ZNode(l.pos.reader.createPos(l.pos.max, (id != null) ? id.pos.max : l.pos.max + 1), null);
@@ -266,10 +268,14 @@ class HaxeCompletion {
 
 class CallInfo {
     public var argindex:Int;
+    public var startPos:Int;
+    public var argPosStart:Int;
     public var node:ZNode;
     public var f:FunctionHaxeType;
-    public function new(argindex:Int, node:ZNode, f:FunctionHaxeType) {
+    public function new(argindex:Int, startPos:Int, argPosStart:Int, node:ZNode, f:FunctionHaxeType) {
         this.argindex = argindex;
+        this.startPos = startPos;
+        this.argPosStart = argPosStart;
         this.node = node;
         this.f = f;
     }
