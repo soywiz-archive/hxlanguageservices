@@ -46,12 +46,12 @@ class HaxeTypes {
 
         function nameNode(name:String) return new ZNode(typesPos, Node.NId(name));
 
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, nameNode('testBoolMethod'), [], new FunctionRetval('Dynamic'))));
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool.pos, nameNode('testBoolMethod2'), [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, nameNode('testIntMethod'), [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt.pos, nameNode('testIntMethod2'), [], new FunctionRetval('Dynamic'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, nameNode('indexOf'), [new FunctionArgument('element', 'Dynamic')], new FunctionRetval('Int'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray.pos, nameNode('charAt'), [new FunctionArgument('index', 'Int')], new FunctionRetval('String'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod'), [], new FunctionRetval('Dynamic'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod2'), [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod'), [], new FunctionRetval('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod2'), [], new FunctionRetval('Dynamic'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('indexOf'), [new FunctionArgument(0, 'element', 'Dynamic')], new FunctionRetval('Int'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('charAt'), [new FunctionArgument(0, 'index', 'Int')], new FunctionRetval('String'))));
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {

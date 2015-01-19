@@ -50,12 +50,16 @@
             height: 100%;
         }
         #rightOverlayInfo h3 { margin: 0; padding: 0; }
-        #autocompletionOverlay, #errorsOverlay {
+        #autocompletionOverlay, #errorsOverlay, #callinfoOverlay {
             font: 14px monospace;
             white-space: pre-wrap;
         }
         #errorsOverlay {
             color: red;
+        }
+        .type {
+            color: green;
+            
         }
     </style>
 </head>
@@ -67,11 +71,11 @@
         <div>Rename: Windows:F2, Mac:Shift+F6</div>
         <div>Completion: Ctrl+space</div>
         <h3>Autocompletion:</h3>
-        <div id="autocompletionOverlay">
-        </div>
+        <div id="autocompletionOverlay"></div>
+        <h3>CallInfo:</h3>
+        <div id="callinfoOverlay"></div>
         <h3 style="padding-top:16px;">Errors:</h3>
-        <div id="errorsOverlay">
-        </div>
+        <div id="errorsOverlay"></div>
     </div>
 
     <div id="editorIn"></div>

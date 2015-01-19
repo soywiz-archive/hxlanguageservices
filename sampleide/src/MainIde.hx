@@ -175,6 +175,7 @@ class MainIde {
         var annotations = new Array<Ace.Annotation>();
         var errorsOverlay = document.getElementById('errorsOverlay');
         var autocompletionOverlay = document.getElementById('autocompletionOverlay');
+        var callinfoOverlay = document.getElementById('callinfoOverlay');
         errorsOverlay.innerText = '';
 
         function addError(e:CompError) {
@@ -201,12 +202,15 @@ class MainIde {
         var show = false;
         var file = 'live.hx';
         try {
+            // Completion
             var items = services.getCompletionAt(file, cursorIndex);
             if (items.items.length == 0) {
                 autocompletionOverlay.innerText = 'no autocompletion info';
             } else {
                 autocompletionOverlay.innerText = items.items.join('\n');
             }
+            
+            // References
             var id = services.getIdAt(file, cursorIndex);
             references = [];
             if (id != null) {
@@ -216,6 +220,14 @@ class MainIde {
                 } else {
                     references.push(new CompReference(id.pos, CompReferenceType.Read));
                 }
+            }
+            
+            // CallInfo
+            var call = services.getCallInfoAt(file, cursorIndex);
+            if (call != null) {
+                callinfoOverlay.innerHTML = HtmlTools.callToHtml(call);
+            } else {
+                callinfoOverlay.innerText = 'no call info';
             }
         } catch (e:Dynamic) {
             try { Browser.window.console.error(e.stack); } catch (e2:Dynamic) { }

@@ -185,6 +185,7 @@ class Grammar<TNode> {
                 var items = [];
                 var count = 0;
                 var separatorCount = 0;
+                var lastSeparatorPos = reader.createPos(start, start);
                 while (true) {
                     var resultItem = _parse(item, reader, errors);
                     switch (resultItem) {
@@ -195,10 +196,12 @@ class Grammar<TNode> {
                     }
                     count++;
                     if (separator != null) {
+                        var rpos = reader.pos;
                         var resultSep = _parse(separator, reader, errors);
                         switch (resultSep) {
                             case Result.RUnmatched(_): break;
                             default:
+                                lastSeparatorPos = reader.createPos(rpos, reader.pos);
                         }
                         separatorCount++;
                     }
@@ -208,7 +211,11 @@ class Grammar<TNode> {
                 if (count < minCount) unmatched = true;
                 if (!allowExtraSeparator) {
                     if (separatorCount >= count) {
-                        unmatched = true;
+                        if (separator != null && count > 0) {
+                            errors.add(new ParserError(lastSeparatorPos, 'unexpected ' + lastSeparatorPos.text));
+                        } else {
+                            unmatched = true;
+                        }
                     }
                     //trace(count + ':' + separatorCount);
                 }

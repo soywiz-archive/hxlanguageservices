@@ -187,7 +187,7 @@ class HaxeTypeBuilder {
                                         case Node.NList(_vargs): for (arg in _vargs) {
                                             if (ZNode.isValid(arg)) switch (arg.node) {
                                                 case Node.NFunctionArg(opt, name, type, value):
-                                                    ffargs.push(new FunctionArgument(NodeTools.getId(name), NodeTypeTools.getTypeDeclType(types, type).type.fqName));
+                                                    ffargs.push(new FunctionArgument(ffargs.length, NodeTools.getId(name), NodeTypeTools.getTypeDeclType(types, type).type.fqName));
                                                 default:
                                                     throw 'Invalid (VII) $arg';
                                             }
@@ -204,7 +204,7 @@ class HaxeTypeBuilder {
                                         fretval = new FunctionRetval('Dynamic');
                                     }
 
-                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, member.pos, vname, ffargs, fretval));
+                                    var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval));
                                     method.modifiers = mods;
                                     if (type.existsMember(method.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${method.name}');

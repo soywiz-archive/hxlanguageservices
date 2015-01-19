@@ -1,1 +1,2 @@
-./runtests && pushd sampleide && ./build -debug $@ && popd
+./runtests
+pushd sampleide && ./build -debug $@ && popd

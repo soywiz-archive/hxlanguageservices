@@ -94,40 +94,68 @@ class HaxeCompletion {
             case Node.NConst(_):
             case Node.NCall(left, args):
                 var lvalue = scope.getNodeResult(left);
+                var callPos = znode.pos;
+                process(left, scope);
+
+                var argnodes:Array<ZNode> = [];
+                if (args != null) switch (args.node) {
+                    case Node.NList(items):
+                        argnodes = items;
+                    default: throw 'Invalid args: ' + args;
+                }
+                
+                var argscopes = [];
+                for (argnode in argnodes) {
+                    var argscope = scope.createChild(argnode);
+                    argscopes.push(argscope);
+                    process(argnode, argscope);
+                }
+
                 if (!Std.is(lvalue.type.type, FunctionHaxeType)) {
                     //trace(Type.getClassName(Type.getClass(lvalue.type)));
                     errors.add(new ParserError(znode.pos, 'Trying to call a non function expression'));
                 } else {
                     var f:FunctionHaxeType = Std.instance(lvalue.type.type, FunctionHaxeType);
 
-                    var argnodes:Array<ZNode> = [];
-                    if (args != null) switch (args.node) {
-                        case Node.NList(items):
-                            argnodes = items;
-                        default: throw 'Invalid args: ' + args;
-                    }
-
                     if (argnodes.length != f.args.length) {
                         errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argnodes.length + ' arguments but required ' + f.args.length));
                     }
                     
-                    for (n in 0 ... argnodes.length) {
-                        var argnode = argnodes[n];
-                        var arg = f.args[n];
-                        if (argnode != null && arg != null) {
-                            var argResult = scope.getNodeResult(argnode);
-                            var expectedArgType = arg.getSpecType(types);
-                            var callArgType = argResult.type;
-                            if (!expectedArgType.canAssign(callArgType)) {
-                                errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
+                    var reader = znode.pos.reader;
+                    if (argnodes.length == 0) {
+                        var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
+                        var argscope = scope.createChild(argnode2);
+                        argscope.callInfo = new CallInfo(0, argnode2, f);
+                    } else {
+                        var lastIndex = 0;
+                        var lastNode:ZNode = null;
+                        for (n in 0 ... argnodes.length) {
+                            var argnode = argnodes[n];
+                            var argscope = argscopes[n];
+                            var arg = f.args[n];
+                            if (argscope != null && argnode != null) {
+                                argscope.callInfo = new CallInfo(n, argnode, f);
+                                lastIndex = n;
+                                lastNode = argnode;
                             }
+                            if (argnode != null && arg != null) {
+                                var argResult = scope.getNodeResult(argnode);
+                                var expectedArgType = arg.getSpecType(types);
+                                var callArgType = argResult.type;
+                                if (!expectedArgType.canAssign(callArgType)) {
+                                    errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
+                                }
+                            }
+                        }
+                        if (lastNode != null) {
+                            var extraIndex = lastIndex + 1;
+                            var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
+                            var extraNode = new ZNode(extraPos, null);
+                            var extraScope = scope.createChild(extraNode);
+                            extraScope.callInfo = new CallInfo(extraIndex, extraNode, f);
                         }
                     }
                 }
-                
-                //trace(lvalue);
-                process(left, scope);
-                process(args, scope);
             case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
@@ -233,6 +261,17 @@ class HaxeCompletion {
                 throw 'Unhandled completion (I) $znode';
                 errors.add(new ParserError(znode.pos, 'Unhandled completion (I) $znode'));
         }
+    }
+}
+
+class CallInfo {
+    public var argindex:Int;
+    public var node:ZNode;
+    public var f:FunctionHaxeType;
+    public function new(argindex:Int, node:ZNode, f:FunctionHaxeType) {
+        this.argindex = argindex;
+        this.node = node;
+        this.f = f;
     }
 }
 
@@ -359,6 +398,7 @@ class CompletionScope implements CompletionEntryProvider {
     private var children = new Array<CompletionScope>();
     private var locals:CScope;
     private var providers = new Array<CompletionEntryProvider>();
+    public var callInfo:CallInfo;
     
     public function unlinkFromParent() {
         this.parent = null;
@@ -377,6 +417,7 @@ class CompletionScope implements CompletionEntryProvider {
             this.parent = parent;
             this.parent.children.push(this);
             this.currentClass = parent.currentClass;
+            this.callInfo = parent.callInfo;
             this.locals = parent.locals.createChild();
         } else {
             this.parent = null;
@@ -401,6 +442,7 @@ class CompletionScope implements CompletionEntryProvider {
 
     public function locateIndex(index:Int):CompletionScope {
         for (child in children) {
+            if (child == null || child.node == null) continue;
             if (child.node.pos.contains(index)) return child.locateIndex(index);
         }
         return this;

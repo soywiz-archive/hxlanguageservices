@@ -1,5 +1,7 @@
 package haxe.languageservices;
 
+import haxe.languageservices.type.FunctionRetval;
+import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.UsageType;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.type.FunctionHaxeType;
@@ -22,11 +24,13 @@ import haxe.languageservices.util.Vfs;
 class HaxeLanguageServices {
     private var vfs:Vfs;
     private var types = new HaxeTypes();
+    private var conv:Conv;
     private var contexts = new Map<String, CompFileContext>();
     public var classPaths = ["."];
 
     public function new(vfs:Vfs) {
         this.vfs = vfs;
+        this.conv = new Conv(types);
     }
     
     public function updateHaxeFile(path:String):Void {
@@ -52,17 +56,20 @@ class HaxeLanguageServices {
         return null;
     }
 
-    public function getTypeMembers(path:String):Array<String> {
+    public function getTypeMembers(fqName:String):Array<String> {
         return null;
     }
     
+    /**
+     * Get a list of possible identifiers used in an offset with type information
+     **/
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
         if (context.completionScope == null) return new CompList([]);
         var scope2 = context.completionScope.locateIndex(offset);
         if (scope2 == null) return new CompList([]);
         var locals = scope2.getEntries();
-        return new CompList([for (l in locals) Conv.toEntry(l.getName(), l.getResult())]);
+        return new CompList([for (l in locals) conv.toEntry(l.getName(), l.getResult())]);
     }
 
     public function getReferencesAt(path:String, offset:Int):CompReferences {
@@ -71,7 +78,7 @@ class HaxeLanguageServices {
         if (id == null) return null;
         var entry = context.completionScope.locateIndex(offset).getEntryByName(id.name);
         if (entry == null) return null;
-        return new CompReferences(id.name, [for (usage in entry.getReferences().usages) new CompReference(Conv.pos(usage.pos), Conv.usageType(usage.type)) ]);
+        return new CompReferences(id.name, [for (usage in entry.getReferences().usages) new CompReference(conv.pos(usage.pos), conv.usageType(usage.type)) ]);
     }
     
     public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
@@ -80,31 +87,29 @@ class HaxeLanguageServices {
         var id = context.completionScope.getIdentifierAt(offset);
         if (id == null) return null;
         return {
-            pos: Conv.pos(id.pos),
+            pos: conv.pos(id.pos),
             name: id.name
         };
     }
     
+    /**
+     * Get information about a calling function, with parameters information and current parameter index
+     **/
     public function getCallInfoAt(path:String, offset:Int):CompCall {
-        /*
-        return switch (getParser(path).callCompletionAt(offset)) {
-            case CCompletion.CallCompletion(baseType, name, args, ret, argIndex, doc):
-                return new CompCall(
-                    baseType, name,
-                    [for (arg in args) new CompArgument(arg.name, typeConvert(arg.type), arg.optional, arg.doc)],
-                    new CompReturn(typeConvert(ret.type), ret.doc),
-                    argIndex, doc
-                );
-            default:
-                return null;
+        var context:CompFileContext = getContext(path);
+        var scope = context.completionScope.locateIndex(offset);
+        var callInfo = scope.callInfo;
+        var call:CompCall = null;
+        if (callInfo != null) {
+            var f = callInfo.f;
+            call = new CompCall(callInfo.argindex, conv.func(f));
         }
-        */
-        return null;
+        return call;
     }
 
     public function getErrors(path:String):Array<CompError> {
         var context:CompFileContext = getContext(path);
-        return [for (error in context.errors.errors) new CompError(Conv.pos(error.pos), error.message)];
+        return [for (error in context.errors.errors) new CompError(conv.pos(error.pos), error.message)];
     }
 
     private function getContext(path:String):CompFileContext {
@@ -112,18 +117,32 @@ class HaxeLanguageServices {
         if (context == null) throw 'Can\'t find context for file $path';
         return context;
     }
-    
-    //static private function convertType(type:CompletionType):CompType {
-    //    return new CompType(CompletionTypeUtils.toString(type));
-    //}
 }
 
 class Conv {
-    static public function toEntry(name:String, result:ExpressionResult):CompEntry {
-        return new CompEntry(name, Conv.toType(result.type), result.hasValue, result.value);
+    private var types:HaxeTypes;
+
+    public function new(types:HaxeTypes) {
+        this.types = types;
+    }
+    
+    public function func(f:FunctionHaxeType):CompFunction {
+        return new CompFunction(f.optBaseType.fqName, f.name, [for (a in f.args) funcArg(a)], funcRet(f.retval), '');
     }
 
-    static public function usageType(type:UsageType):CompReferenceType {
+    public function toEntry(name:String, result:ExpressionResult):CompEntry {
+        return new CompEntry(name, toType(result.type), result.hasValue, result.value);
+    }
+    
+    public function funcRet(f:FunctionRetval):CompReturn {
+        return new CompReturn(toType(f.getSpecType(types)), '');
+    }
+
+    public function funcArg(fa:FunctionArgument):CompArgument {
+        return new CompArgument(fa.index, fa.name, toType(fa.getSpecType(types)), fa.opt, fa.doc);
+    }
+    
+    public function usageType(type:UsageType):CompReferenceType {
         switch (type) {
             case UsageType.Declaration: return CompReferenceType.Declaration;
             case UsageType.Read: return CompReferenceType.Read;
@@ -131,16 +150,17 @@ class Conv {
         }
     }
 
-    static public function pos(pos:Position):CompPosition {
+    public function pos(pos:Position):CompPosition {
         return new CompPosition(pos.min, pos.max);
     }
 
-    static public function toType(type:SpecificHaxeType):CompType {
+    public function toType(type:SpecificHaxeType):CompType {
+        if (type == null) return new BaseCompType('Dynamic');
         if (Std.is(type.type, FunctionHaxeType)) {
             var ftype = cast(type.type, FunctionHaxeType);
             return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.retval.fqName));
         }
-        return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) Conv.toType(i)] : null);
+        return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) toType(i)] : null);
     }
 }
 
@@ -239,44 +259,102 @@ class CompError {
 }
 
 class CompArgument {
-    var name: String;
-    var type: CompType;
-    var optional: Bool;
-    var doc: String;
+    public var index:Int;
+    public var name: String;
+    public var type: CompType;
+    public var optional: Bool;
+    public var doc: String;
 
-    public function new(name:String, type: CompType, optional: Bool, doc:String) {
+    public function new(index:Int, name:String, type: CompType, optional: Bool, doc:String) {
+        this.index = index;
         this.name = name;
         this.type = type;
         this.optional = optional;
         this.doc = doc;
     }
+
+    public function toString() {
+        var out = '';
+        if (optional) out += '?';
+        out += name;
+        if (type != null) out += ':$type';
+        return out;
+    }
 }
 
 class CompReturn {
-    var type: CompType;
-    var doc: String;
+    public var type: CompType;
+    public var doc: String;
     
     public function new(type:CompType, doc:String) {
         this.type = type;
         this.doc = doc;
     } 
+
+    public function toString() return '$type';
 }
 
-class CompCall {
+class CompFunction {
     public var baseType:String;
     public var name:String;
     public var args:Array<CompArgument>;
     public var ret:CompReturn;
-    public var argIndex:Int;
     public var doc:String;
 
-    public function new(baseType:String, name:String, args:Array<CompArgument>, ret:CompReturn, argIndex:Int, doc:String) {
+    public function new(baseType:String, name:String, args:Array<CompArgument>, ret:CompReturn, doc:String) {
         this.baseType = baseType;
         this.name = name;
         this.args = args;
         this.ret = ret;
-        this.argIndex = argIndex;
         this.doc = doc;
+    }
+
+    public function toString() {
+        return '(' + args.join(', ') + '):' + ret;
+    }
+}
+
+class CompCall {
+    public var argIndex:Int;
+    public var func:CompFunction;
+    
+    public function new(argIndex:Int, func:CompFunction) {
+        this.argIndex = argIndex;
+        this.func = func;
+    }
+
+    public function toString() return '$argIndex:$func';
+}
+
+class HtmlTools {
+    static public function escape(str:String) {
+        // @TODO: Escape
+        return str;
+    }
+
+    static public function typeToHtml(f:CompType) {
+        if (Std.is(f, FunctionCompType)) {
+            return [for (a in cast(f, FunctionCompType).args) typeToHtml(a)].join(' -&gt; ');
+        }
+        if (Std.is(f, BaseCompType)) {
+            return '<span class="type">' + escape(cast(f, BaseCompType).str) + '</span>';
+        }
+        return '$f';
+    }
+
+    static public function argumentToHtml(a:CompArgument, ?selectedIndex:Int) {
+        if (a.index != null && a.index == selectedIndex) return '<strong>' + argumentToHtml(a, null) + '</strong>';
+        return '<span class="id">${escape(a.name)}</span>:${typeToHtml(a.type)}';
+    }
+
+    static public function retvalToHtml(r:CompReturn) {
+        return typeToHtml(r.type);
+    }
+
+    static public function callToHtml(f:CompCall) {
+        var func = f.func;
+        var currentIndex = f.argIndex;
+        return '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret);
     }
 }
 
