@@ -198,6 +198,7 @@ class HaxeGrammar extends Grammar<Node> {
         var typeBase = seq([identifier, opt(typeParamDecl)], rlist);
         
         setRef(type, any([
+            seq([ identifier, '<', type, '>' ], rlist),
             list(typeBase, '->', 1, false, rlist),
             seq([ '{', opt(typeNameList), '}' ], rlist),
         ]));
