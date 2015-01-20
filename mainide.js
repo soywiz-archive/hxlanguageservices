@@ -1923,6 +1923,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var stringSqDollarExprChunk = this.seq(["$","{",this.sure(),this.expr,"}"],this.buildNode("NStringSqDollarPart"));
 	var stringSqLiteralChunk = haxe.languageservices.grammar.Term.TCustomMatcher("literalchunk",function(errors2,reader2) {
 		var out1 = "";
+		if(reader2.eof()) return null;
 		if(reader2.peek(1) == "'") return null;
 		if(reader2.peek(1) == "$") return null;
 		try {
@@ -1948,7 +1949,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 		} catch( e ) { if( e != "__break__" ) throw e; }
 		return haxe.languageservices.node.Node.NConst(haxe.languageservices.node.Const.CString(out1));
 	});
-	var stringSqChunks = this.any([stringSqDollarSimpleChunk,stringSqDollarExprChunk,stringSqLiteralChunk]);
+	var stringSqChunks = this.any([stringSqDollarExprChunk,stringSqDollarSimpleChunk,stringSqLiteralChunk]);
 	var stringSqLit = this.seq(["'",this.list2(stringSqChunks,0,this.buildNode2("NStringParts")),"'"],this.buildNode("NStringSq"));
 	this.fqName = this.list(identifier,".",1,false,function(v5) {
 		return haxe.languageservices.node.Node.NIdList(v5);
@@ -1979,8 +1980,10 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var reqType = this.seq([":",this.sure(),type],this.buildNode("NWrapper"));
 	var typeName = this.seq([identifier,optType],this.buildNode("NIdWithType"));
 	var typeNameList = this.list(typeName,",",0,false,rlist);
-	var typeBase = this.seq([identifier,this.opt(typeParamDecl)],rlist);
-	this.setRef(type,this.any([this.list(typeBase,"->",1,false,rlist),this.seq(["{",this.opt(typeNameList),"}"],rlist)]));
+	var anonType = this.seq(["{",this.opt(typeNameList),"}"],rlist);
+	var genericsType = this.seq([identifier,this.opt(this.seqi(["<",type,">"]))],rlist);
+	var baseType = this.any([anonType,genericsType]);
+	this.setRef(type,this.any([this.list(baseType,"->",1,false,rlist),baseType]));
 	var propertyDecl = this.seq(["(",this.sure(),identifier,",",identifier,")"],this.buildNode("NProperty"));
 	var varStm = this.seq(["var",this.sure(),identifier,this.opt(propertyDecl),optType,this.opt(this.seqi(["=",this.expr])),this.optError(";","expected semicolon")],this.buildNode("NVar"));
 	var objectItem = this.seq([identifier,":",this.sure(),this.expr],this.buildNode("NObjectItem"));
@@ -3434,7 +3437,7 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 				break;
 			case 43:
 				var expr1 = _g[2];
-				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
+				return this._getNodeResult(expr1,context);
 			case 42:
 				var parts = _g[2];
 				var value6 = "";
