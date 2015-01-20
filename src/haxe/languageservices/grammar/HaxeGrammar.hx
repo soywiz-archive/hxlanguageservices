@@ -93,15 +93,21 @@ class HaxeGrammar extends Grammar<Node> {
                             // check if hexadecimal is supported
                             case 'x':
                                 var startHex = reader.pos;
-                                var hex = reader.read(2);
-                                if (~/^[0-9a-f]{2}$/i.match(hex)) {
+                                var hex = reader.matchEReg(~/^[0-9a-f]{2}/i);
+                                if (hex != null) {
                                     out += String.fromCharCode(Std.parseInt('0x' + hex));
                                 } else {
                                     errors.add(new ParserError(reader.createPos(startHex, startHex + 2), 'Not an hex escape sequence'));
                                 }
                             // Unicode
-                            //case 'u':
-                                
+                            case 'u':
+                                var startUnicode = reader.pos;
+                                var unicode = reader.matchEReg(~/^[0-9a-f]{4}/i);
+                                if (unicode != null) {
+                                    out += String.fromCharCode(Std.parseInt('0x' + unicode));
+                                } else {
+                                    errors.add(new ParserError(reader.createPos(startUnicode, startUnicode + 4), 'Not an unicode escape sequence'));
+                                }
                             case 'n': out += "\n";
                             case 'r': out += "\r";
                             case 't': out += "\t";
@@ -118,7 +124,8 @@ class HaxeGrammar extends Grammar<Node> {
             'identifier',
             ~/^[a-zA-Z]\w*/,
             function(v) return Node.NId(v),
-            function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
+            function(v) return !ConstTools.isKeyword(v)
+            //function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
         );
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));

@@ -89,4 +89,12 @@ class TestErrorReporting extends HLSTestCase {
         assertProgramErrors('class A { function b(a:String) { } function a() { b("hi"); } }', '[]');
         assertProgramErrors('class A { function b(a:String) { } function a() { b(1); } }', '[52:53:Invalid argument a expected String but found Int = 1]');
     }
+
+    /*
+    public function testVarWithKeyword() {
+        //var if = 1;
+        //var true = 1;
+        //assertMethodErrors('var if = 1;', '[1]');
+    }
+    */
 }
