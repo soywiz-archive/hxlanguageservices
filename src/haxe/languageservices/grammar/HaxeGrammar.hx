@@ -73,7 +73,23 @@ class HaxeGrammar extends Grammar<Node> {
 
         var float = Term.TReg('float', ~/^(\d+\.\d*|\d*\.\d+)/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
-        stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
+        //stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
+        stringDqLit = Term.TCustomMatcher('string', function(reader:Reader) {
+            var out = '';
+            if (reader.matchLit('"') == null) return null;
+            while (true) {
+                if (reader.eof()) return null;
+                var s = reader.read(1);
+                switch (s) {
+                    case '"': break;
+                    case '\\':
+                        var s2 = reader.read(1);
+                        out += s2;
+                    default: out += s;
+                }
+            }
+            return Node.NConst(Const.CString(out));
+        });
         var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
         var identifier = Term.TReg(
             'identifier',

@@ -216,6 +216,8 @@ class HaxeCompletion {
                 processMember(decl, modifiers, scope);
             case Node.NReturn(expr):
                 process(expr, scope);
+            case Node.NNew(id, call):
+                //process(call, scope);
             //case Node.NPackage()
             default:
                 errors.add(new ParserError(znode.pos, 'Unhandled completion (II) ${znode}'));
@@ -517,6 +519,9 @@ class CompletionScope implements CompletionEntryProvider {
             case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
+            case Node.NNew(id, call):
+                var type = NodeTypeTools.getTypeDeclType(types, id);
+                return ExpressionResult.withoutValue(type);
             case Node.NCast(expr, type):
                 var evalue = _getNodeResult(expr, context);
                 var type2 = NodeTypeTools.getTypeDeclType(types, type);

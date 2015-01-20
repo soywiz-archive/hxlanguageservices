@@ -197,8 +197,11 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testString() {
-        var node:ZNode = hg.parseStringNode(hg.expr, '"hello world"', 'program.hx');
-        assertEqualsString('NConst(CString(hello world))@0:13', node);
+        assertEqualsString('NConst(CString(hello world))@0:13', hg.parseStringNode(hg.expr, '"hello world"', 'program.hx'));
+    }
+
+    public function testString2() {
+        assertEqualsString('NConst(CString(hello \" world))@0:16', hg.parseStringNode(hg.expr, '"hello \\" world"', 'program.hx'));
     }
 
     public function testCompletionLocateNode() {

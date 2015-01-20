@@ -33,6 +33,12 @@ class Reader {
         return str.substr(pos, count);
     }
 
+    public function read(count:Int):String {
+        var out = peek(count);
+        skip(count);
+        return out;
+    }
+
     public function skip(count:Int):Void {
         pos++;
     }

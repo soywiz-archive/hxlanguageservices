@@ -56,6 +56,7 @@ class Grammar<TNode> {
         switch (t) {
             case Term.TLit(lit, _): return '"$lit"';
             case Term.TReg(name, _, _, _): return '$name';
+            case Term.TCustomMatcher(name, _): return '$name';
             case Term.TRef(ref): return describe(ref.term);
             case Term.TOpt(item, _): return describe(item);
             case Term.TSeq(items, _): return describe(items[0]);
@@ -99,6 +100,11 @@ class Grammar<TNode> {
                     }
                 }
                 return gen(res, conv);
+            case Term.TCustomMatcher(name, matcher):
+                var result = matcher(reader);
+                if (result == null) return Result.RUnmatched(0, start);
+                var resultnode = new NNode(reader.createPos(start, reader.pos), result);
+                return Result.RMatchedValue(simplify(resultnode, t));
             case Term.TRef(ref): return _parse(ref.term, reader, errors);
             case Term.TOpt(item, error):
                 switch (_parse(item, reader, errors)) {
@@ -283,6 +289,7 @@ enum Result {
 enum Term {
     TLit(lit:String, ?conv:Dynamic -> Dynamic);
     TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic, ?checker: String -> Bool);
+    TCustomMatcher(name:String, matcher: Reader -> Dynamic);
     TRef(ref:TermRef);
     TAny(items:Array<Term>, recover:Array<Term>);
     TSure;
