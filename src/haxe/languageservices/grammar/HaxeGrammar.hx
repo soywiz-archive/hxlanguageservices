@@ -195,11 +195,11 @@ class HaxeGrammar extends Grammar<Node> {
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
         var typeNameList = list(typeName, ',', 0, false, rlist);
         
-        var typeBase = seq([identifier, opt(typeParamDecl)], rlist);
+        var genericsType = seq([ identifier, opt(seqi(['<', type, '>'])) ], rlist);
         
         setRef(type, any([
-            seq([ identifier, '<', type, '>' ], rlist),
-            list(typeBase, '->', 1, false, rlist),
+            list(genericsType, '->', 1, false, rlist),
+            genericsType,
             seq([ '{', opt(typeNameList), '}' ], rlist),
         ]));
         
