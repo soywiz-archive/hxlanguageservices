@@ -33,14 +33,24 @@ class Reader {
         return str.substr(pos, count);
     }
 
+    public function peekChar():Int {
+        return str.charCodeAt(pos);
+    }
+
     public function read(count:Int):String {
         var out = peek(count);
         skip(count);
         return out;
     }
 
+    public function readChar():Int {
+        var out = peekChar();
+        skip(1);
+        return out;
+    }
+
     public function skip(count:Int):Void {
-        pos++;
+        pos += count;
     }
 
     public function matchLit(lit:String) {

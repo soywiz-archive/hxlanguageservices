@@ -101,7 +101,7 @@ class Grammar<TNode> {
                 }
                 return gen(res, conv);
             case Term.TCustomMatcher(name, matcher):
-                var result = matcher(reader);
+                var result = matcher(errors, reader);
                 if (result == null) return Result.RUnmatched(0, start);
                 var resultnode = new NNode(reader.createPos(start, reader.pos), result);
                 return Result.RMatchedValue(simplify(resultnode, t));
@@ -289,7 +289,7 @@ enum Result {
 enum Term {
     TLit(lit:String, ?conv:Dynamic -> Dynamic);
     TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic, ?checker: String -> Bool);
-    TCustomMatcher(name:String, matcher: Reader -> Dynamic);
+    TCustomMatcher(name:String, matcher: HaxeErrors -> Reader -> Dynamic);
     TRef(ref:TermRef);
     TAny(items:Array<Term>, recover:Array<Term>);
     TSure;

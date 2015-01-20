@@ -202,6 +202,8 @@ class TestGrammar extends HLSTestCase {
 
     public function testString2() {
         assertEqualsString('NConst(CString(hello \" world))@0:16', hg.parseStringNode(hg.expr, '"hello \\" world"', 'program.hx'));
+        assertEqualsString('NConst(CString(hello \n world))@0:16', hg.parseStringNode(hg.expr, '"hello \\n world"', 'program.hx'));
+        assertEqualsString('NConst(CString(hello \x50 world))@0:18', hg.parseStringNode(hg.expr, '"hello \\x50 world"', 'program.hx'));
     }
 
     public function testCompletionLocateNode() {

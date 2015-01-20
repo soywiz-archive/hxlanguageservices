@@ -74,7 +74,7 @@ class HaxeGrammar extends Grammar<Node> {
         var float = Term.TReg('float', ~/^(\d+\.\d*|\d*\.\d+)/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         //stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
-        stringDqLit = Term.TCustomMatcher('string', function(reader:Reader) {
+        stringDqLit = Term.TCustomMatcher('string', function(errors:HaxeErrors, reader:Reader) {
             var out = '';
             if (reader.matchLit('"') == null) return null;
             while (true) {
@@ -84,7 +84,30 @@ class HaxeGrammar extends Grammar<Node> {
                     case '"': break;
                     case '\\':
                         var s2 = reader.read(1);
-                        out += s2;
+                        switch (s2) {
+                            // check if octal is supported
+                            case '0': out += String.fromCharCode(0);
+                            case '1': out += String.fromCharCode(1);
+                            case '2': out += String.fromCharCode(2);
+                            case '3': out += String.fromCharCode(3);
+                            // check if hexadecimal is supported
+                            case 'x':
+                                var startHex = reader.pos;
+                                var hex = reader.read(2);
+                                if (~/^[0-9a-f]{2}$/i.match(hex)) {
+                                    out += String.fromCharCode(Std.parseInt('0x' + hex));
+                                } else {
+                                    errors.add(new ParserError(reader.createPos(startHex, startHex + 2), 'Not an hex escape sequence'));
+                                }
+                            // Unicode
+                            //case 'u':
+                                
+                            case 'n': out += "\n";
+                            case 'r': out += "\r";
+                            case 't': out += "\t";
+                            default: out += s2;
+                        }
+                        
                     default: out += s;
                 }
             }
