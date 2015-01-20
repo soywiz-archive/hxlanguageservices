@@ -568,12 +568,13 @@ class CompletionScope implements CompletionEntryProvider {
                     return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
             case Node.NStringSqDollarPart(expr):
-                return ExpressionResult.withoutValue(types.specTypeDynamic);
+                return _getNodeResult(expr, context);
             case Node.NStringParts(parts):
                 var value = '';
                 var hasValue = true;
                 for (part in parts) {
                     var result = _getNodeResult(part, context);
+                    //trace(part + ' :: ' + result);
                     if (result.hasValue) {
                         value += result.value;
                     } else {

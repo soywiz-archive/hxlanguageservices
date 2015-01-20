@@ -142,6 +142,7 @@ class HaxeGrammar extends Grammar<Node> {
         var stringSqDollarExprChunk = seq(["$", "{", sure(), expr, "}"], buildNode('NStringSqDollarPart'));
         var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(errors:HaxeErrors, reader:Reader) {
             var out = '';
+            if (reader.eof()) return null;
             if (reader.peek(1) == "'") return null;
             if (reader.peek(1) == "$") return null;
             while (!reader.eof()) {
@@ -158,7 +159,7 @@ class HaxeGrammar extends Grammar<Node> {
             //if (out.length == 0) return null;
             return Node.NConst(Const.CString(out));
         });
-        var stringSqChunks = any([stringSqDollarSimpleChunk, stringSqDollarExprChunk, stringSqLiteralChunk]);
+        var stringSqChunks = any([stringSqDollarExprChunk, stringSqDollarSimpleChunk, stringSqLiteralChunk]);
         var stringSqLit = seq(["'", list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
 
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
