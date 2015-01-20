@@ -54,7 +54,7 @@ enum Node {
     NCallPart(node:ZNode);
     NBinOpPart(op:ZNode, expr:ZNode);
 
-    NStringParts(expr:Array<ZNode>);
+    NStringParts(parts:Array<ZNode>);
     NStringSqDollarPart(expr:ZNode);
     NStringSq(parts:ZNode);
 

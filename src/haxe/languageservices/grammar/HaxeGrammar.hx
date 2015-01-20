@@ -79,6 +79,41 @@ class HaxeGrammar extends Grammar<Node> {
         var float = Term.TReg('float', ~/^(\d+\.\d*|\d*\.\d+)/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         //stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
+
+        function readEscape(errors:HaxeErrors, reader:Reader):String {
+            var s2 = reader.read(1);
+            switch (s2) {
+                // check if octal is supported
+                case '0': return String.fromCharCode(0);
+                case '1': return String.fromCharCode(1);
+                case '2': return String.fromCharCode(2);
+                case '3': return String.fromCharCode(3);
+                // check if hexadecimal is supported
+                case 'x':
+                    var startHex = reader.pos;
+                    var hex = reader.matchEReg(~/^[0-9a-f]{2}/i);
+                    if (hex != null) {
+                        return String.fromCharCode(Std.parseInt('0x' + hex));
+                    } else {
+                        errors.add(new ParserError(reader.createPos(startHex, startHex + 2), 'Not an hex escape sequence'));
+                    }
+                // Unicode
+                case 'u':
+                    var startUnicode = reader.pos;
+                    var unicode = reader.matchEReg(~/^[0-9a-f]{4}/i);
+                    if (unicode != null) {
+                        return String.fromCharCode(Std.parseInt('0x' + unicode));
+                    } else {
+                        errors.add(new ParserError(reader.createPos(startUnicode, startUnicode + 4), 'Not an unicode escape sequence'));
+                    }
+                case 'n': return "\n";
+                case 'r': return "\r";
+                case 't': return "\t";
+                default: return s2;
+            }
+            return null;
+        }
+
         stringDqLit = Term.TCustomMatcher('string', function(errors:HaxeErrors, reader:Reader) {
             var out = '';
             if (reader.matchLit('"') == null) return null;
@@ -88,37 +123,8 @@ class HaxeGrammar extends Grammar<Node> {
                 switch (s) {
                     case '"': break;
                     case '\\':
-                        var s2 = reader.read(1);
-                        switch (s2) {
-                            // check if octal is supported
-                            case '0': out += String.fromCharCode(0);
-                            case '1': out += String.fromCharCode(1);
-                            case '2': out += String.fromCharCode(2);
-                            case '3': out += String.fromCharCode(3);
-                            // check if hexadecimal is supported
-                            case 'x':
-                                var startHex = reader.pos;
-                                var hex = reader.matchEReg(~/^[0-9a-f]{2}/i);
-                                if (hex != null) {
-                                    out += String.fromCharCode(Std.parseInt('0x' + hex));
-                                } else {
-                                    errors.add(new ParserError(reader.createPos(startHex, startHex + 2), 'Not an hex escape sequence'));
-                                }
-                            // Unicode
-                            case 'u':
-                                var startUnicode = reader.pos;
-                                var unicode = reader.matchEReg(~/^[0-9a-f]{4}/i);
-                                if (unicode != null) {
-                                    out += String.fromCharCode(Std.parseInt('0x' + unicode));
-                                } else {
-                                    errors.add(new ParserError(reader.createPos(startUnicode, startUnicode + 4), 'Not an unicode escape sequence'));
-                                }
-                            case 'n': out += "\n";
-                            case 'r': out += "\r";
-                            case 't': out += "\t";
-                            default: out += s2;
-                        }
-                        
+                        var escape = readEscape(errors, reader);
+                        if (escape != null) out += escape;
                     default: out += s;
                 }
             }
@@ -143,6 +149,9 @@ class HaxeGrammar extends Grammar<Node> {
                 switch (c) {
                     case '$': reader.unread(1); break;
                     case "'": reader.unread(1); break;
+                    case '\\':
+                        var escape = readEscape(errors, reader);
+                        if (escape != null) out += escape;
                     default: out += c;
                 }
             }
@@ -150,7 +159,7 @@ class HaxeGrammar extends Grammar<Node> {
             return Node.NConst(Const.CString(out));
         });
         var stringSqChunks = any([stringSqDollarSimpleChunk, stringSqDollarExprChunk, stringSqLiteralChunk]);
-        var stringSqLit = seq(["'", list2(stringSqChunks, 0, buildNode('NStringParts')), "'"], buildNode('NStringSq'));
+        var stringSqLit = seq(["'", list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
 
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));

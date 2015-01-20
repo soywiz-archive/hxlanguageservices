@@ -107,4 +107,8 @@ class TestCompletion extends HLSTestCase {
             '[39:39:expected identifier]'
         );
     }
+
+    public function testStringInterpolation() {
+        assertFuntionBody("var a = 1; var z = '$###a';", ['a:Int = 1'], []);
+    }
 }

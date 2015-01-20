@@ -219,7 +219,18 @@ class HaxeCompletion {
             case Node.NNew(id, call):
                 //process(call, scope);
             //case Node.NPackage()
+            case Node.NStringSq(parts):
+                process(parts, scope);
+            case Node.NStringParts(parts):
+                for (part in parts) process(part, scope);
+            case Node.NStringSqDollarPart(expr):
+                if (expr != null) {
+                    process(expr, scope);
+                } else {
+                }
             default:
+                trace('Unhandled completion (II) ${znode}');
+                //throw 'Unhandled completion (II) ${znode}';
                 errors.add(new ParserError(znode.pos, 'Unhandled completion (II) ${znode}'));
                 //throw ;
         }
@@ -556,6 +567,22 @@ class CompletionScope implements CompletionEntryProvider {
                     if (local != null) return local.getResult(context);
                     return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
+            case Node.NStringSqDollarPart(expr):
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
+            case Node.NStringParts(parts):
+                var value = '';
+                var hasValue = true;
+                for (part in parts) {
+                    var result = _getNodeResult(part, context);
+                    if (result.hasValue) {
+                        value += result.value;
+                    } else {
+                        hasValue = false;
+                    }
+                }
+                return hasValue ? ExpressionResult.withValue(types.specTypeString, value) : ExpressionResult.withoutValue(types.specTypeString);
+            case Node.NStringSq(parts):
+                return _getNodeResult(parts, context);
             default:
                 throw new js.Error('Not implemented getNodeResult() $znode');
                 //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));

@@ -28,4 +28,11 @@ class TestReferences extends HLSTestCase {
             'm:[36:37:Declaration,41:42:Read,59:60:Read]'
         );
     }
+
+    public function testSqStringReferences() {
+        assertReferences(
+            "class Test { var m = 10; function a(###m) { return '$m'; } }",
+            'm:[36:37:Declaration,50:51:Read]'
+        );
+    }
 }
