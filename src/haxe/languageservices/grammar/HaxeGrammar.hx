@@ -196,7 +196,10 @@ class HaxeGrammar extends Grammar<Node> {
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
         var typeNameList = list(typeName, ',', 0, false, rlist);
         
-        var anonType = seq([ '{', opt(typeNameList), '}' ], rlist);
+        var typeNameReq = seq([identifier, reqType], rlist);
+        var typeNameReqList = list(typeNameReq, ',', 1, false, rlist);
+        
+        var anonType = seq([ '{', opt(typeNameReqList), '}' ], rlist);
         var genericsType = seq([ identifier, opt(seqi(['<', type, '>'])) ], rlist);
         var baseType = any([ anonType, genericsType ]);
         
