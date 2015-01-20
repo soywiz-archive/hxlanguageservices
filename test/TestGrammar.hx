@@ -200,11 +200,17 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString('NConst(CString(hello world))@0:13', hg.parseStringNode(hg.expr, '"hello world"', 'program.hx'));
     }
 
-    public function testString2() {
+    public function testStringDoubleQuotes() {
         assertEqualsString('NConst(CString(hello \" world))@0:16', hg.parseStringNode(hg.expr, '"hello \\" world"', 'program.hx'));
         assertEqualsString('NConst(CString(hello \n world))@0:16', hg.parseStringNode(hg.expr, '"hello \\n world"', 'program.hx'));
         assertEqualsString('NConst(CString(hello \x50 world))@0:18', hg.parseStringNode(hg.expr, '"hello \\x50 world"', 'program.hx'));
         assertEqualsString('NConst(CString(hello \u3042 world))@0:20', hg.parseStringNode(hg.expr, '"hello \\u3042 world"', 'program.hx'));
+    }
+
+    public function testStringSingleQuotes() {
+        assertEqualsString('NStringSq(NStringParts(NConst(CString(hello))@1:6)@1:6)@0:7', hg.parseStringNode(hg.expr, "'hello'", 'program.hx'));
+        //assertEqualsString('---', hg.parseStringNode(hg.expr, "'hello ${1 + 1}'", 'program.hx'));
+        //assertEqualsString('---', hg.parseStringNode(hg.expr, "'hello $a'", 'program.hx'));
     }
 
     public function testCompletionLocateNode() {

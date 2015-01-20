@@ -54,6 +54,10 @@ enum Node {
     NCallPart(node:ZNode);
     NBinOpPart(op:ZNode, expr:ZNode);
 
+    NStringParts(expr:Array<ZNode>);
+    NStringSqDollarPart(expr:ZNode);
+    NStringSq(parts:ZNode);
+
     NArrayAccess(left:ZNode, index:ZNode);
     NFieldAccess(left:ZNode, id:ZNode);
     NCall(left:ZNode, args:ZNode);

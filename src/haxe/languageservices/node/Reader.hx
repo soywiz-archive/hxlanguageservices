@@ -43,6 +43,9 @@ class Reader {
         return out;
     }
 
+    public function unread(count:Int):Void {
+        pos -= count;
+    }
     public function readChar():Int {
         var out = peekChar();
         skip(1);

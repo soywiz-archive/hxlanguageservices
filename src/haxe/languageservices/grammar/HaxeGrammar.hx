@@ -38,6 +38,11 @@ class HaxeGrammar extends Grammar<Node> {
     static private var opsPriority:Map<String, Int>;
 
     public function new() {
+        expr = createRef();
+        stm = createRef();
+        var type = createRef();
+        var primaryExpr = createRef();
+
         if (opsPriority == null) {
             opsPriority = new Map();
 
@@ -119,7 +124,7 @@ class HaxeGrammar extends Grammar<Node> {
             }
             return Node.NConst(Const.CString(out));
         });
-        var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
+        //var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
         var identifier = Term.TReg(
             'identifier',
             ~/^[a-zA-Z]\w*/,
@@ -127,13 +132,31 @@ class HaxeGrammar extends Grammar<Node> {
             function(v) return !ConstTools.isKeyword(v)
             //function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
         );
+        var stringSqDollarSimpleChunk = seq(["$", sure(), identifier], buildNode('NStringSqDollarPart'));
+        var stringSqDollarExprChunk = seq(["$", "{", sure(), expr, "}"], buildNode('NStringSqDollarPart'));
+        var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(errors:HaxeErrors, reader:Reader) {
+            var out = '';
+            if (reader.peek(1) == "'") return null;
+            if (reader.peek(1) == "$") return null;
+            while (!reader.eof()) {
+                var c = reader.read(1);
+                switch (c) {
+                    case '$': reader.unread(1); break;
+                    case "'": reader.unread(1); break;
+                    default: out += c;
+                }
+            }
+            //if (out.length == 0) return null;
+            return Node.NConst(Const.CString(out));
+        });
+        var stringSqChunks = any([stringSqDollarSimpleChunk, stringSqDollarExprChunk, stringSqLiteralChunk]);
+        var stringSqLit = seq(["'", list2(stringSqChunks, 0, buildNode('NStringParts')), "'"], buildNode('NStringSq'));
+
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));
         packageDecl = seq(['package', sure(), fqName, ';'], buildNode('NPackage'));
         importDecl = seq(['import', sure(), fqName, ';'], buildNode('NImport'));
         usingDecl = seq(['using', sure(), fqName, ';'], buildNode('NUsing'));
-        expr = createRef();
-        stm = createRef();
         //expr.term
         var ifStm = seq(['if', sure(), '(', expr, ')', stm, opt(seqi(['else', stm]))], buildNode('NIf'));
         var forStm = seq(['for', sure(), '(', identifier, 'in', expr, ')', stm], buildNode('NFor'));
@@ -149,7 +172,6 @@ class HaxeGrammar extends Grammar<Node> {
         var switchStm = seq(['switch', sure(), '(', expr, ')', '{', list2(any([switchCaseStm, switchDefaultStm, stm]), 0), '}'], buildNode2('NSwitch'));
         var parenExpr = seqi(['(', sure(), expr, ')']);
         var constant = any([ float, int, stringDqLit, stringSqLit, identifier ]);
-        var type = createRef();
         var typeList = opt(list(type, ',', 1, false, rlist));
         var typeParamItem = any([
             seq([identifier, ':', type], buildNode('NWrapper')),
@@ -182,8 +204,7 @@ class HaxeGrammar extends Grammar<Node> {
         var literal = any([ constant, arrayExpr, objectExpr ]);
         var unaryOp = any([operator('++'), operator('--'), operator('+'), operator('-')]);
         var binaryOp = any([for (i in ['...', '<=', '>=', '&&', '||', '==', '!=', '+', '?', ':', '-', '*', '/', '%', '<', '>', '=']) operator(i)]);
-        var primaryExpr = createRef();
-        
+
         var unaryExpr = seq([unaryOp, primaryExpr], buildNode("NUnary"));
         //var binaryExpr = seq([primaryExpr, binaryOp, expr], identity);
     
