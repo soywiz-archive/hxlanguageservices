@@ -44,7 +44,7 @@ enum Node {
     NProperty(a:ZNode, b:ZNode);
     NVar(name:ZNode, propertyInfo:ZNode, type:ZNode, value:ZNode);
     NFunctionArg(opt:ZNode, name:ZNode, type:ZNode, value:ZNode);
-    NFunction(name:ZNode, args:ZNode, ret:ZNode, expr:ZNode);
+    NFunction(name:ZNode, typeParams:ZNode, args:ZNode, ret:ZNode, expr:ZNode);
     NContinue();
     NBreak();
     NReturn(?expr:ZNode);

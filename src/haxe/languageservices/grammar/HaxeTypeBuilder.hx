@@ -177,7 +177,7 @@ class HaxeTypeBuilder {
                                         error(vname.pos, 'Duplicate class field declaration : ${field.name}');
                                     }
                                     type.addMember(field);
-                                case Node.NFunction(vname, vargs, vret, vexpr):
+                                case Node.NFunction(vname, vtypeParams, vargs, vret, vexpr):
                                     checkFunctionDeclArgs(vargs);
                                     checkType(vret);
 

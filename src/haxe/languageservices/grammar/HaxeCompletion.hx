@@ -234,7 +234,7 @@ class HaxeCompletion {
                 local.getReferences().addNode(UsageType.Declaration, name);
                 process(value, scope);
             
-            case Node.NFunction(name, args, ret, expr):
+            case Node.NFunction(name, typeParams, args, ret, expr):
                 var funcScope = scope.createChild(znode);
                 var nameScope = scope.createChild(name);
                 //nameScope.addLocal();
