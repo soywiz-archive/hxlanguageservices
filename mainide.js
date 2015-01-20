@@ -1980,7 +1980,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var typeName = this.seq([identifier,optType],this.buildNode("NIdWithType"));
 	var typeNameList = this.list(typeName,",",0,false,rlist);
 	var typeBase = this.seq([identifier,this.opt(typeParamDecl)],rlist);
-	this.setRef(type,this.any([this.list(typeBase,"->",1,false,rlist),this.seq(["{",typeNameList,"}"],rlist)]));
+	this.setRef(type,this.any([this.list(typeBase,"->",1,false,rlist),this.seq(["{",this.opt(typeNameList),"}"],rlist)]));
 	var propertyDecl = this.seq(["(",this.sure(),identifier,",",identifier,")"],this.buildNode("NProperty"));
 	var varStm = this.seq(["var",this.sure(),identifier,this.opt(propertyDecl),optType,this.opt(this.seqi(["=",this.expr])),this.optError(";","expected semicolon")],this.buildNode("NVar"));
 	var objectItem = this.seq([identifier,":",this.sure(),this.expr],this.buildNode("NObjectItem"));
