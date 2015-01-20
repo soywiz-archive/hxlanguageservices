@@ -150,8 +150,13 @@ class HaxeGrammar extends Grammar<Node> {
         var parenExpr = seqi(['(', sure(), expr, ')']);
         var constant = any([ float, int, stringDqLit, stringSqLit, identifier ]);
         var type = createRef();
-        var typeParamItem = type;
-        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
+        var typeList = opt(list(type, ',', 1, false, rlist));
+        var typeParamItem = any([
+            seq([identifier, ':', type], buildNode('NWrapper')),
+            seq([identifier, ':', '(', typeList, ')'], buildNode('NWrapper')),
+            identifier
+        ]);
+        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));	
 
         var optType = opt(seq([':', sure(), type], buildNode('NWrapper')));
         var reqType = seq([':', sure(), type], buildNode('NWrapper'));
