@@ -218,7 +218,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override'), litK('inline')]);
         var argDecl = seq([opt(litK('?')), identifier, optType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
-        var functionDecl = seq(['function', sure(), identifier, '(', opt(list(argDecl, ',', 0, false, rlist)), ')', optType, stm], buildNode('NFunction'));
+        var functionDecl = seq(['function', sure(), identifier, opt(typeParamDecl), '(', opt(list(argDecl, ',', 0, false, rlist)), ')', optType, stm], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varStm, functionDecl])], buildNode('NMember'));
         var enumArgDecl = seq([opt(litK('?')), identifier, reqType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
         var enumMemberDecl = seq([identifier, sure(), opt(seq(['(', opt(list(enumArgDecl, ',', 0, false, rlist)), ')'], buildNode('NFunctionArg'))), sure(), ';'], buildNode('NMember'));
