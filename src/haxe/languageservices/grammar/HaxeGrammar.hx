@@ -183,8 +183,8 @@ class HaxeGrammar extends Grammar<Node> {
         var constant = any([ float, int, stringDqLit, stringSqLit, identifier ]);
         var typeList = opt(list(type, ',', 1, false, rlist));
         var typeParamItem = any([
-            seq([identifier, ':', type], buildNode('NWrapper')),
-            seq([identifier, ':', '(', typeList, ')'], buildNode('NWrapper')),
+            seq([identifier, ':', sure(), type], buildNode('NWrapper')),
+            seq([identifier, ':', sure(), '(', typeList, ')'], buildNode('NWrapper')),
             identifier
         ]);
         var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));	
