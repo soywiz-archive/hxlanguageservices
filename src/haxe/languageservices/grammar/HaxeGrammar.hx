@@ -199,7 +199,7 @@ class HaxeGrammar extends Grammar<Node> {
         
         setRef(type, any([
             list(typeBase, '->', 1, false, rlist),
-            seq([ '{', typeNameList, '}' ], rlist),
+            seq([ '{', opt(typeNameList), '}' ], rlist),
         ]));
         
         var propertyDecl = seq(['(', sure(), identifier, ',', identifier, ')'], buildNode('NProperty'));
