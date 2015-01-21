@@ -39,7 +39,7 @@ class Grammar<TNode> {
     private function list(item:Dynamic, separator:Dynamic, minCount:Int, allowExtraSeparator:Bool, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, allowExtraSeparator, conv);
     private function list2(item:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, minCount, true, conv);
 
-    private function skipNonGrammar(str:Reader) {
+    private function skipNonGrammar(errors:HaxeErrors, reader:Reader) {
     }
 
     public function parseStringNode(t:Term, str:String, file:String, ?errors:HaxeErrors):NNode<TNode> {
@@ -68,15 +68,15 @@ class Grammar<TNode> {
     
     public function parse(t:Term, reader:Reader, ?errors:HaxeErrors):Result {
         if (errors == null) errors = new HaxeErrors();
-        var result = _parse(t, reader, errors);
+        var result = _parse(t, reader, errors, this.skipNonGrammar);
         if (!reader.eof()) {
             errors.add(new ParserError(reader.createPos(), 'unexpected end of file'));
         }
         return result;
     }
 
-    private function _parse(t:Term, reader:Reader, errors:HaxeErrors):Result {
-        skipNonGrammar(reader);
+    private function _parse(t:Term, reader:Reader, errors:HaxeErrors, skipper:HaxeErrors -> Reader -> Void):Result {
+        skipper(errors, reader);
         var start:Int = reader.pos;
         function gen(result:Dynamic, conv: Dynamic -> Dynamic) {
             if (result == null) return Result.RUnmatched(0, start);
@@ -107,9 +107,9 @@ class Grammar<TNode> {
                 if (result == null) return Result.RUnmatched(0, start);
                 var resultnode = new NNode(reader.createPos(start, reader.pos), result);
                 return Result.RMatchedValue(simplify(resultnode, t));
-            case Term.TRef(ref): return _parse(ref.term, reader, errors);
+            case Term.TRef(ref): return _parse(ref.term, reader, errors, skipper);
             case Term.TOpt(item, error):
-                switch (_parse(item, reader, errors)) {
+                switch (_parse(item, reader, errors, skipper)) {
                     case Result.RMatchedValue(v): return Result.RMatchedValue(v);
                     case Result.RUnmatched(_, _):
                         if (error != null) {
@@ -124,7 +124,7 @@ class Grammar<TNode> {
                 var maxValidPos = start;
                 var maxTerm = null;
                 for (item in items) {
-                    var r = _parse(item, reader, errors);
+                    var r = _parse(item, reader, errors, skipper);
                     switch (r) {
                         case Result.RUnmatched(validCount, lastPos):
                             if (validCount > maxValidCount) {
@@ -139,7 +139,7 @@ class Grammar<TNode> {
                 if (recover != null) {
                     while (!reader.eof()) {
                         for (item in recover) {
-                            var r = _parse(item, reader, errors);
+                            var r = _parse(item, reader, errors, skipper);
                             switch (r) {
                                 case Result.RMatched | Result.RMatchedValue(_):
                                     return Result.RUnmatched(maxValidCount, maxValidPos);
@@ -163,12 +163,17 @@ class Grammar<TNode> {
                 var sure = false;
                 var lastItemIndex = reader.pos;
                 for (item in items) {
-                    if (Type.enumEq(item, Term.TSure)) {
-                        sure = true;
-                        continue;
+                    switch (item) {
+                        case Term.TSure:
+                            sure = true;
+                            continue;
+                        case Term.TCustomSkipper(sk):
+                            skipper = sk;
+                            continue;
+                        default:
                     }
                     var itemIndex = reader.pos;
-                    var r = _parse(item, reader, errors);
+                    var r = _parse(item, reader, errors, skipper);
                     switch (r) {
                         case Result.RUnmatched(validCount, lastPos):
                             if (sure) {
@@ -195,7 +200,7 @@ class Grammar<TNode> {
                 var separatorCount = 0;
                 var lastSeparatorPos = reader.createPos(start, start);
                 while (true) {
-                    var resultItem = _parse(item, reader, errors);
+                    var resultItem = _parse(item, reader, errors, skipper);
                     switch (resultItem) {
                         case Result.RUnmatched(_):
                             break;
@@ -205,7 +210,7 @@ class Grammar<TNode> {
                     count++;
                     if (separator != null) {
                         var rpos = reader.pos;
-                        var resultSep = _parse(separator, reader, errors);
+                        var resultSep = _parse(separator, reader, errors, skipper);
                         switch (resultSep) {
                             case Result.RUnmatched(_): break;
                             default:
@@ -292,6 +297,7 @@ enum Term {
     TLit(lit:String, ?conv:Dynamic -> Dynamic);
     TReg(name:String, reg:EReg, ?conv:Dynamic -> Dynamic, ?checker: String -> Bool);
     TCustomMatcher(name:String, matcher: HaxeErrors -> Reader -> Dynamic);
+    TCustomSkipper(handler:HaxeErrors -> Reader -> Void);
     TRef(ref:TermRef);
     TAny(items:Array<Term>, recover:Array<Term>);
     TSure;

@@ -34,6 +34,9 @@ class HaxeGrammar extends Grammar<Node> {
     private function optError2(tok:String) return optError(tok, 'expected $tok');
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
     private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
+    private function customSkipper(handler: HaxeErrors -> Reader -> Void) {
+        return Term.TCustomSkipper(handler);
+    }
     
     static private var opsPriority:Map<String, Int>;
 
@@ -139,7 +142,7 @@ class HaxeGrammar extends Grammar<Node> {
             //function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
         );
         var stringSqDollarSimpleChunk = seq(["$", sure(), identifier], buildNode('NStringSqDollarPart'));
-        var stringSqDollarExprChunk = seq(["$", "{", sure(), expr, "}"], buildNode('NStringSqDollarPart'));
+        var stringSqDollarExprChunk = seq(["$", "{", sure(), customSkipper(this.skipNonGrammar), expr, "}"], buildNode('NStringSqDollarPart'));
         var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(errors:HaxeErrors, reader:Reader) {
             var out = '';
             if (reader.eof()) return null;
@@ -160,7 +163,7 @@ class HaxeGrammar extends Grammar<Node> {
             return Node.NConst(Const.CString(out));
         });
         var stringSqChunks = any([stringSqDollarExprChunk, stringSqDollarSimpleChunk, stringSqLiteralChunk]);
-        var stringSqLit = seq(["'", list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
+        var stringSqLit = seq(["'", customSkipper(function(errors, reader) { }), list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
 
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));
@@ -345,11 +348,11 @@ class HaxeGrammar extends Grammar<Node> {
     
     private var spaces = ~/^\s+/;
     private var singleLineComments = ~/^\/\/(.*?)(\n|$)/;
-    override private function skipNonGrammar(str:Reader) {
-        str.matchEReg(spaces);
-        str.matchStartEnd('/*', '*/');
-        str.matchEReg(spaces);
-        str.matchEReg(singleLineComments);
-        str.matchEReg(spaces);
+    override private function skipNonGrammar(errors:HaxeErrors, reader:Reader) {
+        reader.matchEReg(spaces);
+        reader.matchStartEnd('/*', '*/');
+        reader.matchEReg(spaces);
+        reader.matchEReg(singleLineComments);
+        reader.matchEReg(spaces);
     }
 }

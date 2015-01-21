@@ -212,6 +212,7 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString('NStringSq(NStringParts([NConst(CString(he\nllo))@1:7])@1:7)@0:8', hg.parseStringNode(hg.expr, "'he\nllo'", 'program.hx'));
         assertEqualsString('NStringSq(NStringParts([NConst(CString(hello ))@1:7,NStringSqDollarPart(NId(a)@8:9)@7:9])@1:9)@0:10', hg.parseStringNode(hg.expr, "'hello $a'", 'program.hx'));
         assertEqualsString('NStringSq(NStringParts([NConst(CString(hello ))@1:7,NStringSqDollarPart(NBinOp(NConst(CInt(1))@9:10,+,NConst(CInt(2))@13:14)@9:14)@7:15])@1:15)@0:16', hg.parseStringNode(hg.expr, "'hello ${1 + 2}'", 'program.hx'));
+        assertEqualsString('NStringSq(NStringParts([NStringSqDollarPart(NId(a)@2:3)@1:3,NConst(CString( ))@3:4,NStringSqDollarPart(NId(b)@5:6)@4:6])@1:6)@0:7', hg.parseStringNode(hg.expr, "'$a $b'", 'program.hx'));
     }
 
     public function testCompletionLocateNode() {
