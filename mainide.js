@@ -1535,7 +1535,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 	}
 	,setRef: function(ref,value) {
 		switch(ref[1]) {
-		case 3:
+		case 4:
 			var t = ref[2];
 			t.term = value;
 			break;
@@ -1578,7 +1578,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 	,list2: function(item,minCount,conv) {
 		return haxe.languageservices.grammar.Term.TList(this.term(item),null,minCount,true,conv);
 	}
-	,skipNonGrammar: function(str) {
+	,skipNonGrammar: function(errors,reader) {
 	}
 	,parseStringNode: function(t,str,file,errors) {
 		var result = this.parseString(t,str,file,errors);
@@ -1604,19 +1604,19 @@ haxe.languageservices.grammar.Grammar.prototype = {
 		case 2:
 			var name1 = t[2];
 			return "" + name1;
-		case 3:
+		case 4:
 			var ref = t[2];
 			return this.describe(ref.term);
-		case 7:
+		case 8:
 			var item = t[2];
 			return this.describe(item);
-		case 6:
+		case 7:
 			var items = t[2];
 			return this.describe(items[0]);
-		case 8:
+		case 9:
 			var item1 = t[2];
 			return this.describe(item1);
-		case 4:
+		case 5:
 			var items1 = t[2];
 			return ((function($this) {
 				var $r;
@@ -1638,13 +1638,13 @@ haxe.languageservices.grammar.Grammar.prototype = {
 	}
 	,parse: function(t,reader,errors) {
 		if(errors == null) errors = new haxe.languageservices.grammar.HaxeErrors();
-		var result = this._parse(t,reader,errors);
+		var result = this._parse(t,reader,errors,$bind(this,this.skipNonGrammar));
 		if(!reader.eof()) errors.add(new haxe.languageservices.grammar.ParserError(reader.createPos(),"unexpected end of file"));
 		return result;
 	}
-	,_parse: function(t,reader,errors) {
+	,_parse: function(t,reader,errors,skipper) {
 		var _g = this;
-		this.skipNonGrammar(reader);
+		skipper(errors,reader);
 		var start = reader.pos;
 		var gen = function(result,conv) {
 			if(result == null) return haxe.languageservices.grammar.Result.RUnmatched(0,start);
@@ -1676,14 +1676,14 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			if(result1 == null) return haxe.languageservices.grammar.Result.RUnmatched(0,start);
 			var resultnode = new haxe.languageservices.grammar.NNode(reader.createPos(start,reader.pos),result1);
 			return haxe.languageservices.grammar.Result.RMatchedValue(this.simplify(resultnode,t));
-		case 3:
+		case 4:
 			var ref = t[2];
-			return this._parse(ref.term,reader,errors);
-		case 7:
+			return this._parse(ref.term,reader,errors,skipper);
+		case 8:
 			var error = t[3];
 			var item = t[2];
 			{
-				var _g1 = this._parse(item,reader,errors);
+				var _g1 = this._parse(item,reader,errors,skipper);
 				switch(_g1[1]) {
 				case 2:
 					var v = _g1[2];
@@ -1696,7 +1696,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 				}
 			}
 			break;
-		case 4:
+		case 5:
 			var recover = t[3];
 			var items = t[2];
 			var maxValidCount = 0;
@@ -1706,7 +1706,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			while(_g2 < items.length) {
 				var item1 = items[_g2];
 				++_g2;
-				var r = this._parse(item1,reader,errors);
+				var r = this._parse(item1,reader,errors,skipper);
 				switch(r[1]) {
 				case 1:
 					var lastPos = r[3];
@@ -1724,7 +1724,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			if(maxValidCount > 0) {
 			}
 			return haxe.languageservices.grammar.Result.RUnmatched(maxValidCount,maxValidPos);
-		case 6:
+		case 7:
 			var conv3 = t[3];
 			var items1 = t[2];
 			var results = [];
@@ -1736,12 +1736,20 @@ haxe.languageservices.grammar.Grammar.prototype = {
 				while(_g3 < items1.length) {
 					var item2 = items1[_g3];
 					++_g3;
-					if(Type.enumEq(item2,haxe.languageservices.grammar.Term.TSure)) {
+					switch(item2[1]) {
+					case 6:
 						sure = true;
 						continue;
+						break;
+					case 3:
+						var sk = item2[2];
+						skipper = sk;
+						continue;
+						break;
+					default:
 					}
 					var itemIndex = reader.pos;
-					var r1 = this._parse(item2,reader,errors);
+					var r1 = this._parse(item2,reader,errors,skipper);
 					switch(r1[1]) {
 					case 1:
 						var lastPos1 = r1[3];
@@ -1767,7 +1775,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 				}
 			} catch( e ) { if( e != "__break__" ) throw e; }
 			return gen(results,conv3);
-		case 8:
+		case 9:
 			var conv4 = t[6];
 			var allowExtraSeparator = t[5];
 			var minCount = t[4];
@@ -1779,7 +1787,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			var lastSeparatorPos = reader.createPos(start,start);
 			try {
 				while(true) {
-					var resultItem = this._parse(item3,reader,errors);
+					var resultItem = this._parse(item3,reader,errors,skipper);
 					switch(resultItem[1]) {
 					case 1:
 						throw "__break__";
@@ -1794,7 +1802,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 					count1++;
 					if(separator != null) {
 						var rpos = reader.pos;
-						var resultSep = this._parse(separator,reader,errors);
+						var resultSep = this._parse(separator,reader,errors,skipper);
 						switch(resultSep[1]) {
 						case 1:
 							throw "__break__";
@@ -1920,7 +1928,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 		return !haxe.languageservices.node.ConstTools.isKeyword(v4);
 	});
 	var stringSqDollarSimpleChunk = this.seq(["$",this.sure(),identifier],this.buildNode("NStringSqDollarPart"));
-	var stringSqDollarExprChunk = this.seq(["$","{",this.sure(),this.expr,"}"],this.buildNode("NStringSqDollarPart"));
+	var stringSqDollarExprChunk = this.seq(["$","{",this.sure(),this.customSkipper($bind(this,this.skipNonGrammar)),this.expr,"}"],this.buildNode("NStringSqDollarPart"));
 	var stringSqLiteralChunk = haxe.languageservices.grammar.Term.TCustomMatcher("literalchunk",function(errors2,reader2) {
 		var out1 = "";
 		if(reader2.eof()) return null;
@@ -1950,7 +1958,8 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 		return haxe.languageservices.node.Node.NConst(haxe.languageservices.node.Const.CString(out1));
 	});
 	var stringSqChunks = this.any([stringSqDollarExprChunk,stringSqDollarSimpleChunk,stringSqLiteralChunk]);
-	var stringSqLit = this.seq(["'",this.list2(stringSqChunks,0,this.buildNode2("NStringParts")),"'"],this.buildNode("NStringSq"));
+	var stringSqLit = this.seq(["'",this.customSkipper(function(errors3,reader3) {
+	}),this.list2(stringSqChunks,0,this.buildNode2("NStringParts")),"'"],this.buildNode("NStringSq"));
 	this.fqName = this.list(identifier,".",1,false,function(v5) {
 		return haxe.languageservices.node.Node.NIdList(v5);
 	});
@@ -1980,7 +1989,9 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var reqType = this.seq([":",this.sure(),type],this.buildNode("NWrapper"));
 	var typeName = this.seq([identifier,optType],this.buildNode("NIdWithType"));
 	var typeNameList = this.list(typeName,",",0,false,rlist);
-	var anonType = this.seq(["{",this.opt(typeNameList),"}"],rlist);
+	var typeNameReq = this.seq([identifier,reqType],rlist);
+	var typeNameReqList = this.list(typeNameReq,",",1,false,rlist);
+	var anonType = this.seq(["{",this.opt(typeNameReqList),"}"],rlist);
 	var genericsType = this.seq([identifier,this.opt(this.seqi(["<",type,">"]))],rlist);
 	var baseType = this.any([anonType,genericsType]);
 	this.setRef(type,this.any([this.list(baseType,"->",1,false,rlist),baseType]));
@@ -2074,6 +2085,9 @@ haxe.languageservices.grammar.HaxeGrammar.prototype = $extend(haxe.languageservi
 			return haxe.languageservices.node.Node.NKeyword(z);
 		});
 	}
+	,customSkipper: function(handler) {
+		return haxe.languageservices.grammar.Term.TCustomSkipper(handler);
+	}
 	,simplify: function(znode,term) {
 		if(!js.Boot.__instanceof(znode.node,haxe.languageservices.node.Node)) throw "Invalid simplify: " + Std.string(znode) + ": " + Std.string(term) + " : " + znode.pos.get_text();
 		{
@@ -2155,12 +2169,12 @@ haxe.languageservices.grammar.HaxeGrammar.prototype = $extend(haxe.languageservi
 	}
 	,spaces: null
 	,singleLineComments: null
-	,skipNonGrammar: function(str) {
-		str.matchEReg(this.spaces);
-		str.matchStartEnd("/*","*/");
-		str.matchEReg(this.spaces);
-		str.matchEReg(this.singleLineComments);
-		str.matchEReg(this.spaces);
+	,skipNonGrammar: function(errors,reader) {
+		reader.matchEReg(this.spaces);
+		reader.matchStartEnd("/*","*/");
+		reader.matchEReg(this.spaces);
+		reader.matchEReg(this.singleLineComments);
+		reader.matchEReg(this.spaces);
 	}
 	,__class__: haxe.languageservices.grammar.HaxeGrammar
 });
@@ -2229,18 +2243,19 @@ haxe.languageservices.node.Node.NIdWithType = function(id,type) { var $x = ["NId
 haxe.languageservices.node.Node.NTypeParams = function(items) { var $x = ["NTypeParams",54,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
 haxe.languageservices.node.Node.NFile = function(decls) { var $x = ["NFile",55,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
 haxe.languageservices.node.Node.__empty_constructs__ = [haxe.languageservices.node.Node.NDefault,haxe.languageservices.node.Node.NContinue,haxe.languageservices.node.Node.NBreak];
-haxe.languageservices.grammar.Term = $hxClasses["haxe.languageservices.grammar.Term"] = { __ename__ : ["haxe","languageservices","grammar","Term"], __constructs__ : ["TLit","TReg","TCustomMatcher","TRef","TAny","TSure","TSeq","TOpt","TList"] };
+haxe.languageservices.grammar.Term = $hxClasses["haxe.languageservices.grammar.Term"] = { __ename__ : ["haxe","languageservices","grammar","Term"], __constructs__ : ["TLit","TReg","TCustomMatcher","TCustomSkipper","TRef","TAny","TSure","TSeq","TOpt","TList"] };
 haxe.languageservices.grammar.Term.TLit = function(lit,conv) { var $x = ["TLit",0,lit,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TReg = function(name,reg,conv,checker) { var $x = ["TReg",1,name,reg,conv,checker]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TCustomMatcher = function(name,matcher) { var $x = ["TCustomMatcher",2,name,matcher]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TRef = function(ref) { var $x = ["TRef",3,ref]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TAny = function(items,recover) { var $x = ["TAny",4,items,recover]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TSure = ["TSure",5];
+haxe.languageservices.grammar.Term.TCustomSkipper = function(handler) { var $x = ["TCustomSkipper",3,handler]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TRef = function(ref) { var $x = ["TRef",4,ref]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TAny = function(items,recover) { var $x = ["TAny",5,items,recover]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TSure = ["TSure",6];
 haxe.languageservices.grammar.Term.TSure.toString = $estr;
 haxe.languageservices.grammar.Term.TSure.__enum__ = haxe.languageservices.grammar.Term;
-haxe.languageservices.grammar.Term.TSeq = function(items,conv) { var $x = ["TSeq",6,items,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TOpt = function(term,errorMessage) { var $x = ["TOpt",7,term,errorMessage]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TList = function(item,separator,minCount,allowExtraSeparator,conv) { var $x = ["TList",8,item,separator,minCount,allowExtraSeparator,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TSeq = function(items,conv) { var $x = ["TSeq",7,items,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TOpt = function(term,errorMessage) { var $x = ["TOpt",8,term,errorMessage]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TList = function(item,separator,minCount,allowExtraSeparator,conv) { var $x = ["TList",9,item,separator,minCount,allowExtraSeparator,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.__empty_constructs__ = [haxe.languageservices.grammar.Term.TSure];
 haxe.languageservices.node.Const = $hxClasses["haxe.languageservices.node.Const"] = { __ename__ : ["haxe","languageservices","node","Const"], __constructs__ : ["CBool","CInt","CFloat","CString"] };
 haxe.languageservices.node.Const.CBool = function(value) { var $x = ["CBool",0,value]; $x.__enum__ = haxe.languageservices.node.Const; $x.toString = $estr; return $x; };
