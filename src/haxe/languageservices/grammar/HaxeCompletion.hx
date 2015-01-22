@@ -74,7 +74,7 @@ class HaxeCompletion {
                 process(value, scope);
             case Node.NIf(condExpr, trueExpr, falseExpr):
                 var condType = scope.getNodeType(condExpr, new ProcessNodeContext());
-                if (condType.type.fqName != 'Bool') {
+                if (!types.specTypeBool.canAssign(condType)) {
                     errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + condType));
                 }
                 //trace(condType);
@@ -89,8 +89,13 @@ class HaxeCompletion {
                 local.getReferences().addNode(UsageType.Declaration, iteratorName);
                 fullForScope.addLocal(local);
                 process(body, fullForScope);
-            case Node.NWhile(cond, body) | Node.NDoWhile(body, cond):
-                process(cond, scope);
+            case Node.NWhile(condExpr, body) | Node.NDoWhile(body, condExpr):
+                var condType = scope.getNodeType(condExpr, new ProcessNodeContext());
+                if (!types.specTypeBool.canAssign(condType)) {
+                    errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + condType));
+                }
+
+                process(condExpr, scope);
                 process(body, scope);
             case Node.NConst(_):
             case Node.NCast(expr, type):

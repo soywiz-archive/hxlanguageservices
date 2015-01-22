@@ -169,6 +169,7 @@ class HaxeGrammar extends Grammar<Node> {
         usingDecl = seq(['using', sure(), fqName, ';'], buildNode('NUsing'));
         //expr.term
         var ifStm = seq(['if', sure(), '(', expr, ')', stm, opt(seqi(['else', stm]))], buildNode('NIf'));
+        var ifExpr = seq(['if', sure(), '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
         var forStm = seq(['for', sure(), '(', identifier, 'in', expr, ')', stm], buildNode('NFor'));
         var forExpr = seq(['for', sure(), '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
         var whileStm = seq(['while', sure(), '(', expr, ')', stm], buildNode('NWhile'));
@@ -249,6 +250,7 @@ class HaxeGrammar extends Grammar<Node> {
             primaryExpr,
             arrayComprehensionExpr,
             literal,
+            ifExpr,
         ]));
 
         setRef(stm, anyRecover([
