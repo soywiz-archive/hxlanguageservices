@@ -1347,7 +1347,7 @@ haxe.languageservices.HaxeLanguageServices.prototype = {
 		return null;
 	}
 	,getTypeMembers: function(fqName) {
-		return null;
+		return this.types.getType(fqName).getAllMembers();
 	}
 	,getCompletionAt: function(path,offset) {
 		var context = this.getContext(path);
@@ -1578,7 +1578,13 @@ haxe.languageservices.grammar.Grammar.prototype = {
 	,list2: function(item,minCount,conv) {
 		return haxe.languageservices.grammar.Term.TList(this.term(item),null,minCount,true,conv);
 	}
-	,skipNonGrammar: function(errors,reader) {
+	,customSkipper: function(handler) {
+		return haxe.languageservices.grammar.Term.TCustomSkipper(handler);
+	}
+	,not: function(v) {
+		return haxe.languageservices.grammar.Term.TNot(this.term(v));
+	}
+	,skipNonGrammar: function(context) {
 	}
 	,parseStringNode: function(t,str,file,errors) {
 		var result = this.parseString(t,str,file,errors);
@@ -1607,13 +1613,13 @@ haxe.languageservices.grammar.Grammar.prototype = {
 		case 4:
 			var ref = t[2];
 			return this.describe(ref.term);
-		case 8:
+		case 9:
 			var item = t[2];
 			return this.describe(item);
-		case 7:
+		case 8:
 			var items = t[2];
 			return this.describe(items[0]);
-		case 9:
+		case 10:
 			var item1 = t[2];
 			return this.describe(item1);
 		case 5:
@@ -1636,15 +1642,21 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			return "???";
 		}
 	}
+	,createContext: function(reader,errors) {
+		return new haxe.languageservices.grammar.GrammarContext(reader,errors);
+	}
 	,parse: function(t,reader,errors) {
 		if(errors == null) errors = new haxe.languageservices.grammar.HaxeErrors();
-		var result = this._parse(t,reader,errors,$bind(this,this.skipNonGrammar));
-		if(!reader.eof()) errors.add(new haxe.languageservices.grammar.ParserError(reader.createPos(),"unexpected end of file"));
+		var grammarContext = this.createContext(reader,errors);
+		var result = this._parse(t,grammarContext,$bind(this,this.skipNonGrammar));
+		if(!reader.eof()) grammarContext.errors.add(new haxe.languageservices.grammar.ParserError(reader.createPos(),"unexpected end of file"));
 		return result;
 	}
-	,_parse: function(t,reader,errors,skipper) {
+	,_parse: function(t,grammarContext,skipper) {
 		var _g = this;
-		skipper(errors,reader);
+		var reader = grammarContext.reader;
+		var errors = grammarContext.errors;
+		skipper(grammarContext);
 		var start = reader.pos;
 		var gen = function(result,conv) {
 			if(result == null) return haxe.languageservices.grammar.Result.RUnmatched(0,start);
@@ -1672,18 +1684,18 @@ haxe.languageservices.grammar.Grammar.prototype = {
 		case 2:
 			var matcher = t[3];
 			var name1 = t[2];
-			var result1 = matcher(errors,reader);
+			var result1 = matcher(grammarContext);
 			if(result1 == null) return haxe.languageservices.grammar.Result.RUnmatched(0,start);
 			var resultnode = new haxe.languageservices.grammar.NNode(reader.createPos(start,reader.pos),result1);
 			return haxe.languageservices.grammar.Result.RMatchedValue(this.simplify(resultnode,t));
 		case 4:
 			var ref = t[2];
-			return this._parse(ref.term,reader,errors,skipper);
-		case 8:
+			return this._parse(ref.term,grammarContext,skipper);
+		case 9:
 			var error = t[3];
 			var item = t[2];
 			{
-				var _g1 = this._parse(item,reader,errors,skipper);
+				var _g1 = this._parse(item,grammarContext,skipper);
 				switch(_g1[1]) {
 				case 2:
 					var v = _g1[2];
@@ -1706,7 +1718,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			while(_g2 < items.length) {
 				var item1 = items[_g2];
 				++_g2;
-				var r = this._parse(item1,reader,errors,skipper);
+				var r = this._parse(item1,grammarContext,skipper);
 				switch(r[1]) {
 				case 1:
 					var lastPos = r[3];
@@ -1724,7 +1736,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			if(maxValidCount > 0) {
 			}
 			return haxe.languageservices.grammar.Result.RUnmatched(maxValidCount,maxValidPos);
-		case 7:
+		case 8:
 			var conv3 = t[3];
 			var items1 = t[2];
 			var results = [];
@@ -1737,7 +1749,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 					var item2 = items1[_g3];
 					++_g3;
 					switch(item2[1]) {
-					case 6:
+					case 7:
 						sure = true;
 						continue;
 						break;
@@ -1746,10 +1758,23 @@ haxe.languageservices.grammar.Grammar.prototype = {
 						skipper = sk;
 						continue;
 						break;
+					case 6:
+						var t1 = item2[2];
+						var old = reader.pos;
+						var r2 = this._parse(t1,grammarContext,skipper);
+						reader.pos = old;
+						switch(r2[1]) {
+						case 1:
+							break;
+						default:
+							return haxe.languageservices.grammar.Result.RUnmatched(count,old);
+						}
+						continue;
+						break;
 					default:
 					}
 					var itemIndex = reader.pos;
-					var r1 = this._parse(item2,reader,errors,skipper);
+					var r1 = this._parse(item2,grammarContext,skipper);
 					switch(r1[1]) {
 					case 1:
 						var lastPos1 = r1[3];
@@ -1775,7 +1800,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 				}
 			} catch( e ) { if( e != "__break__" ) throw e; }
 			return gen(results,conv3);
-		case 9:
+		case 10:
 			var conv4 = t[6];
 			var allowExtraSeparator = t[5];
 			var minCount = t[4];
@@ -1787,7 +1812,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 			var lastSeparatorPos = reader.createPos(start,start);
 			try {
 				while(true) {
-					var resultItem = this._parse(item3,reader,errors,skipper);
+					var resultItem = this._parse(item3,grammarContext,skipper);
 					switch(resultItem[1]) {
 					case 1:
 						throw "__break__";
@@ -1802,7 +1827,7 @@ haxe.languageservices.grammar.Grammar.prototype = {
 					count1++;
 					if(separator != null) {
 						var rpos = reader.pos;
-						var resultSep = this._parse(separator,reader,errors,skipper);
+						var resultSep = this._parse(separator,grammarContext,skipper);
 						switch(resultSep[1]) {
 						case 1:
 							throw "__break__";
@@ -1862,7 +1887,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var parseString = function(s) {
 		return HxOverrides.substr(s,1,s.length - 2);
 	};
-	var $float = haxe.languageservices.grammar.Term.TReg("float",new EReg("^(\\d+\\.\\d*|\\d*\\.\\d+)",""),function(v1) {
+	var $float = haxe.languageservices.grammar.Term.TReg("float",new EReg("^(\\d+\\.\\d+|\\d*\\.\\d+|\\d+\\.[^\\.])",""),function(v1) {
 		return haxe.languageservices.node.Node.NConst(haxe.languageservices.node.Const.CFloat(Std.parseFloat(v1)));
 	});
 	var $int = haxe.languageservices.grammar.Term.TReg("int",new EReg("^\\d+",""),function(v2) {
@@ -1900,7 +1925,9 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 		}
 		return null;
 	};
-	this.stringDqLit = haxe.languageservices.grammar.Term.TCustomMatcher("string",function(errors1,reader1) {
+	this.stringDqLit = haxe.languageservices.grammar.Term.TCustomMatcher("string",function(context) {
+		var errors1 = context.errors;
+		var reader1 = context.reader;
 		var out = "";
 		if(reader1.matchLit("\"") == null) return null;
 		try {
@@ -1929,7 +1956,9 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	});
 	var stringSqDollarSimpleChunk = this.seq(["$",this.sure(),identifier],this.buildNode("NStringSqDollarPart"));
 	var stringSqDollarExprChunk = this.seq(["$","{",this.sure(),this.customSkipper($bind(this,this.skipNonGrammar)),this.expr,"}"],this.buildNode("NStringSqDollarPart"));
-	var stringSqLiteralChunk = haxe.languageservices.grammar.Term.TCustomMatcher("literalchunk",function(errors2,reader2) {
+	var stringSqLiteralChunk = haxe.languageservices.grammar.Term.TCustomMatcher("literalchunk",function(context1) {
+		var errors2 = context1.errors;
+		var reader2 = context1.reader;
 		var out1 = "";
 		if(reader2.eof()) return null;
 		if(reader2.peek(1) == "'") return null;
@@ -1958,7 +1987,7 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 		return haxe.languageservices.node.Node.NConst(haxe.languageservices.node.Const.CString(out1));
 	});
 	var stringSqChunks = this.any([stringSqDollarExprChunk,stringSqDollarSimpleChunk,stringSqLiteralChunk]);
-	var stringSqLit = this.seq(["'",this.customSkipper(function(errors3,reader3) {
+	var stringSqLit = this.seq(["'",this.customSkipper(function(context2) {
 	}),this.list2(stringSqChunks,0,this.buildNode2("NStringParts")),"'"],this.buildNode("NStringSq"));
 	this.fqName = this.list(identifier,".",1,false,function(v5) {
 		return haxe.languageservices.node.Node.NIdList(v5);
@@ -1970,8 +1999,11 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	this.importDecl = this.seq(["import",this.sure(),this.fqName,";"],this.buildNode("NImport"));
 	this.usingDecl = this.seq(["using",this.sure(),this.fqName,";"],this.buildNode("NUsing"));
 	var ifStm = this.seq(["if",this.sure(),"(",this.expr,")",this.stm,this.opt(this.seqi(["else",this.stm]))],this.buildNode("NIf"));
+	var ifExpr = this.seq(["if",this.sure(),"(",this.expr,")",this.expr,this.opt(this.seqi(["else",this.expr]))],this.buildNode("NIf"));
 	var forStm = this.seq(["for",this.sure(),"(",identifier,"in",this.expr,")",this.stm],this.buildNode("NFor"));
+	var forExpr = this.seq(["for",this.sure(),"(",identifier,"in",this.expr,")",this.expr],this.buildNode("NFor"));
 	var whileStm = this.seq(["while",this.sure(),"(",this.expr,")",this.stm],this.buildNode("NWhile"));
+	var whileExpr = this.seq(["while",this.sure(),"(",this.expr,")",this.expr],this.buildNode("NWhile"));
 	var doWhileStm = this.seq(["do",this.sure(),this.stm,"while","(",this.expr,")",this.optError2(";")],this.buildNode("NDoWhile"));
 	var breakStm = this.seq(["break",this.sure(),";"],this.buildNode("NBreak"));
 	var continueStm = this.seq(["continue",this.sure(),";"],this.buildNode("NContinue"));
@@ -1996,9 +2028,10 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var baseType = this.any([anonType,genericsType]);
 	this.setRef(type,this.any([this.list(baseType,"->",1,false,rlist),baseType]));
 	var propertyDecl = this.seq(["(",this.sure(),identifier,",",identifier,")"],this.buildNode("NProperty"));
-	var varStm = this.seq(["var",this.sure(),identifier,this.opt(propertyDecl),optType,this.opt(this.seqi(["=",this.expr])),this.optError(";","expected semicolon")],this.buildNode("NVar"));
+	var varStm = this.seq(["var",this.sure(),identifier,this.opt(propertyDecl),optType,this.opt(this.seqi(["=",this.expr])),this.optError(";","expected semicolon"),this.doc()],this.buildNode("NVar"));
 	var objectItem = this.seq([identifier,":",this.sure(),this.expr],this.buildNode("NObjectItem"));
 	var castExpr = this.seq(["cast",this.sure(),"(",this.expr,this.opt(this.seq([",",type],rlist)),")"],this.buildNode("NCast"));
+	var arrayComprehensionExpr = this.seq(["[",this.any([forExpr,whileExpr]),this.sure(),"]"],this.buildNode("NArrayComprehension"));
 	var arrayExpr = this.seq(["[",this.list(this.expr,",",0,true,rlist),"]"],this.buildNode2("NArray"));
 	var objectExpr = this.seq(["{",this.list(objectItem,",",0,true,rlist),"}"],this.buildNode2("NObject"));
 	var literal = this.any([constant,arrayExpr,objectExpr]);
@@ -2021,16 +2054,16 @@ haxe.languageservices.grammar.HaxeGrammar = function() {
 	var unaryExpr = this.seq([unaryOp,primaryExpr],this.buildNode("NUnary"));
 	var exprCommaList = this.list(this.expr,",",1,false,rlist);
 	var arrayAccess = this.seq(["[",this.sure(),this.expr,"]"],this.buildNode("NArrayAccessPart"));
-	var fieldAccess = this.seq([".",this.sure(),identifier],this.buildNode("NFieldAccessPart"));
+	var fieldAccess = this.seq([this.not("..."),".",this.sure(),identifier],this.buildNode("NFieldAccessPart"));
 	var callEmptyPart = this.seq(["(",")"],this.buildNode("NCallPart"));
 	var callPart = this.seq(["(",exprCommaList,")"],this.buildNode("NCallPart"));
 	var binaryPart = this.seq([binaryOp,this.expr],this.buildNode("NBinOpPart"));
 	this.setRef(primaryExpr,this.any([castExpr,parenExpr,unaryExpr,this.seq(["new",this.sure(),identifier,callEmptyPart,callPart],this.buildNode("NNew")),this.seq([constant,this.list2(this.any([fieldAccess,arrayAccess,callEmptyPart,callPart,binaryPart]),0,rlist)],this.buildNode("NAccessList"))]));
-	this.setRef(this.expr,this.any([primaryExpr,literal]));
+	this.setRef(this.expr,this.any([primaryExpr,arrayComprehensionExpr,literal,ifExpr]));
 	this.setRef(this.stm,this.anyRecover([varStm,blockStm,ifStm,switchStm,forStm,whileStm,doWhileStm,breakStm,continueStm,returnStm,this.seq([primaryExpr,this.sure(),";"],rlist)],[";","}"]));
 	var memberModifier = this.any([this.litK("static"),this.litK("public"),this.litK("private"),this.litK("override"),this.litK("inline")]);
 	var argDecl = this.seq([this.opt(this.litK("?")),identifier,optType,this.opt(this.seqi(["=",this.expr]))],this.buildNode("NFunctionArg"));
-	var functionDecl = this.seq(["function",this.sure(),identifier,this.opt(typeParamDecl),"(",this.opt(this.list(argDecl,",",0,false,rlist)),")",optType,this.stm],this.buildNode("NFunction"));
+	var functionDecl = this.seq(["function",this.sure(),identifier,this.opt(typeParamDecl),"(",this.opt(this.list(argDecl,",",0,false,rlist)),")",optType,this.stm,this.doc()],this.buildNode("NFunction"));
 	var memberDecl = this.seq([this.opt(this.list2(memberModifier,0,rlist)),this.any([varStm,functionDecl])],this.buildNode("NMember"));
 	var enumArgDecl = this.seq([this.opt(this.litK("?")),identifier,reqType,this.opt(this.seqi(["=",this.expr]))],this.buildNode("NFunctionArg"));
 	var enumMemberDecl = this.seq([identifier,this.sure(),this.opt(this.seq(["(",this.opt(this.list(enumArgDecl,",",0,false,rlist)),")"],this.buildNode("NFunctionArg"))),this.sure(),";"],this.buildNode("NMember"));
@@ -2085,24 +2118,28 @@ haxe.languageservices.grammar.HaxeGrammar.prototype = $extend(haxe.languageservi
 			return haxe.languageservices.node.Node.NKeyword(z);
 		});
 	}
-	,customSkipper: function(handler) {
-		return haxe.languageservices.grammar.Term.TCustomSkipper(handler);
+	,doc: function() {
+		return haxe.languageservices.grammar.Term.TCustomMatcher("doc",function(context) {
+			var doc = context.doc;
+			context.doc = "";
+			return haxe.languageservices.node.Node.NDoc(doc);
+		});
 	}
 	,simplify: function(znode,term) {
 		if(!js.Boot.__instanceof(znode.node,haxe.languageservices.node.Node)) throw "Invalid simplify: " + Std.string(znode) + ": " + Std.string(term) + " : " + znode.pos.get_text();
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 30:
+			case 32:
 				var n = _g[2];
 				return this.simplify(n,term);
-			case 49:
+			case 51:
 				var accessors = _g[3];
 				var node = _g[2];
 				{
 					var _g1 = accessors.node;
 					switch(_g1[1]) {
-					case 4:
+					case 5:
 						var items = _g1[2];
 						switch(_g1[2].length) {
 						case 0:
@@ -2117,26 +2154,26 @@ haxe.languageservices.grammar.HaxeGrammar.prototype = $extend(haxe.languageservi
 								{
 									var _g3 = item.node;
 									switch(_g3[1]) {
-									case 38:
+									case 40:
 										var rnode = _g3[2];
 										lnode = this.simplify(new haxe.languageservices.grammar.NNode(cpos,haxe.languageservices.node.Node.NArrayAccess(lnode,rnode)),term);
 										break;
-									case 39:
+									case 41:
 										var rnode1 = _g3[2];
 										lnode = this.simplify(new haxe.languageservices.grammar.NNode(cpos,haxe.languageservices.node.Node.NFieldAccess(lnode,rnode1)),term);
 										break;
-									case 40:
+									case 42:
 										var rnode2 = _g3[2];
 										lnode = this.simplify(new haxe.languageservices.grammar.NNode(cpos,haxe.languageservices.node.Node.NCall(lnode,rnode2)),term);
 										break;
-									case 41:
+									case 43:
 										var rnode3 = _g3[3];
 										var op = _g3[2];
 										var opp = haxe.languageservices.node.NodeTools.getId(op);
 										{
 											var _g4 = rnode3.node;
 											switch(_g4[1]) {
-											case 48:
+											case 50:
 												var r = _g4[4];
 												var o = _g4[3];
 												var l = _g4[2];
@@ -2169,93 +2206,99 @@ haxe.languageservices.grammar.HaxeGrammar.prototype = $extend(haxe.languageservi
 	}
 	,spaces: null
 	,singleLineComments: null
-	,skipNonGrammar: function(errors,reader) {
-		reader.matchEReg(this.spaces);
-		reader.matchStartEnd("/*","*/");
-		reader.matchEReg(this.spaces);
-		reader.matchEReg(this.singleLineComments);
-		reader.matchEReg(this.spaces);
+	,skipNonGrammar: function(context) {
+		context.reader.matchEReg(this.spaces);
+		var comment = context.reader.matchStartEnd("/*","*/");
+		if(comment != null) {
+			if(StringTools.startsWith(comment,"/**")) context.doc = StringTools.trim(comment.substring(3,comment.length - 2));
+		}
+		context.reader.matchEReg(this.spaces);
+		context.reader.matchEReg(this.singleLineComments);
+		context.reader.matchEReg(this.spaces);
 	}
 	,__class__: haxe.languageservices.grammar.HaxeGrammar
 });
 haxe.languageservices.node = {};
-haxe.languageservices.node.Node = $hxClasses["haxe.languageservices.node.Node"] = { __ename__ : ["haxe","languageservices","node","Node"], __constructs__ : ["NId","NKeyword","NOp","NConst","NList","NListDummy","NIdList","NConstList","NCast","NIf","NArray","NObjectItem","NObject","NBlock","NFor","NWhile","NDoWhile","NSwitch","NCase","NDefault","NPackage","NImport","NUsing","NClass","NInterface","NTypedef","NEnum","NAbstract","NExtends","NImplements","NWrapper","NProperty","NVar","NFunctionArg","NFunction","NContinue","NBreak","NReturn","NArrayAccessPart","NFieldAccessPart","NCallPart","NBinOpPart","NStringParts","NStringSqDollarPart","NStringSq","NArrayAccess","NFieldAccess","NCall","NBinOp","NAccessList","NMember","NNew","NUnary","NIdWithType","NTypeParams","NFile"] };
+haxe.languageservices.node.Node = $hxClasses["haxe.languageservices.node.Node"] = { __ename__ : ["haxe","languageservices","node","Node"], __constructs__ : ["NId","NKeyword","NOp","NDoc","NConst","NList","NListDummy","NIdList","NConstList","NCast","NIf","NArrayComprehension","NArray","NObjectItem","NObject","NBlock","NFor","NWhile","NDoWhile","NSwitch","NCase","NDefault","NPackage","NImport","NUsing","NClass","NInterface","NTypedef","NEnum","NAbstract","NExtends","NImplements","NWrapper","NProperty","NVar","NFunctionArg","NFunction","NContinue","NBreak","NReturn","NArrayAccessPart","NFieldAccessPart","NCallPart","NBinOpPart","NStringParts","NStringSqDollarPart","NStringSq","NArrayAccess","NFieldAccess","NCall","NBinOp","NAccessList","NMember","NNew","NUnary","NIdWithType","NTypeParams","NFile"] };
 haxe.languageservices.node.Node.NId = function(value) { var $x = ["NId",0,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
 haxe.languageservices.node.Node.NKeyword = function(value) { var $x = ["NKeyword",1,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
 haxe.languageservices.node.Node.NOp = function(value) { var $x = ["NOp",2,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NConst = function(value) { var $x = ["NConst",3,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NList = function(value) { var $x = ["NList",4,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NListDummy = function(value) { var $x = ["NListDummy",5,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NIdList = function(value) { var $x = ["NIdList",6,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NConstList = function(items) { var $x = ["NConstList",7,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NCast = function(expr,type) { var $x = ["NCast",8,expr,type]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NIf = function(cond,trueExpr,falseExpr) { var $x = ["NIf",9,cond,trueExpr,falseExpr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NArray = function(items) { var $x = ["NArray",10,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NObjectItem = function(key,value) { var $x = ["NObjectItem",11,key,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NObject = function(items) { var $x = ["NObject",12,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NBlock = function(items) { var $x = ["NBlock",13,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFor = function(iteratorName,iteratorExpr,body) { var $x = ["NFor",14,iteratorName,iteratorExpr,body]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NWhile = function(cond,body) { var $x = ["NWhile",15,cond,body]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NDoWhile = function(body,cond) { var $x = ["NDoWhile",16,body,cond]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NSwitch = function(subject,cases) { var $x = ["NSwitch",17,subject,cases]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NCase = function(item) { var $x = ["NCase",18,item]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NDefault = ["NDefault",19];
+haxe.languageservices.node.Node.NDoc = function(value) { var $x = ["NDoc",3,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NConst = function(value) { var $x = ["NConst",4,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NList = function(value) { var $x = ["NList",5,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NListDummy = function(value) { var $x = ["NListDummy",6,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NIdList = function(value) { var $x = ["NIdList",7,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NConstList = function(items) { var $x = ["NConstList",8,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NCast = function(expr,type) { var $x = ["NCast",9,expr,type]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NIf = function(cond,trueExpr,falseExpr) { var $x = ["NIf",10,cond,trueExpr,falseExpr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NArrayComprehension = function(iterator) { var $x = ["NArrayComprehension",11,iterator]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NArray = function(items) { var $x = ["NArray",12,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NObjectItem = function(key,value) { var $x = ["NObjectItem",13,key,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NObject = function(items) { var $x = ["NObject",14,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NBlock = function(items) { var $x = ["NBlock",15,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFor = function(iteratorName,iteratorExpr,body) { var $x = ["NFor",16,iteratorName,iteratorExpr,body]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NWhile = function(cond,body) { var $x = ["NWhile",17,cond,body]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NDoWhile = function(body,cond) { var $x = ["NDoWhile",18,body,cond]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NSwitch = function(subject,cases) { var $x = ["NSwitch",19,subject,cases]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NCase = function(item) { var $x = ["NCase",20,item]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NDefault = ["NDefault",21];
 haxe.languageservices.node.Node.NDefault.toString = $estr;
 haxe.languageservices.node.Node.NDefault.__enum__ = haxe.languageservices.node.Node;
-haxe.languageservices.node.Node.NPackage = function(fqName) { var $x = ["NPackage",20,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NImport = function(fqName) { var $x = ["NImport",21,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NUsing = function(fqName) { var $x = ["NUsing",22,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NClass = function(name,typeParams,extendsImplementsList,decls) { var $x = ["NClass",23,name,typeParams,extendsImplementsList,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NInterface = function(name,typeParams,extendsImplementsList,decls) { var $x = ["NInterface",24,name,typeParams,extendsImplementsList,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NTypedef = function(name) { var $x = ["NTypedef",25,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NEnum = function(name) { var $x = ["NEnum",26,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NAbstract = function(name) { var $x = ["NAbstract",27,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NExtends = function(fqName,params) { var $x = ["NExtends",28,fqName,params]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NImplements = function(fqName,params) { var $x = ["NImplements",29,fqName,params]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NWrapper = function(node) { var $x = ["NWrapper",30,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NProperty = function(a,b) { var $x = ["NProperty",31,a,b]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NVar = function(name,propertyInfo,type,value) { var $x = ["NVar",32,name,propertyInfo,type,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFunctionArg = function(opt,name,type,value) { var $x = ["NFunctionArg",33,opt,name,type,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFunction = function(name,typeParams,args,ret,expr) { var $x = ["NFunction",34,name,typeParams,args,ret,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NContinue = ["NContinue",35];
+haxe.languageservices.node.Node.NPackage = function(fqName) { var $x = ["NPackage",22,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NImport = function(fqName) { var $x = ["NImport",23,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NUsing = function(fqName) { var $x = ["NUsing",24,fqName]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NClass = function(name,typeParams,extendsImplementsList,decls) { var $x = ["NClass",25,name,typeParams,extendsImplementsList,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NInterface = function(name,typeParams,extendsImplementsList,decls) { var $x = ["NInterface",26,name,typeParams,extendsImplementsList,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NTypedef = function(name) { var $x = ["NTypedef",27,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NEnum = function(name) { var $x = ["NEnum",28,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NAbstract = function(name) { var $x = ["NAbstract",29,name]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NExtends = function(fqName,params) { var $x = ["NExtends",30,fqName,params]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NImplements = function(fqName,params) { var $x = ["NImplements",31,fqName,params]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NWrapper = function(node) { var $x = ["NWrapper",32,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NProperty = function(a,b) { var $x = ["NProperty",33,a,b]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NVar = function(name,propertyInfo,type,value,doc) { var $x = ["NVar",34,name,propertyInfo,type,value,doc]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFunctionArg = function(opt,name,type,value,doc) { var $x = ["NFunctionArg",35,opt,name,type,value,doc]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFunction = function(name,typeParams,args,ret,expr,doc) { var $x = ["NFunction",36,name,typeParams,args,ret,expr,doc]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NContinue = ["NContinue",37];
 haxe.languageservices.node.Node.NContinue.toString = $estr;
 haxe.languageservices.node.Node.NContinue.__enum__ = haxe.languageservices.node.Node;
-haxe.languageservices.node.Node.NBreak = ["NBreak",36];
+haxe.languageservices.node.Node.NBreak = ["NBreak",38];
 haxe.languageservices.node.Node.NBreak.toString = $estr;
 haxe.languageservices.node.Node.NBreak.__enum__ = haxe.languageservices.node.Node;
-haxe.languageservices.node.Node.NReturn = function(expr) { var $x = ["NReturn",37,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NArrayAccessPart = function(node) { var $x = ["NArrayAccessPart",38,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFieldAccessPart = function(node) { var $x = ["NFieldAccessPart",39,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NCallPart = function(node) { var $x = ["NCallPart",40,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NBinOpPart = function(op,expr) { var $x = ["NBinOpPart",41,op,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NStringParts = function(parts) { var $x = ["NStringParts",42,parts]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NStringSqDollarPart = function(expr) { var $x = ["NStringSqDollarPart",43,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NStringSq = function(parts) { var $x = ["NStringSq",44,parts]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NArrayAccess = function(left,index) { var $x = ["NArrayAccess",45,left,index]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFieldAccess = function(left,id) { var $x = ["NFieldAccess",46,left,id]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NCall = function(left,args) { var $x = ["NCall",47,left,args]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NBinOp = function(left,op,right) { var $x = ["NBinOp",48,left,op,right]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NAccessList = function(node,accessors) { var $x = ["NAccessList",49,node,accessors]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NMember = function(modifiers,decl) { var $x = ["NMember",50,modifiers,decl]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NNew = function(id,call) { var $x = ["NNew",51,id,call]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NUnary = function(op,value) { var $x = ["NUnary",52,op,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NIdWithType = function(id,type) { var $x = ["NIdWithType",53,id,type]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NTypeParams = function(items) { var $x = ["NTypeParams",54,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
-haxe.languageservices.node.Node.NFile = function(decls) { var $x = ["NFile",55,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NReturn = function(expr) { var $x = ["NReturn",39,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NArrayAccessPart = function(node) { var $x = ["NArrayAccessPart",40,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFieldAccessPart = function(node) { var $x = ["NFieldAccessPart",41,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NCallPart = function(node) { var $x = ["NCallPart",42,node]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NBinOpPart = function(op,expr) { var $x = ["NBinOpPart",43,op,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NStringParts = function(parts) { var $x = ["NStringParts",44,parts]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NStringSqDollarPart = function(expr) { var $x = ["NStringSqDollarPart",45,expr]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NStringSq = function(parts) { var $x = ["NStringSq",46,parts]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NArrayAccess = function(left,index) { var $x = ["NArrayAccess",47,left,index]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFieldAccess = function(left,id) { var $x = ["NFieldAccess",48,left,id]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NCall = function(left,args) { var $x = ["NCall",49,left,args]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NBinOp = function(left,op,right) { var $x = ["NBinOp",50,left,op,right]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NAccessList = function(node,accessors) { var $x = ["NAccessList",51,node,accessors]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NMember = function(modifiers,decl) { var $x = ["NMember",52,modifiers,decl]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NNew = function(id,call) { var $x = ["NNew",53,id,call]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NUnary = function(op,value) { var $x = ["NUnary",54,op,value]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NIdWithType = function(id,type) { var $x = ["NIdWithType",55,id,type]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NTypeParams = function(items) { var $x = ["NTypeParams",56,items]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
+haxe.languageservices.node.Node.NFile = function(decls) { var $x = ["NFile",57,decls]; $x.__enum__ = haxe.languageservices.node.Node; $x.toString = $estr; return $x; };
 haxe.languageservices.node.Node.__empty_constructs__ = [haxe.languageservices.node.Node.NDefault,haxe.languageservices.node.Node.NContinue,haxe.languageservices.node.Node.NBreak];
-haxe.languageservices.grammar.Term = $hxClasses["haxe.languageservices.grammar.Term"] = { __ename__ : ["haxe","languageservices","grammar","Term"], __constructs__ : ["TLit","TReg","TCustomMatcher","TCustomSkipper","TRef","TAny","TSure","TSeq","TOpt","TList"] };
+haxe.languageservices.grammar.Term = $hxClasses["haxe.languageservices.grammar.Term"] = { __ename__ : ["haxe","languageservices","grammar","Term"], __constructs__ : ["TLit","TReg","TCustomMatcher","TCustomSkipper","TRef","TAny","TNot","TSure","TSeq","TOpt","TList"] };
 haxe.languageservices.grammar.Term.TLit = function(lit,conv) { var $x = ["TLit",0,lit,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TReg = function(name,reg,conv,checker) { var $x = ["TReg",1,name,reg,conv,checker]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TCustomMatcher = function(name,matcher) { var $x = ["TCustomMatcher",2,name,matcher]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TCustomSkipper = function(handler) { var $x = ["TCustomSkipper",3,handler]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TRef = function(ref) { var $x = ["TRef",4,ref]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.TAny = function(items,recover) { var $x = ["TAny",5,items,recover]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TSure = ["TSure",6];
+haxe.languageservices.grammar.Term.TNot = function(term) { var $x = ["TNot",6,term]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TSure = ["TSure",7];
 haxe.languageservices.grammar.Term.TSure.toString = $estr;
 haxe.languageservices.grammar.Term.TSure.__enum__ = haxe.languageservices.grammar.Term;
-haxe.languageservices.grammar.Term.TSeq = function(items,conv) { var $x = ["TSeq",7,items,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TOpt = function(term,errorMessage) { var $x = ["TOpt",8,term,errorMessage]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
-haxe.languageservices.grammar.Term.TList = function(item,separator,minCount,allowExtraSeparator,conv) { var $x = ["TList",9,item,separator,minCount,allowExtraSeparator,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TSeq = function(items,conv) { var $x = ["TSeq",8,items,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TOpt = function(term,errorMessage) { var $x = ["TOpt",9,term,errorMessage]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
+haxe.languageservices.grammar.Term.TList = function(item,separator,minCount,allowExtraSeparator,conv) { var $x = ["TList",10,item,separator,minCount,allowExtraSeparator,conv]; $x.__enum__ = haxe.languageservices.grammar.Term; $x.toString = $estr; return $x; };
 haxe.languageservices.grammar.Term.__empty_constructs__ = [haxe.languageservices.grammar.Term.TSure];
 haxe.languageservices.node.Const = $hxClasses["haxe.languageservices.node.Const"] = { __ename__ : ["haxe","languageservices","node","Const"], __constructs__ : ["CBool","CInt","CFloat","CString"] };
 haxe.languageservices.node.Const.CBool = function(value) { var $x = ["CBool",0,value]; $x.__enum__ = haxe.languageservices.node.Const; $x.toString = $estr; return $x; };
@@ -2696,6 +2739,20 @@ haxe.languageservices.grammar.NNode.prototype = {
 	}
 	,__class__: haxe.languageservices.grammar.NNode
 };
+haxe.languageservices.grammar.GrammarContext = function(reader,errors) {
+	this.doc = "";
+	if(errors == null) errors = new haxe.languageservices.grammar.HaxeErrors();
+	this.reader = reader;
+	this.errors = errors;
+};
+$hxClasses["haxe.languageservices.grammar.GrammarContext"] = haxe.languageservices.grammar.GrammarContext;
+haxe.languageservices.grammar.GrammarContext.__name__ = ["haxe","languageservices","grammar","GrammarContext"];
+haxe.languageservices.grammar.GrammarContext.prototype = {
+	errors: null
+	,reader: null
+	,doc: null
+	,__class__: haxe.languageservices.grammar.GrammarContext
+};
 haxe.languageservices.grammar.Result = $hxClasses["haxe.languageservices.grammar.Result"] = { __ename__ : ["haxe","languageservices","grammar","Result"], __constructs__ : ["RMatched","RUnmatched","RMatchedValue"] };
 haxe.languageservices.grammar.Result.RMatched = ["RMatched",0];
 haxe.languageservices.grammar.Result.RMatched.toString = $estr;
@@ -2721,7 +2778,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 55:
+			case 57:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -2730,7 +2787,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.process(item,scope.createChild(item));
 				}
 				break;
-			case 13:
+			case 15:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -2739,7 +2796,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.process(item,scope.createChild(item));
 				}
 				break;
-			case 4:
+			case 5:
 				var items1 = _g[2];
 				var _g11 = 0;
 				while(_g11 < items1.length) {
@@ -2748,7 +2805,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.process(item1,scope);
 				}
 				break;
-			case 10:
+			case 12:
 				var items1 = _g[2];
 				var _g11 = 0;
 				while(_g11 < items1.length) {
@@ -2757,7 +2814,8 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.process(item1,scope);
 				}
 				break;
-			case 32:
+			case 34:
+				var doc = _g[6];
 				var value = _g[5];
 				var type = _g[4];
 				var propertyInfo = _g[3];
@@ -2777,22 +2835,22 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					if(local1 == null) this.errors.add(new haxe.languageservices.grammar.ParserError(znode.pos,"Can't find local \"" + value1 + "\"")); else local1.getReferences().addNode(haxe.languageservices.type.UsageType.Read,znode);
 				}
 				break;
-			case 52:
+			case 54:
 				var value2 = _g[3];
 				var op = _g[2];
 				this.process(value2,scope);
 				break;
-			case 9:
+			case 10:
 				var falseExpr = _g[4];
 				var trueExpr = _g[3];
 				var condExpr = _g[2];
 				var condType = scope.getNodeType(condExpr,new haxe.languageservices.node.ProcessNodeContext());
-				if(condType.type.fqName != "Bool") this.errors.add(new haxe.languageservices.grammar.ParserError(condExpr.pos,"If condition must be Bool but was " + Std.string(condType)));
+				if(!types.specTypeBool.canAssign(condType)) this.errors.add(new haxe.languageservices.grammar.ParserError(condExpr.pos,"If condition must be Bool but was " + Std.string(condType)));
 				this.process(condExpr,scope);
 				this.process(trueExpr,scope);
 				this.process(falseExpr,scope);
 				break;
-			case 14:
+			case 16:
 				var body = _g[4];
 				var iteratorExpr = _g[3];
 				var iteratorName = _g[2];
@@ -2804,26 +2862,30 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				fullForScope.addLocal(local2);
 				this.process(body,fullForScope);
 				break;
-			case 15:
+			case 17:
 				var body1 = _g[3];
-				var cond = _g[2];
-				this.process(cond,scope);
+				var condExpr1 = _g[2];
+				var condType1 = scope.getNodeType(condExpr1,new haxe.languageservices.node.ProcessNodeContext());
+				if(!types.specTypeBool.canAssign(condType1)) this.errors.add(new haxe.languageservices.grammar.ParserError(condExpr1.pos,"If condition must be Bool but was " + Std.string(condType1)));
+				this.process(condExpr1,scope);
 				this.process(body1,scope);
 				break;
-			case 16:
-				var cond = _g[3];
+			case 18:
+				var condExpr1 = _g[3];
 				var body1 = _g[2];
-				this.process(cond,scope);
+				var condType1 = scope.getNodeType(condExpr1,new haxe.languageservices.node.ProcessNodeContext());
+				if(!types.specTypeBool.canAssign(condType1)) this.errors.add(new haxe.languageservices.grammar.ParserError(condExpr1.pos,"If condition must be Bool but was " + Std.string(condType1)));
+				this.process(condExpr1,scope);
 				this.process(body1,scope);
 				break;
-			case 3:
+			case 4:
 				break;
-			case 8:
+			case 9:
 				var type1 = _g[3];
 				var expr = _g[2];
 				this.process(expr,scope);
 				break;
-			case 47:
+			case 49:
 				var args = _g[3];
 				var left = _g[2];
 				var lvalue = scope.getNodeResult(left);
@@ -2833,7 +2895,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				if(args != null) {
 					var _g12 = args.node;
 					switch(_g12[1]) {
-					case 4:
+					case 5:
 						var items2 = _g12[2];
 						argnodes = items2;
 						break;
@@ -2891,13 +2953,13 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					}
 				}
 				break;
-			case 45:
+			case 47:
 				var index = _g[3];
 				var left1 = _g[2];
 				this.process(left1,scope);
 				this.process(index,scope);
 				break;
-			case 46:
+			case 48:
 				var _id = _g[3];
 				var _left = _g[2];
 				var left2 = _left;
@@ -2916,7 +2978,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				}
 				cscope.addProvider(new haxe.languageservices.grammar.TypeCompletionEntryProvider(lvalue1.type.type,haxe.languageservices.type.HaxeMember.staticIsNotStatic));
 				break;
-			case 48:
+			case 50:
 				var right = _g[4];
 				var op1 = _g[3];
 				var left3 = _g[2];
@@ -2925,16 +2987,16 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				var ltype = scope.getNodeType(left3);
 				var rtype = scope.getNodeType(right);
 				break;
-			case 20:
+			case 22:
 				var fqName = _g[2];
 				break;
-			case 21:
+			case 23:
 				var fqName1 = _g[2];
 				break;
-			case 22:
+			case 24:
 				var fqName2 = _g[2];
 				break;
-			case 23:
+			case 25:
 				var decls = _g[5];
 				var extendsImplementsList = _g[4];
 				var typeParams = _g[3];
@@ -2944,43 +3006,43 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				classScope.currentClass = clazz;
 				this.process(decls,classScope);
 				break;
-			case 24:
+			case 26:
 				var decls1 = _g[5];
 				var extendsImplementsList1 = _g[4];
 				var typeParams1 = _g[3];
 				var name2 = _g[2];
 				this.process(decls1,scope.createChild(decls1));
 				break;
-			case 17:
+			case 19:
 				var cases = _g[3];
 				var subject = _g[2];
 				this.process(subject,scope);
 				this.process(cases,scope);
 				break;
-			case 26:
+			case 28:
 				var name3 = _g[2];
 				break;
-			case 27:
+			case 29:
 				var name4 = _g[2];
 				break;
-			case 50:
+			case 52:
 				var decl = _g[3];
 				var modifiers = _g[2];
 				this.processMember(decl,modifiers,scope);
 				break;
-			case 37:
+			case 39:
 				var expr1 = _g[2];
 				this.process(expr1,scope);
 				break;
-			case 51:
+			case 53:
 				var call = _g[3];
 				var id1 = _g[2];
 				break;
-			case 44:
+			case 46:
 				var parts = _g[2];
 				this.process(parts,scope);
 				break;
-			case 42:
+			case 44:
 				var parts1 = _g[2];
 				var _g15 = 0;
 				while(_g15 < parts1.length) {
@@ -2989,13 +3051,17 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.process(part,scope);
 				}
 				break;
-			case 43:
+			case 45:
 				var expr2 = _g[2];
 				if(expr2 != null) this.process(expr2,scope); else {
 				}
 				break;
+			case 11:
+				var expr3 = _g[2];
+				this.process(expr3,scope);
+				break;
 			default:
-				haxe.Log.trace("Unhandled completion (II) " + Std.string(znode),{ fileName : "HaxeCompletion.hx", lineNumber : 232, className : "haxe.languageservices.grammar.HaxeCompletion", methodName : "process"});
+				haxe.Log.trace("Unhandled completion (II) " + Std.string(znode),{ fileName : "HaxeCompletion.hx", lineNumber : 234, className : "haxe.languageservices.grammar.HaxeCompletion", methodName : "process"});
 				this.errors.add(new haxe.languageservices.grammar.ParserError(znode.pos,"Unhandled completion (II) " + Std.string(znode)));
 			}
 		}
@@ -3005,7 +3071,8 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 32:
+			case 34:
+				var doc = _g[6];
 				var value = _g[5];
 				var type = _g[4];
 				var propertyInfo = _g[3];
@@ -3015,7 +3082,8 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 				local.getReferences().addNode(haxe.languageservices.type.UsageType.Declaration,name);
 				this.process(value,scope);
 				break;
-			case 34:
+			case 36:
+				var doc1 = _g[7];
 				var expr = _g[6];
 				var ret = _g[5];
 				var args = _g[4];
@@ -3043,7 +3111,7 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 4:
+			case 5:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -3052,7 +3120,8 @@ haxe.languageservices.grammar.HaxeCompletion.prototype = {
 					this.processFunctionArgs(item,scope,scope2);
 				}
 				break;
-			case 33:
+			case 35:
+				var doc = _g[6];
 				var value = _g[5];
 				var type = _g[4];
 				var name = _g[3];
@@ -3301,10 +3370,10 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 13:
+			case 15:
 				var values = _g[2];
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
-			case 48:
+			case 50:
 				var right = _g[4];
 				var op = _g[3];
 				var left = _g[2];
@@ -3317,6 +3386,8 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 				switch(op) {
 				case "==":case "!=":
 					return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeBool);
+				case "...":
+					return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.createArray(this.types.specTypeInt));
 				case "+":
 					return operator(function(a,b) {
 						return a + b;
@@ -3341,14 +3412,14 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					throw "Unknown operator " + op;
 				}
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
-			case 45:
+			case 47:
 				var index = _g[3];
 				var left1 = _g[2];
 				var lresult = this._getNodeResult(left1,context);
 				var iresult = this._getNodeResult(left1,context);
 				if(lresult.type.type.fqName == "Array") return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.getArrayElement(lresult.type));
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
-			case 4:
+			case 5:
 				var values1 = _g[2];
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.unify((function($this) {
 					var $r;
@@ -3364,7 +3435,7 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					$r = _g11;
 					return $r;
 				}(this))));
-			case 10:
+			case 12:
 				var values2 = _g[2];
 				var elementType = this.types.unify((function($this) {
 					var $r;
@@ -3381,7 +3452,7 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					return $r;
 				}(this)));
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.createArray(elementType));
-			case 3:
+			case 4:
 				switch(Type.enumIndex(_g[2])) {
 				case 1:
 					var value2 = _g[2][2];
@@ -3396,23 +3467,36 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					throw new Error("Not implemented getNodeResult() " + Std.string(znode));
 				}
 				break;
-			case 9:
+			case 10:
 				var falseExpr = _g[4];
 				var trueExpr = _g[3];
 				var code = _g[2];
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.unify([this._getNodeResult(trueExpr,context).type,this._getNodeResult(falseExpr,context).type]));
-			case 51:
+			case 16:
+				var body = _g[4];
+				var iteratorExpr = _g[3];
+				var iteratorName = _g[2];
+				return this._getNodeResult(body,context);
+			case 17:
+				var body1 = _g[3];
+				var cond = _g[2];
+				return this._getNodeResult(body1,context);
+			case 11:
+				var iterator = _g[2];
+				var itResult = this._getNodeResult(iterator,context);
+				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.createArray(itResult.type));
+			case 53:
 				var call = _g[3];
 				var id = _g[2];
 				var type = haxe.languageservices.type.tool.NodeTypeTools.getTypeDeclType(this.types,id);
 				return haxe.languageservices.type.ExpressionResult.withoutValue(type);
-			case 8:
+			case 9:
 				var type1 = _g[3];
 				var expr = _g[2];
 				var evalue = this._getNodeResult(expr,context);
 				var type2 = haxe.languageservices.type.tool.NodeTypeTools.getTypeDeclType(this.types,type1);
 				return haxe.languageservices.type.ExpressionResult.withoutValue(type2);
-			case 47:
+			case 49:
 				var args = _g[3];
 				var left2 = _g[2];
 				var value5 = this._getNodeResult(left2,context);
@@ -3422,7 +3506,7 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					return haxe.languageservices.type.ExpressionResult.withoutValue(type3);
 				}
 				return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
-			case 46:
+			case 48:
 				var id1 = _g[3];
 				var left3 = _g[2];
 				if(left3 != null && id1 != null) {
@@ -3450,10 +3534,10 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 					return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeDynamic);
 				}
 				break;
-			case 43:
+			case 45:
 				var expr1 = _g[2];
 				return this._getNodeResult(expr1,context);
-			case 42:
+			case 44:
 				var parts = _g[2];
 				var value6 = "";
 				var hasValue = true;
@@ -3466,7 +3550,7 @@ haxe.languageservices.grammar.CompletionScope.prototype = {
 				}
 				if(hasValue) return haxe.languageservices.type.ExpressionResult.withValue(this.types.specTypeString,value6); else return haxe.languageservices.type.ExpressionResult.withoutValue(this.types.specTypeString);
 				break;
-			case 44:
+			case 46:
 				var parts1 = _g[2];
 				return this._getNodeResult(parts1,context);
 			default:
@@ -3565,7 +3649,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 		{
 			var _g = nidList2.node;
 			switch(_g[1]) {
-			case 6:
+			case 7:
 				var nidList = _g[2];
 				var _g1 = 0;
 				while(_g1 < nidList.length) {
@@ -3600,7 +3684,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 55:
+			case 57:
 				var items = _g[2];
 				var index = 0;
 				var packag = this.types.rootPackage;
@@ -3611,22 +3695,22 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 					{
 						var _g2 = item.node;
 						switch(_g2[1]) {
-						case 20:
+						case 22:
 							var name = _g2[2];
 							if(index != 0) this.error(item.pos,"Package should be first element in the file"); else {
 								var pathParts = this.checkPackage(name);
 								packag = this.types.rootPackage.access(pathParts.join("."),true);
 							}
 							break;
-						case 21:
-							var name1 = _g2[2];
-							if(builtTypes.length > 0) this.error(item.pos,"Import should appear before any type decl");
-							break;
-						case 22:
-							var name1 = _g2[2];
-							if(builtTypes.length > 0) this.error(item.pos,"Import should appear before any type decl");
-							break;
 						case 23:
+							var name1 = _g2[2];
+							if(builtTypes.length > 0) this.error(item.pos,"Import should appear before any type decl");
+							break;
+						case 24:
+							var name1 = _g2[2];
+							if(builtTypes.length > 0) this.error(item.pos,"Import should appear before any type decl");
+							break;
+						case 25:
 							var decls = _g2[5];
 							var extendsImplementsList = _g2[4];
 							var typeParams = _g2[3];
@@ -3639,7 +3723,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 							if(haxe.languageservices.grammar.NNode.isValid(extendsImplementsList)) {
 								var _g3 = extendsImplementsList.node;
 								switch(_g3[1]) {
-								case 4:
+								case 5:
 									var items1 = _g3[2];
 									var _g4 = 0;
 									while(_g4 < items1.length) {
@@ -3648,14 +3732,14 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 										{
 											var _g5 = item1.node;
 											switch(_g5[1]) {
-											case 28:
+											case 30:
 												var params2 = _g5[3];
 												var type2 = _g5[2];
 												if(type.extending != null) this.error(item1.pos,"multiple inheritance not supported in haxe");
 												var className2 = StringTools.trim(type2.pos.get_text());
 												type.extending = new haxe.languageservices.type.TypeReference(this.types,className2,item1);
 												break;
-											case 29:
+											case 31:
 												var params21 = _g5[3];
 												var type21 = _g5[2];
 												var className21 = StringTools.trim(type21.pos.get_text());
@@ -3674,7 +3758,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 							type.node = item;
 							this.processClass(type,decls);
 							break;
-						case 24:
+						case 26:
 							var decls1 = _g2[5];
 							var extendsImplementsList1 = _g2[4];
 							var typeParams1 = _g2[3];
@@ -3685,21 +3769,21 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 							builtTypes.push(type1);
 							this.processClass(type1,decls1);
 							break;
-						case 25:
+						case 27:
 							var name4 = _g2[2];
 							var typeName2 = this.getId(name4);
 							if(packag.accessType(typeName2) != null) this.error(item.pos,"Type name " + typeName2 + " is already defined in this module");
 							var type3 = packag.accessTypeCreate(typeName2,item.pos,haxe.languageservices.type.TypedefHaxeType);
 							builtTypes.push(type3);
 							break;
-						case 27:
+						case 29:
 							var name5 = _g2[2];
 							var typeName3 = this.getId(name5);
 							if(packag.accessType(typeName3) != null) this.error(item.pos,"Type name " + typeName3 + " is already defined in this module");
 							var type4 = packag.accessTypeCreate(typeName3,item.pos,haxe.languageservices.type.AbstractHaxeType);
 							builtTypes.push(type4);
 							break;
-						case 26:
+						case 28:
 							var name6 = _g2[2];
 							var typeName4 = this.getId(name6);
 							if(packag.accessType(typeName4) != null) this.error(item.pos,"Type name " + typeName4 + " is already defined in this module");
@@ -3723,7 +3807,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 		{
 			var _g = decls.node;
 			switch(_g[1]) {
-			case 4:
+			case 5:
 				var members = _g[2];
 				var _g1 = 0;
 				while(_g1 < members.length) {
@@ -3732,14 +3816,14 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 					{
 						var _g2 = member.node;
 						switch(_g2[1]) {
-						case 50:
+						case 52:
 							var decl = _g2[3];
 							var modifiers = _g2[2];
 							var mods = new haxe.languageservices.type.HaxeModifiers();
 							if(haxe.languageservices.grammar.NNode.isValid(modifiers)) {
 								var _g3 = modifiers.node;
 								switch(_g3[1]) {
-								case 4:
+								case 5:
 									var parts = _g3[2];
 									var _g4 = 0;
 									while(_g4 < parts.length) {
@@ -3765,7 +3849,8 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 							if(haxe.languageservices.grammar.NNode.isValid(decl)) {
 								var _g31 = decl.node;
 								switch(_g31[1]) {
-								case 32:
+								case 34:
+									var doc = _g31[6];
 									var vvalue = _g31[5];
 									var vtype = _g31[4];
 									var propInfo = _g31[3];
@@ -3776,7 +3861,8 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 									if(type.existsMember(field.name)) this.error(vname.pos,"Duplicate class field declaration : " + field.name);
 									type.addMember(field);
 									break;
-								case 34:
+								case 36:
+									var doc1 = _g31[7];
 									var vexpr = _g31[6];
 									var vret = _g31[5];
 									var vargs = _g31[4];
@@ -3788,7 +3874,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 									if(haxe.languageservices.grammar.NNode.isValid(vargs)) {
 										var _g41 = vargs.node;
 										switch(_g41[1]) {
-										case 4:
+										case 5:
 											var _vargs = _g41[2];
 											var _g51 = 0;
 											while(_g51 < _vargs.length) {
@@ -3797,7 +3883,8 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 												if(haxe.languageservices.grammar.NNode.isValid(arg)) {
 													var _g6 = arg.node;
 													switch(_g6[1]) {
-													case 33:
+													case 35:
+														var doc2 = _g6[6];
 														var value = _g6[5];
 														var type1 = _g6[4];
 														var name = _g6[3];
@@ -3817,6 +3904,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 									var fretval;
 									if(vret != null) fretval = new haxe.languageservices.type.FunctionRetval(StringTools.trim(vret.pos.get_text()),""); else fretval = new haxe.languageservices.type.FunctionRetval("Dynamic");
 									var method = new haxe.languageservices.type.MethodHaxeMember(new haxe.languageservices.type.FunctionHaxeType(this.types,type,member.pos,vname1,ffargs,fretval));
+									method.doc = haxe.languageservices.node.NodeTools.getId(doc1);
 									method.modifiers = mods;
 									if(type.existsMember(method.name)) this.error(vname1.pos,"Duplicate class field declaration : " + method.name);
 									type.addMember(method);
@@ -3843,7 +3931,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 		{
 			var _g = znode.node;
 			switch(_g[1]) {
-			case 4:
+			case 5:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -3852,7 +3940,8 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 					this.checkFunctionDeclArgs(item);
 				}
 				break;
-			case 33:
+			case 35:
+				var doc = _g[6];
 				var value = _g[5];
 				var type = _g[4];
 				var id = _g[3];
@@ -3873,14 +3962,14 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 				var name = _g[2];
 				this.checkClassName(znode.pos,name);
 				break;
-			case 30:
+			case 32:
 				var item = _g[2];
 				this.checkType(item);
 				break;
-			case 54:
+			case 56:
 				var items = _g[2];
 				break;
-			case 4:
+			case 5:
 				var items1 = _g[2];
 				var _g1 = 0;
 				while(_g1 < items1.length) {
@@ -3902,7 +3991,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 		{
 			var _g = expr.node;
 			switch(_g[1]) {
-			case 13:
+			case 15:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -3911,7 +4000,7 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 					this.processMethodBody(type,method,item);
 				}
 				break;
-			case 4:
+			case 5:
 				var items = _g[2];
 				var _g1 = 0;
 				while(_g1 < items.length) {
@@ -3920,7 +4009,8 @@ haxe.languageservices.grammar.HaxeTypeBuilder.prototype = {
 					this.processMethodBody(type,method,item);
 				}
 				break;
-			case 32:
+			case 34:
+				var doc = _g[6];
 				var vvalue = _g[5];
 				var vtype = _g[4];
 				var propertyInfo = _g[3];
@@ -4022,6 +4112,9 @@ haxe.languageservices.node.NodeTools.getId = function(znode) {
 		case 2:
 			var v2 = _g[2];
 			return v2;
+		case 3:
+			var v3 = _g[2];
+			return v3;
 		default:
 			throw "Invalid id: " + Std.string(znode);
 		}
@@ -4434,6 +4527,7 @@ haxe.languageservices.type.HaxeCompilerUsage.prototype = {
 };
 haxe.languageservices.type.HaxeMember = function(baseType,pos,nameNode) {
 	this.refs = new haxe.languageservices.type.HaxeCompilerReferences();
+	this.doc = "";
 	this.modifiers = new haxe.languageservices.type.HaxeModifiers();
 	this.baseType = baseType;
 	this.pos = pos;
@@ -4457,6 +4551,7 @@ haxe.languageservices.type.HaxeMember.prototype = {
 	,pos: null
 	,name: null
 	,modifiers: null
+	,doc: null
 	,typeNode: null
 	,valueNode: null
 	,nameNode: null
@@ -4692,6 +4787,7 @@ haxe.languageservices.type.HaxeTypes = function() {
 	this.rootPackage = new haxe.languageservices.type.HaxePackage(this,"");
 	this.typeVoid = this.rootPackage.accessTypeCreate("Void",typesPos,haxe.languageservices.type.ClassHaxeType);
 	this.typeDynamic = this.rootPackage.accessTypeCreate("Dynamic",typesPos,haxe.languageservices.type.ClassHaxeType);
+	this.typeUnknown = this.rootPackage.accessTypeCreate("Unknown",typesPos,haxe.languageservices.type.ClassHaxeType);
 	this.typeBool = this.rootPackage.accessTypeCreate("Bool",typesPos,haxe.languageservices.type.ClassHaxeType);
 	this.typeInt = this.rootPackage.accessTypeCreate("Int",typesPos,haxe.languageservices.type.ClassHaxeType);
 	this.typeFloat = this.rootPackage.accessTypeCreate("Float",typesPos,haxe.languageservices.type.ClassHaxeType);
@@ -4699,6 +4795,7 @@ haxe.languageservices.type.HaxeTypes = function() {
 	this.typeString = this.rootPackage.accessTypeCreate("String",typesPos,haxe.languageservices.type.ClassHaxeType);
 	this.specTypeVoid = this.createSpecific(this.typeVoid);
 	this.specTypeDynamic = this.createSpecific(this.typeDynamic);
+	this.specTypeUnknown = this.createSpecific(this.typeUnknown);
 	this.specTypeBool = this.createSpecific(this.typeBool);
 	this.specTypeInt = this.createSpecific(this.typeInt);
 	this.specTypeFloat = this.createSpecific(this.typeFloat);
@@ -4719,12 +4816,14 @@ haxe.languageservices.type.HaxeTypes.prototype = {
 	rootPackage: null
 	,typeVoid: null
 	,typeDynamic: null
+	,typeUnknown: null
 	,typeBool: null
 	,typeInt: null
 	,typeFloat: null
 	,typeString: null
 	,specTypeVoid: null
 	,specTypeDynamic: null
+	,specTypeUnknown: null
 	,specTypeBool: null
 	,specTypeInt: null
 	,specTypeFloat: null
@@ -4869,7 +4968,7 @@ haxe.languageservices.type.tool.NodeTypeTools.getTypeDeclType = function(types,t
 	if(haxe.languageservices.grammar.NNode.isValid(typeDecl)) {
 		var _g = typeDecl.node;
 		switch(_g[1]) {
-		case 4:
+		case 5:
 			var items = _g[2];
 			if(items.length > 1) {
 				if(items[1] != null) throw "Invalid2 " + Std.string(items);
