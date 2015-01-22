@@ -504,6 +504,8 @@ class CompletionScope implements CompletionEntryProvider {
                 switch (op) {
                     case '==', '!=':
                         return ExpressionResult.withoutValue(types.specTypeBool);
+                    case '...':
+                        return ExpressionResult.withoutValue(types.createArray(types.specTypeInt));
                     case '+': return operator(function(a, b) return a + b);
                     case '-': return operator(function(a, b) return a - b);
                     case '%': return operator(function(a, b) return a % b);

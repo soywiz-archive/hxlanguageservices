@@ -71,6 +71,12 @@ class TestCompletion extends HLSTestCase {
         assertProgramBody('class Test { function a() { } function b() { ### } }', ['a:Void -> Dynamic', 'b:Void -> Dynamic', 'this:Test'], []);
     }
 
+    public function test4() {
+        assertFuntionBody('for (a in 0 ... 100) a; ###', [], ['a']);
+        assertFuntionBody('for (a in 0...100) a; ###', [], ['a']);
+        assertFuntionBody('for (a in 0...100) ###a;', ['a:Int'], []);
+    }
+
     public function testArrayAccess() {
         assertFuntionBody('var array = [[1],[2],[3]]; var item = array[0]; var item2 = array[0][0]; ###', ['item:Array<Int>', 'item2:Int'], []);
     }
@@ -91,12 +97,6 @@ class TestCompletion extends HLSTestCase {
     public function testCast() {
         assertFuntionBody('var a = cast(10, Test); ###', ['a:Test'], []);
     }
-
-    /*
-    public function testNew() {
-        //assertFuntionBody('var a = new Test(1); ###', ['a:Test'], []);
-    }
-    */
 
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);

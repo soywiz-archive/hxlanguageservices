@@ -39,6 +39,12 @@ class Grammar<TNode> {
     private function list(item:Dynamic, separator:Dynamic, minCount:Int, allowExtraSeparator:Bool, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), term(separator), minCount, allowExtraSeparator, conv);
     private function list2(item:Dynamic, minCount:Int, ?conv: Dynamic -> Dynamic):Term return Term.TList(term(item), null, minCount, true, conv);
 
+    private function customSkipper(handler: HaxeErrors -> Reader -> Void) {
+        return Term.TCustomSkipper(handler);
+    }
+
+    private function not(v:Dynamic):Term return Term.TNot(term(v));
+    
     private function skipNonGrammar(errors:HaxeErrors, reader:Reader) {
     }
 
@@ -170,6 +176,17 @@ class Grammar<TNode> {
                         case Term.TCustomSkipper(sk):
                             skipper = sk;
                             continue;
+                        case Term.TNot(t):
+                            var old = reader.pos;
+                            var r2 = _parse(t, reader, errors, skipper);
+                            reader.pos = old;
+                            switch (r2) {
+                                case Result.RUnmatched(_, _):
+                                default:
+                                    return Result.RUnmatched(count, old);
+                            }
+                            continue;
+                            
                         default:
                     }
                     var itemIndex = reader.pos;
@@ -300,6 +317,7 @@ enum Term {
     TCustomSkipper(handler:HaxeErrors -> Reader -> Void);
     TRef(ref:TermRef);
     TAny(items:Array<Term>, recover:Array<Term>);
+    TNot(term:Term);
     TSure;
     TSeq(items:Array<Term>, ?conv: Dynamic -> Dynamic);
     TOpt(term:Term, errorMessage:String);

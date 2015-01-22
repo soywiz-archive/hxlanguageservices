@@ -34,10 +34,7 @@ class HaxeGrammar extends Grammar<Node> {
     private function optError2(tok:String) return optError(tok, 'expected $tok');
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
     private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
-    private function customSkipper(handler: HaxeErrors -> Reader -> Void) {
-        return Term.TCustomSkipper(handler);
-    }
-    
+
     static private var opsPriority:Map<String, Int>;
 
     public function new() {
@@ -79,7 +76,7 @@ class HaxeGrammar extends Grammar<Node> {
             return s.substr(1, s.length - 2);
         }
 
-        var float = Term.TReg('float', ~/^(\d+\.\d*|\d*\.\d+)/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
+        var float = Term.TReg('float', ~/^(\d+\.\d+|\d*\.\d+|\d+\.[^\.])/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
         var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         //stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
 
@@ -229,7 +226,7 @@ class HaxeGrammar extends Grammar<Node> {
         var exprCommaList = list(expr, ',', 1, false, rlist);
 
         var arrayAccess = seq(['[', sure(), expr, ']'], buildNode('NArrayAccessPart'));
-        var fieldAccess = seq(['.', sure(), identifier], buildNode('NFieldAccessPart'));
+        var fieldAccess = seq([not('...'), '.', sure(), identifier], buildNode('NFieldAccessPart'));
         var callEmptyPart = seq(['(', ')'], buildNode('NCallPart'));
         var callPart = seq(['(', exprCommaList, ')'], buildNode('NCallPart'));
         var binaryPart = seq([binaryOp, expr], buildNode('NBinOpPart'));
