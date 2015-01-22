@@ -8,7 +8,7 @@ using StringTools;
 using Lambda;
 
 class TestCompletion extends HLSTestCase {
-    private function assertProgramBody(prg:String, include:Array<String>, exclude:Array<String>, ?errors:Dynamic, ?p:PosInfos) {
+    private function assertProgramBody(prg:String, include:Array<String>, exclude:Array<String>, ?errors:Dynamic, ?callback:HaxeLanguageServices -> Void, ?p:PosInfos) {
         var index = prg.indexOf('###');
         prg = prg.replace('###', '');
         var live = 'live.hx';
@@ -34,6 +34,8 @@ class TestCompletion extends HLSTestCase {
                 assertTrue(true, p);
             }
         }
+        
+        if (callback != null) callback(services);
 
         if (errors != null) {
             assertEquals('' + errors, '' + services.getErrors(live));
@@ -115,5 +117,14 @@ class TestCompletion extends HLSTestCase {
 
     public function testStringInterpolation() {
         assertFuntionBody("var a = 1; var z = '$###a';", ['a:Int = 1'], []);
+    }
+
+    public function testComments() {
+        assertProgramBody(
+            'class Test { /** MemberDoc */ function funcname() { ### } }', [], [], [],
+            function(services:HaxeLanguageServices) {
+                assertEqualsString('MemberDoc', services.getTypeMembers('Test')[0].doc);
+            }
+        );
     }
 }

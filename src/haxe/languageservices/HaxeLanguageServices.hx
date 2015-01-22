@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.UsageType;
@@ -51,13 +52,13 @@ class HaxeLanguageServices {
         }
     }
     
-    public function getFileTypes(path:String):Array<CompType> {
+    public function getFileTypes(path:String):Array<HaxeType> {
         var context = getContext(path);
         return null;
     }
 
-    public function getTypeMembers(fqName:String):Array<String> {
-        return null;
+    public function getTypeMembers(fqName:String):Array<HaxeMember> {
+        return types.getType(fqName).getAllMembers();
     }
     
     /**

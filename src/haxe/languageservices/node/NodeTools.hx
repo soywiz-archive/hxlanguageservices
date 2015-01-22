@@ -9,6 +9,7 @@ class NodeTools {
             case Node.NId(v): return v;
             case Node.NKeyword(v): return v;
             case Node.NOp(v): return v;
+            case Node.NDoc(v): return v;
             default: throw 'Invalid id: $znode';
         }
     }

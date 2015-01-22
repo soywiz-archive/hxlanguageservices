@@ -169,7 +169,7 @@ class HaxeTypeBuilder {
                                 default: throw 'Invalid (II) $modifiers';
                             }
                             if (ZNode.isValid(decl)) switch (decl.node) {
-                                case Node.NVar(vname, propInfo, vtype, vvalue):
+                                case Node.NVar(vname, propInfo, vtype, vvalue, doc):
                                     checkType(vtype);
                                     var field = new FieldHaxeMember(type, member.pos, vname);
                                     field.modifiers = mods;
@@ -177,7 +177,7 @@ class HaxeTypeBuilder {
                                         error(vname.pos, 'Duplicate class field declaration : ${field.name}');
                                     }
                                     type.addMember(field);
-                                case Node.NFunction(vname, vtypeParams, vargs, vret, vexpr):
+                                case Node.NFunction(vname, vtypeParams, vargs, vret, vexpr, doc):
                                     checkFunctionDeclArgs(vargs);
                                     checkType(vret);
 
@@ -186,7 +186,7 @@ class HaxeTypeBuilder {
                                         //case null:
                                         case Node.NList(_vargs): for (arg in _vargs) {
                                             if (ZNode.isValid(arg)) switch (arg.node) {
-                                                case Node.NFunctionArg(opt, name, type, value):
+                                                case Node.NFunctionArg(opt, name, type, value, doc):
                                                     ffargs.push(new FunctionArgument(ffargs.length, NodeTools.getId(name), NodeTypeTools.getTypeDeclType(types, type).type.fqName));
                                                 default:
                                                     throw 'Invalid (VII) $arg';
@@ -205,6 +205,7 @@ class HaxeTypeBuilder {
                                     }
 
                                     var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval));
+                                    method.doc = NodeTools.getId(doc);
                                     method.modifiers = mods;
                                     if (type.existsMember(method.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${method.name}');
@@ -226,7 +227,7 @@ class HaxeTypeBuilder {
         if (!ZNode.isValid(znode)) return;
         switch (znode.node) {
             case Node.NList(items): for (item in items) checkFunctionDeclArgs(item);
-            case Node.NFunctionArg(opt, id, type, value): checkType(type);
+            case Node.NFunctionArg(opt, id, type, value, doc): checkType(type);
             default: throw 'Invalid (VI) $znode';
         }
     }
@@ -254,7 +255,7 @@ class HaxeTypeBuilder {
         if (!ZNode.isValid(expr)) return;
         switch (expr.node) {
             case Node.NBlock(items) | Node.NList(items): for (item in items) processMethodBody(type, method, item);
-            case Node.NVar(vname, propertyInfo, vtype, vvalue):
+            case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
                 checkType(vtype);
                 processMethodBody(type, method, vvalue);
             default:

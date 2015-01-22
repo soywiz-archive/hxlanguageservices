@@ -7,6 +7,7 @@ enum Node {
     NId(value:String);
     NKeyword(value:String);
     NOp(value:String);
+    NDoc(value:String);
     NConst(value:Dynamic);
     NList(value:Array<ZNode>);
     NListDummy(value:Array<ZNode>);
@@ -43,9 +44,9 @@ enum Node {
 
     NWrapper(node:ZNode);
     NProperty(a:ZNode, b:ZNode);
-    NVar(name:ZNode, propertyInfo:ZNode, type:ZNode, value:ZNode);
-    NFunctionArg(opt:ZNode, name:ZNode, type:ZNode, value:ZNode);
-    NFunction(name:ZNode, typeParams:ZNode, args:ZNode, ret:ZNode, expr:ZNode);
+    NVar(name:ZNode, propertyInfo:ZNode, type:ZNode, value:ZNode, doc:ZNode);
+    NFunctionArg(opt:ZNode, name:ZNode, type:ZNode, value:ZNode, doc:ZNode);
+    NFunction(name:ZNode, typeParams:ZNode, args:ZNode, ret:ZNode, expr:ZNode, doc:ZNode);
     NContinue();
     NBreak();
     NReturn(?expr:ZNode);

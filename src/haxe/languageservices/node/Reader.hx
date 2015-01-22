@@ -69,7 +69,7 @@ class Reader {
         return m;
     }
 
-    public function matchStartEnd(start:String, end:String) {
+    public function matchStartEnd(start:String, end:String):String {
         if (str.substr(pos, start.length) != start) return null;
         var startIndex = pos;
         var index = str.indexOf(end, pos);

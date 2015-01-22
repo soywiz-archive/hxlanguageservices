@@ -54,7 +54,7 @@ class HaxeCompletion {
         switch (znode.node) {
             case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
             case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
-            case Node.NVar(name, propertyInfo, type, value):
+            case Node.NVar(name, propertyInfo, type, value, doc):
                 var local = new BaseCompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
                 scope.addLocal(local);
                 local.getReferences().addNode(UsageType.Declaration, name);
@@ -197,11 +197,6 @@ class HaxeCompletion {
                 process(right, scope);
                 var ltype = scope.getNodeType(left);
                 var rtype = scope.getNodeType(right);
-                /*
-                switch (op) {
-                    case '':
-                }
-                */
             case Node.NPackage(fqName):
             case Node.NImport(fqName):
             case Node.NUsing(fqName):
@@ -246,13 +241,13 @@ class HaxeCompletion {
 
     private function processMember(znode:ZNode, modifiers:ZNode, scope:CompletionScope):CompletionScope {
         switch (znode.node) {
-            case Node.NVar(name, propertyInfo, type, value):
+            case Node.NVar(name, propertyInfo, type, value, doc):
                 var local = new BaseCompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
                 scope.addLocal(local);
                 local.getReferences().addNode(UsageType.Declaration, name);
                 process(value, scope);
             
-            case Node.NFunction(name, typeParams, args, ret, expr):
+            case Node.NFunction(name, typeParams, args, ret, expr, doc):
                 var funcScope = scope.createChild(znode);
                 var nameScope = scope.createChild(name);
                 //nameScope.addLocal();
@@ -277,7 +272,7 @@ class HaxeCompletion {
         if (znode == null || znode.node == null) return;
         switch (znode.node) {
             case Node.NList(items): for (item in items) processFunctionArgs(item, scope, scope2);
-            case Node.NFunctionArg(opt, name, type, value):
+            case Node.NFunctionArg(opt, name, type, value, doc):
                 //trace(type);
                 var e = new BaseCompletionEntry(scope2, name.pos, type, value, NodeTools.getId(name));
                 //trace(e.getType(new ProcessNodeContext()));

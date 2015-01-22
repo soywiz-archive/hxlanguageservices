@@ -11,6 +11,8 @@ import haxe.languageservices.node.Node;
 import haxe.languageservices.grammar.Grammar;
 import haxe.languageservices.grammar.Grammar.Term;
 
+using StringTools;
+
 class HaxeGrammar extends Grammar<Node> {
     public var ints:Term;
     public var fqName:Term;
@@ -34,6 +36,11 @@ class HaxeGrammar extends Grammar<Node> {
     private function optError2(tok:String) return optError(tok, 'expected $tok');
     private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
     private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
+    private function doc() return Term.TCustomMatcher('doc', function(context:GrammarContext):Node {
+        var doc = context.doc;
+        context.doc = '';
+        return Node.NDoc(doc);
+    });
 
     static private var opsPriority:Map<String, Int>;
 
@@ -114,7 +121,9 @@ class HaxeGrammar extends Grammar<Node> {
             return null;
         }
 
-        stringDqLit = Term.TCustomMatcher('string', function(errors:HaxeErrors, reader:Reader) {
+        stringDqLit = Term.TCustomMatcher('string', function(context:GrammarContext) {
+            var errors:HaxeErrors = context.errors;
+            var reader:Reader = context.reader;
             var out = '';
             if (reader.matchLit('"') == null) return null;
             while (true) {
@@ -140,7 +149,9 @@ class HaxeGrammar extends Grammar<Node> {
         );
         var stringSqDollarSimpleChunk = seq(["$", sure(), identifier], buildNode('NStringSqDollarPart'));
         var stringSqDollarExprChunk = seq(["$", "{", sure(), customSkipper(this.skipNonGrammar), expr, "}"], buildNode('NStringSqDollarPart'));
-        var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(errors:HaxeErrors, reader:Reader) {
+        var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(context:GrammarContext) {
+            var errors = context.errors;
+            var reader = context.reader;
             var out = '';
             if (reader.eof()) return null;
             if (reader.peek(1) == "'") return null;
@@ -160,7 +171,7 @@ class HaxeGrammar extends Grammar<Node> {
             return Node.NConst(Const.CString(out));
         });
         var stringSqChunks = any([stringSqDollarExprChunk, stringSqDollarSimpleChunk, stringSqLiteralChunk]);
-        var stringSqLit = seq(["'", customSkipper(function(errors, reader) { }), list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
+        var stringSqLit = seq(["'", customSkipper(function(context) { }), list2(stringSqChunks, 0, buildNode2('NStringParts')), "'"], buildNode('NStringSq'));
 
         fqName = list(identifier, '.', 1, false, function(v) return Node.NIdList(v));
         ints = list(int, ',', 1, false, function(v) return Node.NConstList(v));
@@ -213,7 +224,7 @@ class HaxeGrammar extends Grammar<Node> {
         
         var propertyDecl = seq(['(', sure(), identifier, ',', identifier, ')'], buildNode('NProperty'));
         
-        var varStm = seq(['var', sure(), identifier, opt(propertyDecl), optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon')], buildNode('NVar'));
+        var varStm = seq(['var', sure(), identifier, opt(propertyDecl), optType, opt(seqi(['=', expr])), optError(';', 'expected semicolon'), doc()], buildNode('NVar'));
         var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
         var castExpr = seq(['cast', sure(), '(', expr, opt(seq([',', type], rlist)), ')'], buildNode('NCast'));
@@ -265,7 +276,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         var memberModifier = any([litK('static'), litK('public'), litK('private'), litK('override'), litK('inline')]);
         var argDecl = seq([opt(litK('?')), identifier, optType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
-        var functionDecl = seq(['function', sure(), identifier, opt(typeParamDecl), '(', opt(list(argDecl, ',', 0, false, rlist)), ')', optType, stm], buildNode('NFunction'));
+        var functionDecl = seq(['function', sure(), identifier, opt(typeParamDecl), '(', opt(list(argDecl, ',', 0, false, rlist)), ')', optType, stm, doc()], buildNode('NFunction'));
         var memberDecl = seq([opt(list2(memberModifier, 0, rlist)), any([varStm, functionDecl])], buildNode('NMember'));
         var enumArgDecl = seq([opt(litK('?')), identifier, reqType, opt(seqi(['=', expr]))], buildNode('NFunctionArg'));
         var enumMemberDecl = seq([identifier, sure(), opt(seq(['(', opt(list(enumArgDecl, ',', 0, false, rlist)), ')'], buildNode('NFunctionArg'))), sure(), ';'], buildNode('NMember'));
@@ -351,11 +362,16 @@ class HaxeGrammar extends Grammar<Node> {
     
     private var spaces = ~/^\s+/;
     private var singleLineComments = ~/^\/\/(.*?)(\n|$)/;
-    override private function skipNonGrammar(errors:HaxeErrors, reader:Reader) {
-        reader.matchEReg(spaces);
-        reader.matchStartEnd('/*', '*/');
-        reader.matchEReg(spaces);
-        reader.matchEReg(singleLineComments);
-        reader.matchEReg(spaces);
+    override private function skipNonGrammar(context:GrammarContext) {
+        context.reader.matchEReg(spaces);
+        var comment = context.reader.matchStartEnd('/*', '*/');
+        if (comment != null) {
+            if (comment.startsWith('/**')) {
+                context.doc = comment.substring(3, comment.length - 2).trim();
+            }
+        }
+        context.reader.matchEReg(spaces);
+        context.reader.matchEReg(singleLineComments);
+        context.reader.matchEReg(spaces);
     }
 }
