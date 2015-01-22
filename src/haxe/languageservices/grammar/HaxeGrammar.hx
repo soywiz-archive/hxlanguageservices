@@ -170,7 +170,9 @@ class HaxeGrammar extends Grammar<Node> {
         //expr.term
         var ifStm = seq(['if', sure(), '(', expr, ')', stm, opt(seqi(['else', stm]))], buildNode('NIf'));
         var forStm = seq(['for', sure(), '(', identifier, 'in', expr, ')', stm], buildNode('NFor'));
+        var forExpr = seq(['for', sure(), '(', identifier, 'in', expr, ')', expr], buildNode('NFor'));
         var whileStm = seq(['while', sure(), '(', expr, ')', stm], buildNode('NWhile'));
+        var whileExpr = seq(['while', sure(), '(', expr, ')', expr], buildNode('NWhile'));
         var doWhileStm = seq(['do', sure(), stm, 'while', '(', expr, ')', optError2(';')], buildNode('NDoWhile'));
         var breakStm = seq(['break', sure(), ';'], buildNode('NBreak'));
         var continueStm = seq(['continue', sure(), ';'], buildNode('NContinue'));
@@ -214,6 +216,7 @@ class HaxeGrammar extends Grammar<Node> {
         var objectItem = seq([identifier, ':', sure(), expr], buildNode('NObjectItem'));
 
         var castExpr = seq(['cast', sure(), '(', expr, opt(seq([',', type], rlist)), ')'], buildNode('NCast'));
+        var arrayComprehensionExpr = seq(['[', any([forExpr, whileExpr]), sure(), ']'], buildNode('NArrayComprehension'));
         var arrayExpr = seq(['[', list(expr, ',', 0, true, rlist), ']'], buildNode2('NArray'));
         var objectExpr = seq(['{', list(objectItem, ',', 0, true, rlist), '}'], buildNode2('NObject'));
         var literal = any([ constant, arrayExpr, objectExpr ]);
@@ -244,6 +247,7 @@ class HaxeGrammar extends Grammar<Node> {
 
         setRef(expr, any([
             primaryExpr,
+            arrayComprehensionExpr,
             literal,
         ]));
 

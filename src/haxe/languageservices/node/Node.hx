@@ -15,6 +15,7 @@ enum Node {
 
     NCast(expr:ZNode, ?type:ZNode);
     NIf(cond:ZNode, trueExpr:ZNode, falseExpr:ZNode);
+    NArrayComprehension(iterator:ZNode);
     NArray(items:Array<ZNode>);
     NObjectItem(key:ZNode, value:ZNode);
     NObject(items:Array<ZNode>);

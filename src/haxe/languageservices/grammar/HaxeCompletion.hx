@@ -228,6 +228,8 @@ class HaxeCompletion {
                     process(expr, scope);
                 } else {
                 }
+            case Node.NArrayComprehension(expr):
+                process(expr, scope);
             default:
                 trace('Unhandled completion (II) ${znode}');
                 //throw 'Unhandled completion (II) ${znode}';
@@ -532,6 +534,13 @@ class CompletionScope implements CompletionEntryProvider {
             case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
             case Node.NIf(code, trueExpr, falseExpr):
                 return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
+            case Node.NFor(iteratorName, iteratorExpr, body):
+                return _getNodeResult(body, context);
+            case Node.NWhile(cond, body):
+                return _getNodeResult(body, context);
+            case Node.NArrayComprehension(iterator):
+                var itResult = _getNodeResult(iterator, context);
+                return ExpressionResult.withoutValue(types.createArray(itResult.type));
             case Node.NNew(id, call):
                 var type = NodeTypeTools.getTypeDeclType(types, id);
                 return ExpressionResult.withoutValue(type);

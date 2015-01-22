@@ -98,6 +98,10 @@ class TestCompletion extends HLSTestCase {
         assertFuntionBody('var a = cast(10, Test); ###', ['a:Test'], []);
     }
 
+    public function testArrayComprehension() {
+        assertFuntionBody('var a = [for (n in 0 ... 10) n]; ###', ['a:Array<Dynamic>'], []);
+    }
+
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
         assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], []);

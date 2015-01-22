@@ -10,6 +10,7 @@ class HaxeTypes {
 
     public var typeVoid(default, null):HaxeType;
     public var typeDynamic(default, null):HaxeType;
+    public var typeUnknown(default, null):HaxeType;
     public var typeBool(default, null):HaxeType;
     public var typeInt(default, null):HaxeType;
     public var typeFloat(default, null):HaxeType;
@@ -17,6 +18,7 @@ class HaxeTypes {
 
     public var specTypeVoid(default, null):SpecificHaxeType;
     public var specTypeDynamic(default, null):SpecificHaxeType;
+    public var specTypeUnknown(default, null):SpecificHaxeType;
     public var specTypeBool(default, null):SpecificHaxeType;
     public var specTypeInt(default, null):SpecificHaxeType;
     public var specTypeFloat(default, null):SpecificHaxeType;
@@ -30,6 +32,7 @@ class HaxeTypes {
         rootPackage = new HaxePackage(this, '');
         typeVoid = rootPackage.accessTypeCreate('Void', typesPos, ClassHaxeType);
         typeDynamic = rootPackage.accessTypeCreate('Dynamic', typesPos, ClassHaxeType);
+        typeUnknown = rootPackage.accessTypeCreate('Unknown', typesPos, ClassHaxeType);
         typeBool = rootPackage.accessTypeCreate('Bool', typesPos, ClassHaxeType);
         typeInt = rootPackage.accessTypeCreate('Int', typesPos, ClassHaxeType);
         typeFloat = rootPackage.accessTypeCreate('Float', typesPos, ClassHaxeType);
@@ -38,6 +41,7 @@ class HaxeTypes {
 
         specTypeVoid = createSpecific(typeVoid);
         specTypeDynamic = createSpecific(typeDynamic);
+        specTypeUnknown = createSpecific(typeUnknown);
         specTypeBool = createSpecific(typeBool);
         specTypeInt = createSpecific(typeInt);
         specTypeFloat = createSpecific(typeFloat);
