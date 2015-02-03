@@ -14,4 +14,7 @@ class Position {
     public function toString() return '$min:$max';
     private function get_file():String return reader.file;
     private function get_text():String return reader.slice(min, max);
+    static public function createDummy() {
+        return new Position(0, 0, new Reader(''));
+    }
 }

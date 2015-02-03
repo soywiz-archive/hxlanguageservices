@@ -9,7 +9,7 @@ import haxe.languageservices.node.Position;
 import haxe.languageservices.grammar.HaxeCompletion.CompletionScope;
 import haxe.languageservices.type.HaxeCompilerElement;
 
-class BaseCompletionEntry implements HaxeCompilerElement {
+class CompletionEntry implements HaxeCompilerElement {
     public var scope:CompletionScope;
     public var pos:Position;
     public var name:String;

@@ -4,7 +4,7 @@ import haxe.languageservices.type.HaxeCompilerElement;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
 
-class TypeCompletionEntryProvider implements CompletionEntryProvider {
+class TypeMembersCompletionProvider implements CompletionProvider {
     private var type:HaxeType;
     private var filter: HaxeMember -> Bool;
 
