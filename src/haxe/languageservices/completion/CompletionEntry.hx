@@ -6,7 +6,6 @@ import haxe.languageservices.type.HaxeCompilerReferences;
 import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Position;
-import haxe.languageservices.grammar.HaxeCompletion.CompletionScope;
 import haxe.languageservices.type.HaxeCompilerElement;
 
 class CompletionEntry implements HaxeCompilerElement {

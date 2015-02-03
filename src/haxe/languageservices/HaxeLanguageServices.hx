@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionArgument;

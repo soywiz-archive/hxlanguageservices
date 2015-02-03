@@ -3,7 +3,6 @@ package haxe.languageservices.completion;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.node.Position;
-import haxe.languageservices.grammar.HaxeCompletion.CompletionScope;
 import haxe.languageservices.type.HaxeType;
 
 class CompletionEntryThis extends CompletionEntry {

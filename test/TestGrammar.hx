@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.error.HaxeErrors;
