@@ -10,7 +10,7 @@ class HaxeMember implements HaxeCompilerElement {
     public var pos:Position;
     public var name(default, null):String;
     public var modifiers = new HaxeModifiers();
-    public var doc:String = '';
+    public var doc:HaxeDoc;
     public var typeNode:ZNode;
     public var valueNode:ZNode;
     public var nameNode:ZNode;

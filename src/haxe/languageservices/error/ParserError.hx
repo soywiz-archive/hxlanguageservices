@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar;
+package haxe.languageservices.error;
 
 import haxe.languageservices.node.Position;
 class ParserError {

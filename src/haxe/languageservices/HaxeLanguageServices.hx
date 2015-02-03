@@ -14,7 +14,7 @@ import haxe.languageservices.grammar.Grammar.Result;
 import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.languageservices.grammar.HaxeCompletion;
-import haxe.languageservices.grammar.HaxeErrors;
+import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar.Term;
 import haxe.languageservices.node.Reader;

@@ -1,5 +1,7 @@
 package haxe.languageservices.type;
 
+using Lambda;
+
 class ClassHaxeType extends HaxeType {
     public var extending:TypeReference;
     public var implementing:Array<TypeReference> = [];
@@ -42,5 +44,13 @@ class ClassHaxeType extends HaxeType {
             if (ii != null) ii.getAllImplementingMembers(out);
         }
         return out;
+    }
+
+    override public function canAssignTo(that:HaxeType):Bool {
+        for (i in implementing) {
+            if (i.fqName == that.fqName) return true;
+        }
+        if (extending != null && that.fqName == extending.fqName) return true;
+        return super.canAssignTo(that);
     }
 }

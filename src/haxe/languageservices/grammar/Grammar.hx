@@ -1,5 +1,7 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.error.ParserError;
+import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Node;
 import haxe.languageservices.node.Position;

@@ -1,4 +1,7 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.error.ParserError;
+import haxe.languageservices.error.HaxeErrors;
+import haxe.languageservices.type.HaxeDoc;
 import haxe.languageservices.type.tool.NodeTypeTools;
 import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.FunctionRetval;
@@ -205,7 +208,7 @@ class HaxeTypeBuilder {
                                     }
 
                                     var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval));
-                                    method.doc = NodeTools.getId(doc);
+                                    method.doc = new HaxeDoc(NodeTools.getId(doc));
                                     method.modifiers = mods;
                                     if (type.existsMember(method.name)) {
                                         error(vname.pos, 'Duplicate class field declaration : ${method.name}');

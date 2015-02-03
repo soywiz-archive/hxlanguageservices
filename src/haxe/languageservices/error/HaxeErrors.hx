@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar;
+package haxe.languageservices.error;
 class HaxeErrors {
     public var errors = new Array<ParserError>();
     public function new() {}

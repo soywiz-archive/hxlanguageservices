@@ -20,6 +20,6 @@ class SpecificHaxeType {
     }
 
     public function canAssign(that:SpecificHaxeType):Bool {
-        return this.type.canAssign(that.type);
+        return this.type.canAssignFrom(that.type);
     }
 }

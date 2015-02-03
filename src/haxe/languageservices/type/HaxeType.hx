@@ -8,6 +8,7 @@ class HaxeType {
     public var packag:HaxePackage;
     public var types:HaxeTypes;
     public var name:String;
+    public var doc:HaxeDoc;
     //public var nameNode:String;
     public var fqName:String;
     
@@ -50,10 +51,13 @@ class HaxeType {
         packag.types.remove(this.name);
     }
 
-    public function canAssign(that:HaxeType):Bool {
-        if (this.fqName == 'Float' && that.fqName == 'Int') return true;
-        if (this.fqName == 'Dynamic') return true;
-        if (that.fqName == 'Dynamic') return true;
+    @:final public function canAssignFrom(that:HaxeType):Bool {
+        return that.canAssignTo(this);
+    }
+
+    public function canAssignTo(that:HaxeType):Bool {
+        if (this.fqName == 'Int' && that.fqName == 'Float') return true;
+        if (this.fqName == 'Dynamic' || that.fqName == 'Dynamic') return true;
         if (this != that) return false;
         return true;
     }

@@ -1,7 +1,7 @@
 package ;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Reader;
-import haxe.languageservices.grammar.HaxeErrors;
+import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.grammar.HaxeCompletion;
