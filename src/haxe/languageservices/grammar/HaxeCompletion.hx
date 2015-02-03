@@ -1,5 +1,8 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.completion.CompletionEntryProvider;
+import haxe.languageservices.completion.BaseCompletionEntry;
+import haxe.languageservices.completion.TypeCompletionEntryProvider;
 import haxe.languageservices.error.ParserError;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.type.tool.NodeTypeTools;
@@ -345,71 +348,8 @@ class CompletionEntryThis extends BaseCompletionEntry {
     }
 }
 
-interface CompletionEntryProvider {
-    function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement>;
-    function getEntryByName(name:String):HaxeCompilerElement;
-}
 
-class TypeCompletionEntryProvider implements CompletionEntryProvider {
-    private var type:HaxeType;
-    private var filter: HaxeMember -> Bool;
 
-    public function new(type:HaxeType, ?filter: HaxeMember -> Bool) {
-        this.type = type;
-        this.filter = filter;
-    }
-
-    public function getEntryByName(name:String):HaxeCompilerElement {
-        var member = type.getInheritedMemberByName(name);
-        if (filter != null && !filter(member)) return null;
-        if (member == null) return null;
-        return member;
-    }
-
-    public function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement> {
-        if (out == null) out = [];
-        for (member in type.getAllMembers()) {
-            if (filter != null && !filter(member)) continue;
-            out.push(member);
-        }
-        return out;
-    }
-}
-
-class BaseCompletionEntry implements HaxeCompilerElement {
-    public var scope:CompletionScope;
-    public var pos:Position;
-    public var name:String;
-    public var type:ZNode;
-    public var type2:SpecificHaxeType;
-    public var expr:ZNode;
-    public var refs = new HaxeCompilerReferences();
-
-    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:SpecificHaxeType) {
-        this.scope = scope;
-        this.pos = pos;
-        this.type = type;
-        this.type2 = type2;
-        this.expr = expr;
-        this.name = name;
-    }
-    
-    public function getNode() return expr;
-    public function getPosition() return pos;
-    public function getName() return name;
-    public function getReferences():HaxeCompilerReferences return refs;
-
-    public function getResult(?context:ProcessNodeContext):ExpressionResult {
-        var ctype:ExpressionResult = null;
-        if (type2 != null) return ExpressionResult.withoutValue(type2);
-        if (type != null) ctype = ExpressionResult.withoutValue(scope.types.createSpecific(scope.types.getType(type.pos.text)));
-        if (expr != null) ctype = scope.getNodeResult(expr, context);
-        if (ctype == null) ctype = ExpressionResult.withoutValue(scope.types.specTypeDynamic);
-        return ctype;
-    }
-
-    public function toString() return '$name@$pos';
-}
 
 
 typedef CScope = Scope<HaxeCompilerElement>;
