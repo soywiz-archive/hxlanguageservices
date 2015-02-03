@@ -16,7 +16,7 @@ import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.node.Reader;
-import haxe.languageservices.grammar.Grammar.NNode;
+import haxe.languageservices.util.Grammar.NNode;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.NodeTools;

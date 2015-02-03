@@ -19,7 +19,7 @@ import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.type.HaxeMember.FieldHaxeMember;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
-import haxe.languageservices.grammar.Grammar.Result;
+import haxe.languageservices.util.Grammar.Result;
 import haxe.languageservices.node.Position;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;

@@ -1,6 +1,6 @@
 package haxe.languageservices.node;
 
-import haxe.languageservices.grammar.Grammar.NNode;
+import haxe.languageservices.util.Grammar.NNode;
 import haxe.languageservices.util.IndentWriter;
 class NodeTools {
     static public function getId(znode:ZNode):String {

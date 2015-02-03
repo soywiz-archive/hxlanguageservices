@@ -10,8 +10,8 @@ import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
-import haxe.languageservices.grammar.Grammar;
-import haxe.languageservices.grammar.Grammar.Term;
+import haxe.languageservices.util.Grammar;
+import haxe.languageservices.util.Grammar.Term;
 
 using StringTools;
 

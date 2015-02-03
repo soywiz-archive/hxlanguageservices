@@ -10,7 +10,7 @@ import haxe.Json;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
-import haxe.languageservices.grammar.Grammar;
+import haxe.languageservices.util.Grammar;
 import haxe.unit.TestCase;
 
 using StringTools;

@@ -1,4 +1,4 @@
-package haxe.languageservices.grammar;
+package haxe.languageservices.util;
 
 import haxe.languageservices.error.ParserError;
 import haxe.languageservices.error.HaxeErrors;
