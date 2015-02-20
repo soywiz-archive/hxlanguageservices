@@ -1,7 +1,6 @@
 package haxe.languageservices.type;
 
 import haxe.languageservices.node.Node;
-import haxe.languageservices.type.HaxeMember.MethodHaxeMember;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.TextRange;

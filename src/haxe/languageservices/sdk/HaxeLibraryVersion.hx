@@ -3,6 +3,7 @@ import haxe.languageservices.util.PathUtils;
 import haxe.languageservices.util.Vfs;
 import haxe.languageservices.sdk.HaxeLibraryVersion;
 import haxe.languageservices.util.LocalVfs;
+
 class HaxeLibraryVersion {
     public var exists(get, never):Bool;
     public var name(default, null):String;

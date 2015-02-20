@@ -1,5 +1,6 @@
 package haxe.languageservices.completion;
 
+import haxe.languageservices.type.HaxeModifiers;
 import haxe.languageservices.type.HaxeCompilerElement;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
@@ -11,6 +12,14 @@ class TypeMembersCompletionProvider implements CompletionProvider {
     public function new(type:HaxeType, ?filter: HaxeMember -> Bool) {
         this.type = type;
         this.filter = filter;
+    }
+    
+    static public function forType(type:HaxeType, viewInstance:Bool, viewPrivate:Bool):CompletionProvider {
+        return new TypeMembersCompletionProvider(type, function(member:HaxeMember) {
+            if (!viewInstance && !member.modifiers.isStatic) return false;
+            if (!viewPrivate && member.modifiers.isPrivate) return false;
+            return true;
+        });
     }
 
     public function getEntryByName(name:String):HaxeCompilerElement {

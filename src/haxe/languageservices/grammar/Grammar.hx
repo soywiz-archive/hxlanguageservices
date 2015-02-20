@@ -5,6 +5,7 @@ import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Node;
 import haxe.languageservices.node.TextRange;
+
 class Grammar<TNode> {
     private function term(z:Dynamic, ?conv: Dynamic -> Dynamic):GrammarTerm {
         if (Std.is(z, String)) return GrammarTerm.TLit(cast(z, String), conv);
@@ -100,8 +101,17 @@ class Grammar<TNode> {
             if (Std.is(rresult, GrammarNode)) {
                 //rresult = new NNode(Position.combine(rresult.pos, result.pos), rresult.node);
                 return GrammarResult.RMatchedValue(simplify(rresult, t));
+            } else {
+                var out = simplify(new GrammarNode(reader.createPos(start, reader.pos), rresult), t);
+                if (Std.is(result, Array) && Std.is(out, GrammarNode)) {
+                    for (item in cast(result, Array<Dynamic>)) {
+                        if (Std.is(item, GrammarNode)) {
+                            cast(out, GrammarNode<Dynamic>).addChild(cast(item, GrammarNode<Dynamic>));
+                        }
+                    }
+                }
+                return GrammarResult.RMatchedValue(out);
             }
-            return GrammarResult.RMatchedValue(simplify(new GrammarNode(reader.createPos(start, reader.pos), rresult), t));
         }
         switch (t) {
             case GrammarTerm.TLit(lit, conv): return gen(reader.matchLit(lit), conv);

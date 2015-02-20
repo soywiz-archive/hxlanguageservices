@@ -15,7 +15,7 @@ class MemoryVfs extends Vfs {
     }
 }
 
-class MemoryNode {
+private class MemoryNode {
     public var name:String;
     public var children = new Map<String, MemoryNode>();
     public var content = ""; 
