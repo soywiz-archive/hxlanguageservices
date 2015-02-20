@@ -1,6 +1,6 @@
 package haxe.languageservices.type;
 
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.node.ZNode;
 
 class FunctionHaxeType extends HaxeType {
@@ -11,7 +11,7 @@ class FunctionHaxeType extends HaxeType {
     public var nameNode:ZNode;
     public var retval:FunctionRetval = new FunctionRetval('Dynamic', '');
 
-    public function new(types:HaxeTypes, optBaseType:HaxeType, pos:Position, nameNode:ZNode, args:Array<FunctionArgument>, retval:FunctionRetval) {
+    public function new(types:HaxeTypes, optBaseType:HaxeType, pos:TextRange, nameNode:ZNode, args:Array<FunctionArgument>, retval:FunctionRetval) {
         super(types.rootPackage, pos, nameNode.pos.text);
         this.optBaseType = optBaseType;
         this.args = args;

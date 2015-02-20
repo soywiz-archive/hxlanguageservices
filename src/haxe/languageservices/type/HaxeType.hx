@@ -2,9 +2,9 @@ package haxe.languageservices.type;
 
 import js.html.svg.AnimatedBoolean;
 import haxe.languageservices.node.ZNode;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 class HaxeType {
-    public var pos:Position;
+    public var pos:TextRange;
     public var packag:HaxePackage;
     public var types:HaxeTypes;
     public var name:String;
@@ -28,7 +28,7 @@ class HaxeType {
         return membersByName[name];
     }
 
-    public function new(packag:HaxePackage, pos:Position, name:String) {
+    public function new(packag:HaxePackage, pos:TextRange, name:String) {
         this.packag = packag;
         this.types = packag.base;
         this.pos = pos;

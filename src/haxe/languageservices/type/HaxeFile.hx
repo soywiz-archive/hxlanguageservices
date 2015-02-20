@@ -1,6 +1,6 @@
 package haxe.languageservices.type;
 import haxe.languageservices.node.Node;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.node.ZNode;
 
 class HaxeFile {

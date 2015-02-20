@@ -4,27 +4,27 @@ import haxe.languageservices.error.ParserError;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.node.NodeTools;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.Const;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
-import haxe.languageservices.util.Grammar;
-import haxe.languageservices.util.Grammar.Term;
+import haxe.languageservices.grammar.Grammar;
+import haxe.languageservices.grammar.GrammarTerm;
 
 using StringTools;
 
 class HaxeGrammar extends Grammar<Node> {
-    public var ints:Term;
-    public var fqName:Term;
-    public var packageDecl:Term;
-    public var importDecl:Term;
-    public var usingDecl:Term;
-    public var expr:Term;
-    public var stm:Term;
-    public var program:Term;
-    public var stringDqLit:Term;
+    public var ints:GrammarTerm;
+    public var fqName:GrammarTerm;
+    public var packageDecl:GrammarTerm;
+    public var importDecl:GrammarTerm;
+    public var usingDecl:GrammarTerm;
+    public var expr:GrammarTerm;
+    public var stm:GrammarTerm;
+    public var program:GrammarTerm;
+    public var stringDqLit:GrammarTerm;
     
     private function buildNode(name:String): Dynamic -> Dynamic {
         return function(v) return Type.createEnum(Node, name, v);
@@ -34,11 +34,11 @@ class HaxeGrammar extends Grammar<Node> {
         return function(v) return Type.createEnum(Node, name, [v]);
     }
     
-    private function operator(v:Dynamic):Term return term(v, buildNode2('NOp'));
+    private function operator(v:Dynamic):GrammarTerm return term(v, buildNode2('NOp'));
     private function optError2(tok:String) return optError(tok, 'expected $tok');
-    private function litS(z:String) return Term.TLit(z, function(v) return Node.NId(z));
-    private function litK(z:String) return Term.TLit(z, function(v) return Node.NKeyword(z));
-    private function doc() return Term.TCustomMatcher('doc', function(context:GrammarContext):Node {
+    private function litS(z:String) return GrammarTerm.TLit(z, function(v) return Node.NId(z));
+    private function litK(z:String) return GrammarTerm.TLit(z, function(v) return Node.NKeyword(z));
+    private function doc() return GrammarTerm.TCustomMatcher('doc', function(context:GrammarContext):Node {
         var doc = context.doc;
         context.doc = '';
         return Node.NDoc(doc);
@@ -85,8 +85,8 @@ class HaxeGrammar extends Grammar<Node> {
             return s.substr(1, s.length - 2);
         }
 
-        var float = Term.TReg('float', ~/^(\d+\.\d+|\d*\.\d+|\d+\.[^\.])/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
-        var int = Term.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
+        var float = GrammarTerm.TReg('float', ~/^(\d+\.\d+|\d*\.\d+|\d+\.[^\.])/, function(v) return Node.NConst(Const.CFloat(Std.parseFloat(v))));
+        var int = GrammarTerm.TReg('int', ~/^\d+/, function(v) return Node.NConst(Const.CInt(Std.parseInt(v))));
         //stringDqLit = Term.TReg('string', ~/^"[^"]*"/, function(v) return Node.NConst(Const.CString(parseString(v))));
 
         function readEscape(errors:HaxeErrors, reader:Reader):String {
@@ -123,7 +123,7 @@ class HaxeGrammar extends Grammar<Node> {
             return null;
         }
 
-        stringDqLit = Term.TCustomMatcher('string', function(context:GrammarContext) {
+        stringDqLit = GrammarTerm.TCustomMatcher('string', function(context:GrammarContext) {
             var errors:HaxeErrors = context.errors;
             var reader:Reader = context.reader;
             var out = '';
@@ -142,7 +142,7 @@ class HaxeGrammar extends Grammar<Node> {
             return Node.NConst(Const.CString(out));
         });
         //var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
-        var identifier = Term.TReg(
+        var identifier = GrammarTerm.TReg(
             'identifier',
             ~/^[a-zA-Z]\w*/,
             function(v) return Node.NId(v),
@@ -151,7 +151,7 @@ class HaxeGrammar extends Grammar<Node> {
         );
         var stringSqDollarSimpleChunk = seq(["$", sure(), identifier], buildNode('NStringSqDollarPart'));
         var stringSqDollarExprChunk = seq(["$", "{", sure(), customSkipper(this.skipNonGrammar), expr, "}"], buildNode('NStringSqDollarPart'));
-        var stringSqLiteralChunk = Term.TCustomMatcher('literalchunk', function(context:GrammarContext) {
+        var stringSqLiteralChunk = GrammarTerm.TCustomMatcher('literalchunk', function(context:GrammarContext) {
             var errors = context.errors;
             var reader = context.reader;
             var out = '';
@@ -316,7 +316,7 @@ class HaxeGrammar extends Grammar<Node> {
         program = list2(any([packageDecl, importDecl, usingDecl, typeDecl]), 0, buildNode2('NFile'));
     }
 
-    override private function simplify(znode:ZNode, term:Term):ZNode {
+    override private function simplify(znode:ZNode, term:GrammarTerm):ZNode {
 //if (znode == null) return null;
 //if (znode.node == null) return null;
         if (!Std.is(znode.node, Node)) throw 'Invalid simplify: $znode: $term : ' + znode.pos.text;
@@ -329,7 +329,7 @@ class HaxeGrammar extends Grammar<Node> {
                     case Node.NList(items):
                         var lnode = node;
                         for (item in items) {
-                            var cpos = Position.combine(lnode.pos, item.pos);
+                            var cpos = TextRange.combine(lnode.pos, item.pos);
                             switch (item.node) {
                                 case Node.NArrayAccessPart(rnode):
                                     lnode = simplify(new ZNode(cpos, Node.NArrayAccess(lnode, rnode)), term);

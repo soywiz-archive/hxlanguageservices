@@ -9,7 +9,7 @@ import haxe.languageservices.node.ConstTools;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.node.Node;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.grammar.HaxeCompletion;
@@ -53,7 +53,7 @@ class CompletionScope implements CompletionProvider {
         }
     }
 
-    public function getIdentifierAt(index:Int):{ pos: Position, name: String } {
+    public function getIdentifierAt(index:Int):{ pos: TextRange, name: String } {
         var znode = node.locateIndex(index);
         if (znode != null) {
             switch (znode.node) {

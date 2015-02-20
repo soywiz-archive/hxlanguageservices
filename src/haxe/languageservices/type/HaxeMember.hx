@@ -2,12 +2,12 @@ package haxe.languageservices.type;
 
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.ProcessNodeContext;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.node.ZNode;
 
 class HaxeMember implements HaxeCompilerElement {
     public var baseType:HaxeType;
-    public var pos:Position;
+    public var pos:TextRange;
     public var name(default, null):String;
     public var modifiers = new HaxeModifiers();
     public var doc:HaxeDoc;
@@ -16,7 +16,7 @@ class HaxeMember implements HaxeCompilerElement {
     public var nameNode:ZNode;
     public var refs = new HaxeCompilerReferences();
 
-    public function new(baseType:HaxeType, pos:Position, nameNode:ZNode) {
+    public function new(baseType:HaxeType, pos:TextRange, nameNode:ZNode) {
         this.baseType = baseType;
         this.pos = pos;
         this.nameNode = nameNode;
@@ -28,7 +28,7 @@ class HaxeMember implements HaxeCompilerElement {
 
     public function getType():SpecificHaxeType return baseType.types.specTypeDynamic;
 
-    public function getPosition():Position return this.pos;
+    public function getPosition():TextRange return this.pos;
     public function getNode():ZNode return valueNode;
     public function getName():String return name;
     public function getReferences():HaxeCompilerReferences return refs;

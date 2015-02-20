@@ -4,7 +4,7 @@ import haxe.languageservices.node.Node;
 import haxe.languageservices.type.HaxeMember.MethodHaxeMember;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 class HaxeTypes {
     public var rootPackage:HaxePackage;
 
@@ -27,7 +27,7 @@ class HaxeTypes {
     public var typeArray(default, null):HaxeType;
 
     public function new() {
-        var typesPos = new Position(0, 0, new Reader('', '_Types.hx'));
+        var typesPos = new TextRange(0, 0, new Reader('', '_Types.hx'));
     
         rootPackage = new HaxePackage(this, '');
         typeVoid = rootPackage.accessTypeCreate('Void', typesPos, ClassHaxeType);

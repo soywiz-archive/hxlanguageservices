@@ -1,23 +1,23 @@
 package haxe.languageservices.completion;
 
+import haxe.languageservices.node.ZNode;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.type.HaxeCompilerReferences;
 import haxe.languageservices.type.SpecificHaxeType;
-import haxe.languageservices.node.ZNode;
-import haxe.languageservices.node.Position;
 import haxe.languageservices.type.HaxeCompilerElement;
 
 class CompletionEntry implements HaxeCompilerElement {
     public var scope:CompletionScope;
-    public var pos:Position;
+    public var pos:TextRange;
     public var name:String;
     public var type:ZNode;
     public var type2:SpecificHaxeType;
     public var expr:ZNode;
     public var refs = new HaxeCompilerReferences();
 
-    public function new(scope:CompletionScope, pos:Position, type:ZNode, expr:ZNode, name:String, ?type2:SpecificHaxeType) {
+    public function new(scope:CompletionScope, pos:TextRange, type:ZNode, expr:ZNode, name:String, ?type2:SpecificHaxeType) {
         this.scope = scope;
         this.pos = pos;
         this.type = type;

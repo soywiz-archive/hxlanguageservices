@@ -1,11 +1,12 @@
 package haxe.languageservices.error;
 
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
+
 class ParserError {
-    public var pos:Position;
+    public var pos:TextRange;
     public var message:String;
     
-    public function new(pos:Position, message:String) {
+    public function new(pos:TextRange, message:String) {
         this.pos = pos;
         this.message = message;
     }

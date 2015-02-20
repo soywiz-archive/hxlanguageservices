@@ -1,6 +1,6 @@
 package haxe.languageservices.node;
 
 interface HaxeElement {
-    function getPosition():Position;
+    function getPosition():TextRange;
 }
 

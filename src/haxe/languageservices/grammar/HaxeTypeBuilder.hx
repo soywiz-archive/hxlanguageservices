@@ -19,8 +19,8 @@ import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.type.HaxeMember.FieldHaxeMember;
 import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.util.StringUtils;
-import haxe.languageservices.util.Grammar.Result;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.grammar.GrammarResult;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.Node;
 
@@ -35,15 +35,15 @@ class HaxeTypeBuilder {
         this.errors = errors;
     }
 
-    public function processResult(result:Result) {
+    public function processResult(result:GrammarResult) {
         switch (result) {
-            case Result.RMatchedValue(v): return process(cast(v));
+            case GrammarResult.RMatchedValue(v): return process(cast(v));
             default: throw "Can't process";
         }
         return null;
     }
     
-    private function error(pos:Position, text:String) {
+    private function error(pos:TextRange, text:String) {
         errors.add(new ParserError(pos, text));
     }
     
@@ -248,7 +248,7 @@ class HaxeTypeBuilder {
         //checkClassName(znode.pos, znode.pos.text);
     }
     
-    private function checkClassName(pos:Position, typeName:String):Void {
+    private function checkClassName(pos:TextRange, typeName:String):Void {
         if (!StringUtils.isFirstUpper(typeName)) {
             error(pos, 'Type name should start with an uppercase letter');
         }

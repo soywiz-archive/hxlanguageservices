@@ -1,6 +1,6 @@
 package haxe.languageservices.type;
 
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 class HaxePackage {
     public var base:HaxeTypes;
     public var root(default, null):HaxePackage;
@@ -57,11 +57,11 @@ class HaxePackage {
         return _accessType(path, false, null, null);
     }
 
-    public function accessTypeCreate<T:HaxeType>(path:String, pos:Position, type:Class<HaxeType>):T {
+    public function accessTypeCreate<T:HaxeType>(path:String, pos:TextRange, type:Class<HaxeType>):T {
         return cast _accessType(path, true, pos, type);
     }
 
-    private function _accessType(path:String, create:Bool, pos:Position, type:Class<HaxeType>):HaxeType {
+    private function _accessType(path:String, create:Bool, pos:TextRange, type:Class<HaxeType>):HaxeType {
         if (path == null) return null;
         var parts = path.split('.');
         var typeName = parts.pop();

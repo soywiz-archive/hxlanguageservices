@@ -1,4 +1,6 @@
 package ;
+import haxe.languageservices.grammar.GrammarTerm;
+import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Reader;
@@ -11,7 +13,7 @@ import haxe.Json;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
-import haxe.languageservices.util.Grammar;
+import haxe.languageservices.grammar.Grammar;
 import haxe.unit.TestCase;
 
 using StringTools;
@@ -130,7 +132,7 @@ class TestGrammar extends HLSTestCase {
             var result = hg.parseString(hg.stm, str, 'program.hx');
             var completion = new HaxeCompletion(types);
             switch (result) {
-                case Result.RMatchedValue(value):
+                case GrammarResult.RMatchedValue(value):
                     var node:ZNode = cast(value);
                     var cc = completion.processCompletion(node);
                     var scope = cc.locateIndex(completionIndex);
@@ -162,15 +164,15 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testRecovery() {
-        function assert(term:Term, program:String, expectedError:String, ?p:PosInfos) {
+        function assert(term:GrammarTerm, program:String, expectedError:String, ?p:PosInfos) {
             var errors = new HaxeErrors();
             var result = hg.parseString(term, program, 'program.hx', errors);
             switch (result) {
-                case Result.RMatched | Result.RUnmatched(_):
+                case GrammarResult.RMatched | GrammarResult.RUnmatched(_):
                     trace(result);
                     trace(errors);
                     assertTrue(false, p);
-                case Result.RMatchedValue(v):
+                case GrammarResult.RMatchedValue(v):
                     //trace(v);
             }
             assertEqualsString(expectedError, errors.errors, p);

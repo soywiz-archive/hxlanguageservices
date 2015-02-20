@@ -1,7 +1,7 @@
 package haxe.languageservices.node;
 
 import haxe.languageservices.node.ZNode;
-import haxe.languageservices.util.Grammar.NNode;
+import haxe.languageservices.grammar.GrammarNode;
 
 enum Node {
     NId(value:String);

@@ -1,6 +1,6 @@
 package haxe.languageservices.node;
 
-import haxe.languageservices.util.Grammar.NNode;
+import haxe.languageservices.grammar.GrammarNode;
 import haxe.languageservices.util.IndentWriter;
 class NodeTools {
     static public function getId(znode:ZNode):String {
@@ -21,9 +21,9 @@ class NodeTools {
     }
 
     static private function _dump(item:Dynamic, iw:IndentWriter):Void {
-        if (Std.is(item, NNode)) {
+        if (Std.is(item, GrammarNode)) {
             //trace('[1]');
-            _dump(Std.instance(item, NNode).node, iw);
+            _dump(Std.instance(item, GrammarNode).node, iw);
         } else if (Std.is(item, Node)) {
             //trace('[2]');
             iw.write(item + '{\n');

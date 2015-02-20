@@ -1,5 +1,5 @@
 package haxe.languageservices.node;
 
-import haxe.languageservices.util.Grammar.NNode;
+import haxe.languageservices.grammar.GrammarNode;
 
-typedef ZNode = NNode<Node>;
+typedef ZNode = GrammarNode<Node>;

@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.FunctionRetval;
@@ -11,16 +12,16 @@ import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.HaxeLanguageServices.FunctionCompType;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;
-import haxe.languageservices.util.Grammar.Result;
+import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
 import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.grammar.HaxeGrammar;
-import haxe.languageservices.util.Grammar.Term;
+import haxe.languageservices.grammar.GrammarTerm;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.type.HaxeTypes;
-import haxe.languageservices.node.Position;
+import haxe.languageservices.node.TextRange;
 import haxe.languageservices.util.Vfs;
 
 class HaxeLanguageServices {
@@ -154,7 +155,7 @@ class Conv {
         }
     }
 
-    public function pos(pos:Position):CompPosition {
+    public function pos(pos:TextRange):CompPosition {
         return new CompPosition(pos.min, pos.max);
     }
 
@@ -171,13 +172,13 @@ class Conv {
 class CompFileContext {
     static private var grammar = new HaxeGrammar();
     public var reader:Reader;
-    public var term:Term;
+    public var term:GrammarTerm;
     public var types:HaxeTypes;
     public var typeBuilder:HaxeTypeBuilder;
     public var typeChecker:HaxeTypeChecker;
     public var completion:HaxeCompletion;
     public var completionScope:CompletionScope;
-    public var grammarResult:Result;
+    public var grammarResult:GrammarResult;
     public var rootNode:ZNode;
     public var errors:HaxeErrors = new HaxeErrors();
     public var builtTypes:Array<HaxeType> = [];
@@ -208,8 +209,8 @@ class CompFileContext {
         completion = new HaxeCompletion(types, errors);
         completionScope = null;
         switch (grammarResult) {
-            case Result.RUnmatched(_, _) | Result.RMatched: rootNode = null;
-            case Result.RMatchedValue(value): rootNode = cast(value);
+            case GrammarResult.RUnmatched(_, _) | GrammarResult.RMatched: rootNode = null;
+            case GrammarResult.RMatchedValue(value): rootNode = cast(value);
         }
         if (rootNode != null) {
             builtTypes = [];

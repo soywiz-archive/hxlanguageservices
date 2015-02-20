@@ -19,10 +19,10 @@ class Reader {
         return this.pos >= this.str.length;
     }
 
-    public function createPos(?start:Int, ?end:Int):Position {
+    public function createPos(?start:Int, ?end:Int):TextRange {
         if (start == null) start = this.pos;
         if (end == null) end = this.pos;
-        return new Position(start, end, this);
+        return new TextRange(start, end, this);
     }
     
     public function slice(start:Int, end:Int):String {
