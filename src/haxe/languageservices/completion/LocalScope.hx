@@ -5,7 +5,7 @@ class LocalScope implements CompletionProvider {
     public var parent:CompletionProvider;
     private var locals:Array<HaxeCompilerElement> = [];
     
-    public function new(parent:CompletionProvider) {
+    public function new(?parent:CompletionProvider) {
         this.parent = parent;
     }
     

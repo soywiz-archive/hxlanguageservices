@@ -1,4 +1,9 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.ExpressionResult;
+import haxe.languageservices.node.ProcessNodeContext;
+import haxe.languageservices.node.ConstTools;
+import haxe.languageservices.type.UsageType;
+import haxe.languageservices.type.HaxeLocalVariable;
 import haxe.languageservices.completion.TypeMembersCompletionProvider;
 import haxe.languageservices.completion.LocalScope;
 import haxe.languageservices.completion.CompletionScope;
@@ -80,10 +85,19 @@ class HaxeTypeBuilder {
         if (!ZNode.isValid(znode)) return builtTypes;
         switch (znode.node) {
             case Node.NFile(items):
-                var info = { index: 0, packag: types.rootPackage };
+                var info = { index: 0, packag: types.rootPackage, types: builtTypes };
                 for (item in items) {
                     processTopLevel(item, info, builtTypes);
                     info.index++;
+                }
+                for (type in builtTypes) {
+                    for (member in type.members) {
+                        if (Std.is(member, MethodHaxeMember)) {
+                            var method:MethodHaxeMember = cast(member, MethodHaxeMember);
+                            //trace(method);
+                            processMethodBody(method.func.body, new LocalScope(TypeMembersCompletionProvider.forType(type, !member.modifiers.isStatic, true)));
+                        }
+                    }
                 }
             default:
                 throw 'Expected haxe file';
@@ -91,7 +105,7 @@ class HaxeTypeBuilder {
         return builtTypes;
     }
 
-    public function processTopLevel(item:ZNode, info: { index: Int, packag: HaxePackage }, builtTypes:Array<HaxeType>) {
+    public function processTopLevel(item:ZNode, info: { index: Int, packag: HaxePackage, types: Array<HaxeType> }, builtTypes:Array<HaxeType>) {
         switch (item.node) {
             case Node.NPackage(name):
                 if (info.index != 0) {
@@ -227,14 +241,13 @@ class HaxeTypeBuilder {
                     fretval = new FunctionRetval('Dynamic');
                 }
 
-                var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval));
+                var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval, vexpr));
                 method.doc = new HaxeDoc(NodeTools.getId(doc));
                 method.modifiers = mods;
                 if (type.existsMember(method.name)) {
                     error(vname.pos, 'Duplicate class field declaration : ${method.name}');
                 }
                 type.addMember(method);
-                processMethodBody(type, method, vexpr, TypeMembersCompletionProvider.forType(type, !mods.isStatic, true));
             default:
                 throw 'Invalid (III) $decl';
         }
@@ -267,20 +280,87 @@ class HaxeTypeBuilder {
             error(pos, 'Type name should start with an uppercase letter');
         }
     }
-
-    private function processMethodBody(type:HaxeType, method:MethodHaxeMember, expr:ZNode, completion:CompletionProvider) {
-        if (!ZNode.isValid(expr)) return;
-        expr.completion = completion;
-        switch (expr.node) {
-            case Node.NList(items): for (item in items) processMethodBody(type, method, item, completion);
-            case Node.NBlock(items):
-                var blockCompletion = new LocalScope(completion);
-                for (item in items) processMethodBody(type, method, item, blockCompletion);
-            case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
-                checkType(vtype);
-                processMethodBody(type, method, vvalue, completion);
-            default:
-                //errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+    
+    public var debug = false;
+    
+    private var completionQueue:Array<Void -> Void> = [];
+    
+    public function complete() {
+        while (completionQueue.length > 0) {
+            var item = completionQueue.shift();
+            item();
         }
+    }
+
+    public function processMethodBody(expr:ZNode, scope:LocalScope):LocalScope {
+        if (!ZNode.isValid(expr)) return scope;
+        expr.completion = scope;
+        //if (debug) trace(expr.node);
+        switch (expr.node) {
+            case Node.NList(items): for (item in items) processMethodBody(item, scope);
+            case Node.NBlock(items):
+                var blockScope = new LocalScope(scope);
+                for (item in items) processMethodBody(item, blockScope);
+            case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
+                var localVariable = new HaxeLocalVariable(vname);
+            
+                localVariable.getReferences().addNode(UsageType.Declaration, vname);
+                expr.element = localVariable;
+                //trace('declared var: ' + vname);
+                scope.add(localVariable);
+                checkType(vtype);
+                localVariable.resultResolver = function(context) {
+                    return processExprValue(vvalue, scope);
+                }
+                return processMethodBody(vvalue, scope);
+            case Node.NId(name):
+                //trace('field: ' + name);
+                if (!ConstTools.isPredefinedConstant(name)) {
+                    var id = scope.getEntryByName(name);
+                    expr.element = id;
+                    //trace(id);
+                    if (id == null) {
+                        trace('Not found id: ' + name + ' in ' + expr.pos.reader.str);
+                        trace(scope.getEntries());
+                    } else {
+                        id.getReferences().addNode(UsageType.Read, expr);
+                    }
+                }
+            case Node.NBinOp(left, op, right):
+                processMethodBody(left, scope);
+                processMethodBody(right, scope);
+            case Node.NConst(value):
+            default:
+                //trace('TypeBuilder: Unimplemented body $expr');
+                //if (debug) errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+        }
+        return scope;
+    }
+
+    public function processExprValue(expr:ZNode, scope:LocalScope):ExpressionResult {
+        if (!ZNode.isValid(expr)) return ExpressionResult.withoutValue(types.specTypeDynamic);
+        expr.completion = scope;
+        switch (expr.node) {
+            case Node.NId(name):
+                if (ConstTools.isPredefinedConstant(name)) {
+                    switch (name) {
+                        case "true": return ExpressionResult.withValue(types.specTypeBool, true);
+                        case "false": return ExpressionResult.withValue(types.specTypeBool, false);
+                        case "null": return ExpressionResult.withValue(types.specTypeDynamic, null);
+                        default:
+                    }
+                } else {
+                    var id = scope.getEntryByName(name);
+                    if (id != null) return id.getResult();
+                }
+            case Node.NArray(items):
+                return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) processExprValue(item, scope).type ])));
+            case Node.NUnary(op, value):
+                return processExprValue(value, scope);
+            default:
+                errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+                //throw 'Test';
+        }
+        return ExpressionResult.withoutValue(types.specTypeDynamic);
     }
 }

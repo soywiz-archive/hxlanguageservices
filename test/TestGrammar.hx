@@ -1,4 +1,5 @@
 package ;
+import haxe.languageservices.completion.LocalScope;
 import haxe.languageservices.grammar.GrammarTerm;
 import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.completion.CompletionScope;
@@ -246,5 +247,17 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString({pos : '31:33', name : 'it'}, scope.getIdentifierAt(32));
         //assertEqualsString('', scope.getLocalAt(6));
         //assertEqualsString('', scope.getLocalAt(32));
+    }
+
+    public function testNewCompletion() {
+        var node:ZNode = hg.parseStringNode(hg.stm, '{ var z = 7; { var m = z * z * 2; } }', 'program.hx');
+        var htb = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
+        htb.debug = true;
+        var cp = htb.processMethodBody(node, new LocalScope());
+        htb.complete();
+        assertEqualsString('[z:Declaration@6:7,z:Read@23:24,z:Read@27:28]', node.locateIndex(16).getCompletion().getEntryByName('z').getReferences().usages);
+        //var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
+        //assertEqualsString({pos : '5:7', name : 'it'}, scope.getIdentifierAt(6));
+        //assertEqualsString({pos : '31:33', name : 'it'}, scope.getIdentifierAt(32));
     }
 }

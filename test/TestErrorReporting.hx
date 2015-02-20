@@ -13,7 +13,7 @@ class TestErrorReporting extends HLSTestCase {
     }
 
     private function assertMethodErrors(body:String, errors:Dynamic, ?p:PosInfos) {
-        assertProgramErrors('class A { function a() { $body }}', errors, p);
+        assertProgramErrors('class A { function a() { $body } }', errors, p);
     }
 
     public function testSimpleProgramErrors() {
