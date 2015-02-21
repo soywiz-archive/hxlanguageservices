@@ -19,13 +19,13 @@ class ExpressionResult {
         return '$type';
     }
 
-    static public function unify(items:Array<ExpressionResult>):ExpressionResult {
-        if (items.length == 0) return null;
+    static public function unify(types:HaxeTypes, items:Array<ExpressionResult>):ExpressionResult {
+        if (items.length == 0) return withoutValue(types.specTypeDynamic);
         if (items.length == 1) return items[0];
-        return unify2(items[0], unify(items.slice(1)));
+        return unify2(types, items[0], unify(types, items.slice(1)));
     }
 
-    static public function unify2(a:ExpressionResult, b:ExpressionResult):ExpressionResult {
+    static public function unify2(types:HaxeTypes, a:ExpressionResult, b:ExpressionResult):ExpressionResult {
         if (a.type == b.type && a.hasValue == b.hasValue && a.value == b.value) return a;
         if (a.type == b.type) return withoutValue(a.type);
         return withoutValue(a.type.type.types.unify([a.type, b.type]));

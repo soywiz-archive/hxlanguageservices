@@ -84,7 +84,7 @@ class TestCompletion extends HLSTestCase {
     }
 
     public function testCall() {
-        assertProgramBody('class A { function b() return 1; function a() { var result = b(); ### } }', ['result:Dynamic'], []);
+        assertProgramBody('class A { function b() return 1; function a() { var result = b(); ### } }', ['result:Int = 1'], []);
     }
 
     public function testArguments() {

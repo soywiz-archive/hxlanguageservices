@@ -154,9 +154,7 @@ class CompletionScope implements CompletionProvider {
             case Node.NCall(left, args):
                 var value = _getNodeResult(left, context);
                 if (Std.is(value.type.type, FunctionHaxeType)) {
-                    var retval = cast(value.type.type, FunctionHaxeType).retval;
-                    var type = retval.getSpecType(types);
-                    return ExpressionResult.withoutValue(type);
+                    return cast(value.type.type, FunctionHaxeType).getReturn();
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NFieldAccess(left, id):

@@ -132,15 +132,15 @@ class Conv {
     }
     
     public function func(f:FunctionHaxeType):CompFunction {
-        return new CompFunction(f.optBaseType.fqName, f.name, [for (a in f.args) funcArg(a)], funcRet(f.retval), '');
+        return new CompFunction(f.optBaseType.fqName, f.name, [for (a in f.args) funcArg(a)], funcRet(f.getReturn()), '');
     }
 
     public function toEntry(name:String, result:ExpressionResult):CompEntry {
         return new CompEntry(name, toType(result.type), result.hasValue, result.value);
     }
     
-    public function funcRet(f:FunctionRetval):CompReturn {
-        return new CompReturn(toType(f.getSpecType(types)), '');
+    public function funcRet(f:ExpressionResult):CompReturn {
+        return new CompReturn(toType(f.type), '');
     }
 
     public function funcArg(fa:FunctionArgument):CompArgument {
@@ -163,7 +163,7 @@ class Conv {
         if (type == null) return new BaseCompType('Dynamic');
         if (Std.is(type.type, FunctionHaxeType)) {
             var ftype = cast(type.type, FunctionHaxeType);
-            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.retval.fqName));
+            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.getRetvalFqName()));
         }
         return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) toType(i)] : null);
     }

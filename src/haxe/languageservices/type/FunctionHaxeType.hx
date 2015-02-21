@@ -9,7 +9,7 @@ class FunctionHaxeType extends HaxeType {
     public var body:ZNode;
     //public var name:String;
     public var nameNode:ZNode;
-    public var retval:FunctionRetval = new FunctionRetval('Dynamic', '');
+    public var _retval:FunctionRetval = new FunctionRetval('Dynamic', '');
     public var returns:Array<ExpressionResult> = [];
 
     public function new(types:HaxeTypes, optBaseType:HaxeType, pos:TextRange, nameNode:ZNode, args:Array<FunctionArgument>, retval:FunctionRetval, body:ZNode = null) {
@@ -18,15 +18,19 @@ class FunctionHaxeType extends HaxeType {
         this.args = args;
         this.name = nameNode.pos.text;
         this.nameNode = nameNode;
-        this.retval = retval;
+        this._retval = retval;
         this.body = body;
     }
     
+    public function getRetvalFqName() {
+        return getReturn().type.type.fqName;
+    }
+    
     public function getReturn():ExpressionResult {
-        if (retval == null || retval.fqName == 'Dynamic') return ExpressionResult.unify(returns);
+        if (_retval == null || _retval.fqName == 'Dynamic') return ExpressionResult.unify(types, returns);
         //if (retval.getSpecType(types))
-        return ExpressionResult.withoutValue(retval.getSpecType(types));
+        return ExpressionResult.withoutValue(_retval.getSpecType(types));
     }
 
-    override public function toString() return 'FunctionType(' + args.join(',') + '):' + retval;
+    override public function toString() return 'FunctionType(' + args.join(',') + '):' + _retval;
 }
