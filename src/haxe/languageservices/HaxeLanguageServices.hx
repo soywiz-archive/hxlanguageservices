@@ -110,8 +110,9 @@ class HaxeLanguageServices {
         if (callInfo != null) {
             var f = callInfo.f;
             var argStartPos = callInfo.argPosStart;
+            var callPosEnd = callInfo.callPosEnd;
             var startPos = callInfo.startPos;
-            call = new CompCall(callInfo.argindex, startPos, argStartPos, conv.func(f));
+            call = new CompCall(callInfo.argindex, startPos, callPosEnd, argStartPos, conv.func(f));
         }
         return call;
     }
@@ -335,12 +336,14 @@ class CompFunction {
 class CompCall {
     public var argIndex:Int;
     public var startPos:Int;
+    public var callEndPos:Int;
     public var argPos:Int;
     public var func:CompFunction;
     
-    public function new(argIndex:Int, startPos:Int, startIndex:Int, func:CompFunction) {
+    public function new(argIndex:Int, startPos:Int, callEndPos:Int, startIndex:Int, func:CompFunction) {
         this.argIndex = argIndex;
         this.startPos = startPos;
+        this.callEndPos = callEndPos;
         this.argPos = startIndex;
         this.func = func;
     }

@@ -269,9 +269,12 @@ class MainIde {
             if (call != null) {
                 callinfoOverlay.innerHTML = HtmlTools.callToHtml(call);
                 var p = editor.session.doc.indexToPosition(call.startPos, 0);
+                var p2 = editor.session.doc.indexToPosition(call.callEndPos, 0);
                 var sp = editor.renderer.textToScreenCoordinates(p.row, p.column);
-                signaturecompletion.style.top = sp.pageY + 'px';
-                signaturecompletion.style.left = sp.pageX + 'px';
+                var sp2 = editor.renderer.textToScreenCoordinates(p2.row, p2.column);
+
+                signaturecompletion.style.left = Math.min(sp.pageX, sp2.pageX) + 'px';
+                signaturecompletion.style.top = Math.max(sp.pageY, sp2.pageY) + 'px';
                 signaturecompletion.innerHTML = HtmlTools.callToHtml(call);
                 signaturecompletion.style.visibility = 'visible';
                 document.body.className = 'info2';

@@ -447,7 +447,7 @@ class HaxeTypeBuilder {
                     var reader = znode.pos.reader;
                     if (argnodes.length == 0) {
                         var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
-                        argnode2.callInfo = new CallInfo(0, start1, argnode2.pos.min, argnode2, f);
+                        argnode2.callInfo = new CallInfo(0, start1, argnode2.pos.min, callPos.max, argnode2, f);
                         znode.children.unshift(argnode2);
                     } else {
                         var lastIndex = 0;
@@ -456,7 +456,7 @@ class HaxeTypeBuilder {
                             var argnode = argnodes[n];
                             var arg = f.args[n];
                             if (argnode != null) {
-                                argnode.callInfo = new CallInfo(n, start1, argnode.pos.min, argnode, f);
+                                argnode.callInfo = new CallInfo(n, start1, argnode.pos.min, callPos.max, argnode, f);
                                 lastIndex = n;
                                 lastNode = argnode;
                             }
@@ -475,7 +475,7 @@ class HaxeTypeBuilder {
                             var extraIndex = lastIndex + 1;
                             var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
                             var extraNode = new ZNode(extraPos, null);
-                            extraNode.callInfo = new CallInfo(extraIndex, start1, extraPos.min, extraNode, f);
+                            extraNode.callInfo = new CallInfo(extraIndex, start1, extraPos.min, callPos.max, extraNode, f);
                             znode.children.unshift(extraNode);
                         }
                     }
