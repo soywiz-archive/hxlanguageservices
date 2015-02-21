@@ -17,6 +17,13 @@ class GrammarNode<T> {
     
     public function new(pos:TextRange, node:T) { this.pos = pos; this.node = node; }
     
+    public function getAncestors(count:Int, ?out:Array<GrammarNode<T>>):Array<GrammarNode<T>> {
+        if (out == null) out = [];
+        out.push(this);
+        if (parent != null && count > 0) parent.getAncestors(count - 1, out);
+        return out;
+    }
+    
     public function getCompletion():CompletionProvider {
         if (completion != null) return completion;
         if (parent != null) return parent.getCompletion();

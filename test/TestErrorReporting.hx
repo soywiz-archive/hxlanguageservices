@@ -90,6 +90,13 @@ class TestErrorReporting extends HLSTestCase {
         assertProgramErrors('class A { function b(a:String) { } function a() { b(1); } }', '[52:53:Invalid argument a expected String but found Int = 1]');
     }
 
+    public function testReassign() {
+        assertProgramErrors('class A { function b() { var a:Int = "test"; } }', "[37:43:Can't assign String to Int]");
+        assertProgramErrors('class A { function b() { var a = 7; a = "test"; } }', "[36:46:Can't assign String to Int]");
+        assertProgramErrors('class A { function b() { var a:Int; a = "test"; } }', "[36:46:Can't assign String to Int]");
+        assertProgramErrors('class A { function b() { var a    ; a = "test"; } }', "[]");
+    }
+
     /*
     public function testVarWithKeyword() {
         //var if = 1;

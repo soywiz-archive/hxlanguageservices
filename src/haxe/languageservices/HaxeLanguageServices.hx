@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.node.ZNode;
 import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.type.HaxeMember;
@@ -71,6 +72,11 @@ class HaxeLanguageServices {
         if (scope2 == null) return new CompList([]);
         var locals = scope2.getEntries();
         return new CompList([for (l in locals) conv.toEntry(l.getName(), l.getResult())]);
+    }
+
+    public function _getNodeAt(path:String, offset:Int):ZNode {
+        var context = getContext(path);
+        return context.rootNode.locateIndex(offset);
     }
 
     public function getReferencesAt(path:String, offset:Int):CompReferences {

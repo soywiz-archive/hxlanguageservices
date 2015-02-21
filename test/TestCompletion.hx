@@ -123,6 +123,12 @@ class TestCompletion extends HLSTestCase {
         assertProgramBody('class A { function chain() { return this; } function method() { this.chain().chain().###chain; } }', ['chain:Void -> A'], []);
     }
 
+    /*
+    public function testNew() {
+        assertProgramBody('class A { function test() { var a = new A(); ### } }', ['a:A'], []);
+    }
+    */
+
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
         assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Cant find member a in Array. Maybe type recursion?']);

@@ -315,8 +315,9 @@ class HaxeTypeBuilder {
     private function _processMethodBody(expr:ZNode, scope:LocalScope, func:FunctionHaxeType):LocalScope {
         if (!ZNode.isValid(expr)) return scope;
         
-        function doExpr(expr:ZNode):ExpressionResult {
-            return _processExprValue(expr, scope, func, new ProcessNodeContext());
+        function doExpr(expr:ZNode, ?context:ProcessNodeContext):ExpressionResult {
+            if (context == null) context = new ProcessNodeContext();
+            return _processExprValue(expr, scope, func, context);
         }
 
         function doBody(expr:ZNode, ?scope2:LocalScope):LocalScope {
@@ -327,10 +328,10 @@ class HaxeTypeBuilder {
         expr.completion = scope;
         //if (debug) trace(expr.node);
         switch (expr.node) {
-            case Node.NList(items): for (item in items) _processMethodBody(item, scope, func);
+            case Node.NList(items): for (item in items) doBody(item);
             case Node.NBlock(items):
                 var blockScope = new LocalScope(scope);
-                for (item in items) _processMethodBody(item, blockScope, func);
+                for (item in items) doBody(item, blockScope);
             case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
                 var localVariable = new HaxeLocalVariable(vname);
             
@@ -339,10 +340,18 @@ class HaxeTypeBuilder {
                 //trace('declared var: ' + vname);
                 scope.add(localVariable);
                 checkType(vtype);
+                var ntype:SpecificHaxeType = vtype != null ? getTypeNodeType2(vtype) : null;
                 localVariable.resultResolver = function(context) {
-                    return _processExprValue(vvalue, scope, func, context);
+                    if (ntype != null) return types.result(ntype);
+                    return doExpr(vvalue, context);
                 }
-                return _processMethodBody(vvalue, scope, func);
+                if (ntype != null && vvalue != null) {
+                    var exprType = doExpr(vvalue).type;
+                    if (!ntype.canAssign(exprType)) {
+                        error(vvalue.pos, 'Can\'t assign ${exprType} to ${ntype}');
+                    }
+                }
+                return doBody(vvalue);
             case Node.NId(name):
                 //trace('field: ' + name);
                 if (!ConstTools.isPredefinedConstant(name)) {
@@ -358,11 +367,22 @@ class HaxeTypeBuilder {
                     }
                 }
             case Node.NBinOp(left, op, right):
-                _processMethodBody(left, scope, func);
-                _processMethodBody(right, scope, func);
+                if (op == '=') {
+                    // @TODO: Check lvalue
+                    //checkLValue(left);
+                    var tleft = doExpr(left);
+                    var tright = doExpr(right);
+                    if (!tleft.type.canAssign(tright.type)) {
+                        error(expr.pos, 'Can\'t assign ${tright.type} to ${tleft.type}');
+                    }
+                } else {
+
+                }
+                doBody(left);
+                doBody(right);
             case Node.NConst(value):
             case Node.NCall(left, args):
-                _processMethodBody(left, scope, func);
+                doBody(left);
 
                 var znode = expr;
                 var lvalue = processExprValue(left, scope, func);
@@ -374,9 +394,7 @@ class HaxeTypeBuilder {
                     default: throw 'Invalid args: ' + args;
                 }
 
-                for (argnode in argnodes) {
-                    _processMethodBody(argnode, scope, func);
-                }
+                for (argnode in argnodes) doBody(argnode);
 
                 if (!Std.is(lvalue.type.type, FunctionHaxeType)) {
                     errors.add(new ParserError(znode.pos, 'Trying to call a non function expression'));
@@ -426,15 +444,15 @@ class HaxeTypeBuilder {
                     }
                 }
             case Node.NIf(condExpr, trueExpr, falseExpr):
-                _processMethodBody(condExpr, scope, func);
-                _processMethodBody(trueExpr, scope, func);
-                _processMethodBody(falseExpr, scope, func);
-                var econd = processExprValue(condExpr, scope, func);
+                doBody(condExpr);
+                doBody(trueExpr);
+                doBody(falseExpr);
+                var econd = doExpr(condExpr);
                 if (!types.specTypeBool.canAssign(econd.type)) {
                     errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + econd.type));
                 }
             case Node.NUnary(op, value):
-                _processMethodBody(value, scope, func);
+                doBody(value);
             case Node.NFieldAccess(_left, _id):
                 var left:ZNode = _left;
                 var id:ZNode = _id;
@@ -457,7 +475,7 @@ class HaxeTypeBuilder {
                     }
                 }
             case Node.NReturn(expr):
-                _processMethodBody(expr, scope, func);
+                doBody(expr);
                 if (func != null) func.returns.push(processExprValue(expr, scope, func));
             case Node.NArray(items) | Node.NList(items):
                 for (item in items) doBody(item);
@@ -465,14 +483,11 @@ class HaxeTypeBuilder {
                 doBody(left);
                 doBody(index);
             case Node.NStringSq(part):
-                _processMethodBody(part, scope, func);
+                doBody(part);
             case Node.NStringParts(parts):
-                for (part in parts) _processMethodBody(part, scope, func);
+                for (part in parts) doBody(part);
             case Node.NStringSqDollarPart(expr):
-                if (expr != null) {
-                    _processMethodBody(expr, scope, func);
-                } else {
-                }
+                if (expr != null) doBody(expr);
             case Node.NFor(_iteratorName, _iteratorExpr, _body):
                 var iteratorName:ZNode = _iteratorName;
                 var iteratorExpr:ZNode = _iteratorExpr;
@@ -480,7 +495,7 @@ class HaxeTypeBuilder {
                 var innerScope = new LocalScope(scope);
                 doBody(iteratorExpr);
                 var local = new HaxeLocalVariable(iteratorName, function(context:ProcessNodeContext) {
-                    return _processExprValue(iteratorExpr, scope, func, context).getArrayElement();
+                    return doExpr(iteratorExpr, context).getArrayElement();
                 });
                 local.getReferences().addNode(UsageType.Declaration, iteratorName);
                 innerScope.add(local);
@@ -495,6 +510,8 @@ class HaxeTypeBuilder {
                 //doBody(type);
             case Node.NArrayComprehension(expr):
                 doBody(expr);
+            case Node.NNew(id, call):
+                //doBody(call);
 
             default:
                 trace('TypeBuilder: Unimplemented body $expr');
@@ -523,6 +540,8 @@ class HaxeTypeBuilder {
             return _processExprValue(expr, scope, func, context);
         }
         switch (expr.node) {
+            case Node.NBlock(values):
+                return types.resultAnyDynamic;
             case Node.NId(name):
                 if (ConstTools.isPredefinedConstant(name)) {
                     switch (name) {
@@ -564,26 +583,27 @@ class HaxeTypeBuilder {
                     if (lv.hasValue && rv.hasValue) {
                         return ExpressionResult.withValue(lv.type, doOp(lv.value, rv.value));
                     }
-                    return ExpressionResult.withoutValue(types.specTypeInt);
+                    return types.result(types.specTypeInt);
                 }
 
                 switch (op) {
-                    case '==', '!=': return ExpressionResult.withoutValue(types.specTypeBool);
-                    case '...': return ExpressionResult.withoutValue(types.createArray(types.specTypeInt));
+                    case '==', '!=': return types.result(types.specTypeBool);
+                    case '...': return types.result(types.createArray(types.specTypeInt));
                     case '+': return operator(function(a, b) return a + b);
                     case '-': return operator(function(a, b) return a - b);
                     case '%': return operator(function(a, b) return a % b);
-                    case '/': return ExpressionResult.withoutValue(types.specTypeFloat);
+                    case '/': return types.result(types.specTypeFloat);
                     case '*': return operator(function(a, b) return a * b);
+                    case '=': return rv;
                     default: throw 'Unknown operator $op';
                 }
-                return ExpressionResult.withoutValue(types.specTypeDynamic);
+                return types.resultAnyDynamic;
             case Node.NStringSqDollarPart(expr):
                 return doExpr(expr);
             case Node.NArrayAccess(left, index):
                 var lresult = doExpr(left);
                 var iresult = doExpr(index);
-                return ExpressionResult.withoutValue(lresult.type.getArrayElement());
+                return types.result(lresult.type.getArrayElement());
             case Node.NStringParts(parts):
                 var value = '';
                 var hasValue = true;
@@ -595,7 +615,7 @@ class HaxeTypeBuilder {
                         hasValue = false;
                     }
                 }
-                return hasValue ? ExpressionResult.withValue(types.specTypeString, value) : ExpressionResult.withoutValue(types.specTypeString);
+                return hasValue ? types.resultValue(types.specTypeString, value) : types.result(types.specTypeString);
             case Node.NStringSq(parts):
                 return doExpr(parts);
             case Node.NCall(left, args):
@@ -603,7 +623,7 @@ class HaxeTypeBuilder {
                 if (Std.is(value.type.type, FunctionHaxeType)) {
                     return cast(value.type.type, FunctionHaxeType).getReturn();
                 }
-                return ExpressionResult.withoutValue(types.specTypeDynamic);
+                return types.resultAnyDynamic;
             case Node.NCast(expr, type):
                 var evalue = doExpr(expr);
                 var type2 = NodeTypeTools.getTypeDeclType(types, type);
@@ -613,6 +633,9 @@ class HaxeTypeBuilder {
                 return types.result(types.createArray(itResult.type));
             case Node.NFor(iteratorName, iteratorExpr, body):
                 return doExpr(body);
+            case Node.NNew(id, call):
+                var type = NodeTypeTools.getTypeDeclType(types, id);
+                return types.result(type);
             default:
                 //trace('TypeBuilder: Unimplemented processExprValue $expr');
                 errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented processExprValue $expr'));
@@ -675,8 +698,6 @@ class HaxeCompletion {
                 processMember(decl, modifiers, scope);
             case Node.NReturn(expr):
                 process(expr, scope);
-            case Node.NNew(id, call):
-                //process(call, scope);
             //case Node.NPackage()
             default:
                 trace('Unhandled completion (II) ${znode}');
@@ -693,35 +714,8 @@ class HaxeCompletion {
         private function _getNodeResult(znode:ZNode, context:ProcessNodeContext):ExpressionResult {
         //trace(znode);
         switch (znode.node) {
-            case Node.NBlock(values):
-                return ExpressionResult.withoutValue(types.specTypeDynamic);
             case Node.NWhile(cond, body):
                 return _getNodeResult(body, context);
-            case Node.NNew(id, call):
-                var type = NodeTypeTools.getTypeDeclType(types, id);
-                return ExpressionResult.withoutValue(type);
-            case Node.NFieldAccess(left, id):
-                if (left != null && id != null) {
-                    var lvalue = _getNodeResult(left, context);
-                    var sid = NodeTools.getId(id);
-                    var member = lvalue.type.type.getInheritedMemberByName(sid);
-                    if (member == null) return ExpressionResult.withoutValue(types.specTypeDynamic);
-                    return ExpressionResult.withoutValue(member.getType());
-                }
-                return ExpressionResult.withoutValue(types.specTypeDynamic);
-            case Node.NId(str):
-                if (ConstTools.isPredefinedConstant(str)) {
-                    switch (str) {
-                        case 'true': return ExpressionResult.withValue(types.specTypeBool, true);
-                        case 'false': return ExpressionResult.withValue(types.specTypeBool, false);
-                        case 'null': return ExpressionResult.withValue(types.specTypeDynamic, null);
-                        default: throw 'Invalid HaxeCompletion predefined constant';
-                    }
-                } else {
-                    var local = getEntryByName(str);
-                    if (local != null) return local.getResult(context);
-                    return ExpressionResult.withoutValue(types.specTypeDynamic);
-                }
             default:
                 throw new js.Error('Not implemented getNodeResult() $znode');
             //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));

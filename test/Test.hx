@@ -11,6 +11,7 @@ class Test {
         r.add(new TestReferences());
         r.add(new TestCompletion());
 		r.add(new TestGrammar());
+        r.add(new TestRenames());
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js

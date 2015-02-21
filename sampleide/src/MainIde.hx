@@ -177,7 +177,9 @@ class MainIde {
         var errorsOverlay = document.getElementById('errorsOverlay');
         var autocompletionOverlay = document.getElementById('autocompletionOverlay');
         var callinfoOverlay = document.getElementById('callinfoOverlay');
+        var currentNodeOverlay = document.getElementById('currentNodeOverlay');
         errorsOverlay.innerText = '';
+        currentNodeOverlay.innerText = '';
 
         function addError(e:CompError) {
             //trace(e);
@@ -204,6 +206,10 @@ class MainIde {
         var file = 'live.hx';
         try {
             // Completion
+
+            var curParent = services._getNodeAt(file, cursorIndex);
+
+            currentNodeOverlay.innerText = curParent.getAncestors(4).join('\n');
             var items = services.getCompletionAt(file, cursorIndex);
             if (items.items.length == 0) {
                 autocompletionOverlay.innerText = 'no autocompletion info';
