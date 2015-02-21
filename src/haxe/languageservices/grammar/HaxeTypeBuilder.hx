@@ -1,4 +1,7 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.error.QuickFixAction;
+import haxe.languageservices.error.QuickFix;
+import haxe.languageservices.error.QuickFix;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.type.HaxeThisElement;
@@ -57,8 +60,8 @@ class HaxeTypeBuilder {
         return null;
     }
     
-    private function error(pos:TextRange, text:String) {
-        errors.add(new ParserError(pos, text));
+    private function error(pos:TextRange, text:String, ?fixes:Array<QuickFix>) {
+        errors.add(new ParserError(pos, text, fixes));
     }
     
     private function checkPackage(nidList2:ZNode):Array<String> {
@@ -332,7 +335,8 @@ class HaxeTypeBuilder {
             case Node.NBlock(items):
                 var blockScope = new LocalScope(scope);
                 for (item in items) doBody(item, blockScope);
-            case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
+            case Node.NVar(vname, propertyInfo, _vtype, vvalue, doc):
+                var vtype:ZNode = _vtype;
                 var localVariable = new HaxeLocalVariable(vname);
             
                 localVariable.getReferences().addNode(UsageType.Declaration, vname);
@@ -348,7 +352,13 @@ class HaxeTypeBuilder {
                 if (ntype != null && vvalue != null) {
                     var exprType = doExpr(vvalue).type;
                     if (!ntype.canAssign(exprType)) {
-                        error(vvalue.pos, 'Can\'t assign ${exprType} to ${ntype}');
+                        error(vvalue.pos, 'Can\'t assign ${exprType} to ${ntype}', [
+                            new QuickFix('Change type', function() {
+                                return [
+                                    QuickFixAction.QFReplace(vtype.pos, exprType.toString())
+                                ];
+                            })
+                        ]);
                     }
                 }
                 return doBody(vvalue);

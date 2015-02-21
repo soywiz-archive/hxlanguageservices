@@ -1,5 +1,9 @@
 package;
 
+import haxe.languageservices.node.TextRange;
+import haxe.languageservices.error.QuickFixAction;
+import haxe.languageservices.error.QuickFix;
+import js.html.ButtonElement;
 import Ace;
 import Ace.Annotation;
 import Ace.Editor;
@@ -178,8 +182,10 @@ class MainIde {
         var autocompletionOverlay = document.getElementById('autocompletionOverlay');
         var callinfoOverlay = document.getElementById('callinfoOverlay');
         var currentNodeOverlay = document.getElementById('currentNodeOverlay');
+        var quickFixOverlay = document.getElementById('quickFixOverlay');
         errorsOverlay.innerText = '';
         currentNodeOverlay.innerText = '';
+        quickFixOverlay.innerText = '';
 
         function addError(e:CompError) {
             //trace(e);
@@ -191,6 +197,31 @@ class MainIde {
             annotations.push({
                 row: pos1.row, column: pos1.column,
                 text: e.text, type: 'error'
+            });
+            //quickFixOverlay
+            if (e.fixes != null) Lambda.foreach(e.fixes, function(fix:QuickFix) {
+                var fixButton:ButtonElement = cast document.createElement('button');
+                fixButton.textContent = fix.name;
+                fixButton.onclick = function(e) {
+                    var actions = fix.fixer();
+                    trace(actions);
+                    for (action in actions) {
+                        switch (action) {
+                            case QuickFixAction.QFReplace(_pos, _newtext):
+                                var pos:TextRange = _pos;
+                                var newtext:String = _newtext;
+                                
+                                editor.session.replace(
+                                    AceTools.createRangeIndices(editor, pos.min, pos.max),
+                                    newtext
+                                );
+                        }
+                        
+                    }
+                    //trace(actions);
+                }
+                quickFixOverlay.appendChild(fixButton);
+                return true;
             });
             errorsOverlay.innerText += '${e.pos}:${e.text}\n';
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
@@ -206,7 +237,6 @@ class MainIde {
         var file = 'live.hx';
         try {
             // Completion
-
             var curParent = services._getNodeAt(file, cursorIndex);
 
             currentNodeOverlay.innerText = curParent.getAncestors(4).join('\n');
@@ -249,7 +279,7 @@ class MainIde {
         } catch (e:Dynamic) {
             try { Browser.window.console.error(e.stack); } catch (e2:Dynamic) { }
             Browser.window.console.error(e);
-            addError(new CompError(new CompPosition(0, 0), '' + e));
+            addError(new CompError(new CompPosition(0, 0), '' + e, []));
         }
 
         for (reference in references) {

@@ -1,5 +1,6 @@
 package haxe.languageservices;
 
+import haxe.languageservices.error.QuickFix;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.grammar.GrammarResult;
@@ -49,7 +50,7 @@ class HaxeLanguageServices {
             js.Browser.window.console.error(e);
             #end
             //trace(e);
-            throw new CompError(new CompPosition(0, 0), 'unexpected error: $e');
+            throw new CompError(new CompPosition(0, 0), 'unexpected error: $e', []);
         }
     }
     
@@ -117,7 +118,7 @@ class HaxeLanguageServices {
 
     public function getErrors(path:String):Array<CompError> {
         var context:CompFileContext = getContext(path);
-        return [for (error in context.errors.errors) new CompError(conv.pos(error.pos), error.message)];
+        return [for (error in context.errors.errors) new CompError(conv.pos(error.pos), error.message, error.fixes)];
     }
 
     private function getContext(path:String):CompFileContext {
@@ -266,7 +267,12 @@ class CompPosition {
 class CompError {
     public var pos:CompPosition;
     public var text:String;
-    public function new(pos:CompPosition, text:String) { this.pos = pos; this.text = text; }
+    public var fixes:Array<QuickFix>;
+    public function new(pos:CompPosition, text:String, fixes:Array<QuickFix>) {
+        this.pos = pos;
+        this.text = text;
+        this.fixes = (fixes != null) ? fixes : [];
+    }
     public function toString() return '$pos:$text';
 }
 
