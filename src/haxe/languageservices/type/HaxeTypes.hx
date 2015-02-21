@@ -83,6 +83,7 @@ class HaxeTypes {
     }
     
     public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
+        if (arrayType.type.fqName == 'Array') return specTypeDynamic;
         if (arrayType == null || arrayType.parameters.length < 1) return specTypeDynamic;
         return arrayType.parameters[0];
     }
