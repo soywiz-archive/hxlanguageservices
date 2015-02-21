@@ -94,6 +94,7 @@ class MainIde {
                             result
                         );
                     }
+                    editor.focus();
                 }
             } else {
                 window.alert('nothing to rename!');
@@ -216,8 +217,8 @@ class MainIde {
                                     newtext
                                 );
                         }
-                        
                     }
+                    editor.focus();
                     //trace(actions);
                 }
                 quickFixOverlay.appendChild(fixButton);

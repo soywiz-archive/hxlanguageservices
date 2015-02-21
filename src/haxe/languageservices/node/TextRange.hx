@@ -14,6 +14,19 @@ class TextRange {
     public function toString() return '$min:$max';
     private function get_file():String return reader.file;
     private function get_text():String return reader.slice(min, max);
+    
+    public function startEmptyRange():TextRange {
+        return new TextRange(min, min, reader);
+    }
+
+    public function endEmptyRange():TextRange {
+        return new TextRange(max, max, reader);
+    }
+
+    public function displace(offset:Int):TextRange {
+        return new TextRange(min + offset, max + offset, reader);
+    }
+
     static public function createDummy() {
         return new TextRange(0, 0, new Reader(''));
     }

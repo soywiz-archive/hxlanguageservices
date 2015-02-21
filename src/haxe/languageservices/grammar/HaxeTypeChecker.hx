@@ -1,4 +1,8 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.MethodHaxeMember;
+import haxe.languageservices.node.TextRange;
+import haxe.languageservices.error.QuickFixAction;
+import haxe.languageservices.error.QuickFix;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.type.InterfaceHaxeType;
 import haxe.languageservices.type.ClassHaxeType;
@@ -7,6 +11,8 @@ import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.type.HaxeMember;
 import haxe.languageservices.type.HaxeType;
 import haxe.languageservices.node.ZNode;
+
+using StringTools;
 
 class HaxeTypeChecker {
     public var errors:HaxeErrors;
@@ -55,13 +61,45 @@ class HaxeTypeChecker {
         } 
 
         // Check implementing methods
+        var notImplementedMembers:Array<HaxeMember> = [];
         for (mem in expectedImplementingMembers) {
             if (!allMembers.exists(mem.name)) {
-                errors.add(new ParserError(type.pos, 'member ${mem.name} not implemented'));
+                notImplementedMembers.push(mem);
             }
             // @TODO: Check compatible signature
         }
-        
+
+        if (notImplementedMembers.length > 0) {
+            var notImplementedMembersNames = [for (mem in notImplementedMembers) mem.name];
+            errors.add(new ParserError(type.pos, 'members $notImplementedMembersNames not implemented', [
+                new QuickFix('Implement methods', function() {
+                    var outs = [];
+                    for (mem in notImplementedMembers) {
+                        if (Std.is(mem, MethodHaxeMember)) {
+                            var mmem:MethodHaxeMember = cast(mem, MethodHaxeMember);
+                            var func = mmem.func;
+                            var retval = func.getReturn();
+                            var rettypeString = retval.type.toString();
+                            var mods:String = mmem.modifiers.toString();
+                            var argstrl = [];
+                            for (arg in func.args) {
+                                var str = '';
+                                if (arg.opt) str += '?';
+                                str += arg.getName();
+                                if (arg.type != null) str += ':' + arg.type.toString();
+                                argstrl.push(str);
+                            }
+                            outs.push('$mods function ${mmem.name}(${argstrl.join(", ")}):${rettypeString} { throw "Not implemented ${mmem.name}"; }'.trim());
+                        } else {
+                        }
+                    }
+                    var that = type.node.pos.endEmptyRange().displace(-1);
+                    
+                    return [QuickFixAction.QFReplace(that, outs.join('\n') + "\n")];
+                })
+            ]));
+        }
+
         // Check extending methods
         for (_mem in thisMembers) {
             var mem:HaxeMember = _mem;

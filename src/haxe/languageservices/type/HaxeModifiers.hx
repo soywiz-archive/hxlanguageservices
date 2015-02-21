@@ -27,4 +27,14 @@ class HaxeModifiers {
             default: throw 'Invalid haxe modifier';
         }
     }
+
+    public function toString() {
+        var out = [];
+        if (isStatic) out.push('static');
+        if (isInline) out.push('inline');
+        if (isOverride) out.push('override');
+        if (isPublic) out.push('public');
+        if (isPrivate) out.push('private');
+        return out.join(' ');
+    }
 }

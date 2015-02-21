@@ -43,4 +43,13 @@ class TestRenames extends HLSTestCase {
             'class Test { function a() { var i:Int = "string"; } }'
         );
     }
+
+    public function testImplementInterface() {
+        assertQuickFix(
+            '[Implement methods:[QFReplace(26:26,function demo(a:Int):Int { throw "Not implemented demo"; }\nfunction demo2(a:Int):Int { throw "Not implemented demo2"; }\n)]]',
+            'class Test implements Z { } interface Z { function demo(a:Int):Int { } function demo2(a:Int):Int { } }'
+        );
+    }
+
+
 }

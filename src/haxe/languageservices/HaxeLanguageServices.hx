@@ -190,7 +190,7 @@ class CompFileContext {
         //trace('before:' + types.getAllTypes());
         for (type in builtTypes) {
             //trace('remove:' + type);
-            type.remove();
+            if (type != null) type.remove();
         }
         builtTypes = [];
         //trace('after:' + types.getAllTypes());

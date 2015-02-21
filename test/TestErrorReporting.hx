@@ -32,7 +32,7 @@ class TestErrorReporting extends HLSTestCase {
     public function testInterfaceImplementations() {
         assertProgramErrors('class A implements B { }', '[8:21:type B not defined]');
         assertProgramErrors('interface B {} class A implements B { }', '[]');
-        assertProgramErrors('interface B { function a() { } } class A implements B { }', '[33:57:member a not implemented]');
+        assertProgramErrors('interface B { function a() { } } class A implements B { }', '[33:57:members [a] not implemented]');
         assertProgramErrors('interface B { } class A implements B { function a() { } }', '[]');
     }
 

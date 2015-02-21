@@ -31,6 +31,7 @@ extern class Editor {
     public function setTheme(name:String):Void;
     public function setOptions(name:Options):Void;
     public function getSession():Session;
+    public function focus():Void;
 }
 
 extern class Commands {
