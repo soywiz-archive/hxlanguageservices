@@ -102,7 +102,7 @@ class Grammar<TNode> {
                 //rresult = new NNode(Position.combine(rresult.pos, result.pos), rresult.node);
                 return GrammarResult.RMatchedValue(simplify(rresult, t));
             } else {
-                var out = simplify(new GrammarNode(reader.createPos(start, reader.pos), rresult), t);
+                var out = new GrammarNode(reader.createPos(start, reader.pos), rresult);
                 if (Std.is(result, Array) && Std.is(out, GrammarNode)) {
                     for (item in cast(result, Array<Dynamic>)) {
                         if (Std.is(item, GrammarNode)) {
@@ -110,7 +110,7 @@ class Grammar<TNode> {
                         }
                     }
                 }
-                return GrammarResult.RMatchedValue(out);
+                return GrammarResult.RMatchedValue(simplify(out, t));
             }
         }
         switch (t) {

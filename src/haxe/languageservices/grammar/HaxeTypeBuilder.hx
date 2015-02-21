@@ -1,4 +1,5 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.type.HaxeThisElement;
 import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.node.Const;
@@ -100,7 +101,7 @@ class HaxeTypeBuilder {
                     }
                 }
             default:
-                throw 'Expected haxe file';
+                throw 'Expected haxe file but found $znode';
         }
         return builtTypes;
     }
@@ -329,15 +330,76 @@ class HaxeTypeBuilder {
                 _processMethodBody(right, scope, func);
             case Node.NConst(value):
             case Node.NCall(left, args):
-                //processMethodBody(left, scope);
-                if (args != null) {
-                    //switch (args) {
-                    //}
+                _processMethodBody(left, scope, func);
+
+                var znode = expr;
+                var lvalue = _processExprValue(left, scope, func);
+                var callPos = znode.pos;
+
+                var argnodes:Array<ZNode> = [];
+                if (args != null) switch (args.node) {
+                    case Node.NList(items): argnodes = items;
+                    default: throw 'Invalid args: ' + args;
                 }
-            case Node.NIf(cond, trueExpr, falseExpr):
-                _processMethodBody(cond, scope, func);
+
+                for (argnode in argnodes) {
+                    _processMethodBody(argnode, scope, func);
+                }
+
+                if (!Std.is(lvalue.type.type, FunctionHaxeType)) {
+                    errors.add(new ParserError(znode.pos, 'Trying to call a non function expression'));
+                } else {
+                    var f:FunctionHaxeType = Std.instance(lvalue.type.type, FunctionHaxeType);
+
+                    if (argnodes.length != f.args.length) {
+                        errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argnodes.length + ' arguments but required ' + f.args.length));
+                    }
+
+                    var start1 = left.pos.max + 1;
+
+                    var reader = znode.pos.reader;
+                    if (argnodes.length == 0) {
+                        var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
+                        argnode2.callInfo = new CallInfo(0, start1, argnode2.pos.min, argnode2, f);
+                    } else {
+                        var lastIndex = 0;
+                        var lastNode:ZNode = null;
+                        for (n in 0 ... argnodes.length) {
+                            var argnode = argnodes[n];
+                            var arg = f.args[n];
+                            if (argnode != null) {
+                                argnode.callInfo = new CallInfo(n, start1, argnode.pos.min, argnode, f);
+                                lastIndex = n;
+                                lastNode = argnode;
+                            }
+                            if (argnode != null && arg != null) {
+                                //var argResult = scope.getNodeResult(argnode);
+                                var argResult = _processExprValue(argnode, scope, func);
+                                var expectedArgType = arg.getSpecType(types);
+                                var callArgType = argResult.type;
+                                if (!expectedArgType.canAssign(callArgType)) {
+                                    errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
+                                }
+                            }
+                        }
+                        if (lastNode != null) {
+                            var extraIndex = lastIndex + 1;
+                            var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
+                            var extraNode = new ZNode(extraPos, null);
+                            extraNode.callInfo = new CallInfo(extraIndex, start1, extraPos.min, extraNode, f);
+                        }
+                    }
+                }
+            case Node.NIf(condExpr, trueExpr, falseExpr):
+                _processMethodBody(condExpr, scope, func);
                 _processMethodBody(trueExpr, scope, func);
                 _processMethodBody(falseExpr, scope, func);
+                var econd = _processExprValue(condExpr, scope, func);
+                if (!types.specTypeBool.canAssign(econd.type)) {
+                    errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + econd.type));
+                }
+            case Node.NUnary(op, value):
+                _processMethodBody(value, scope, func);
             case Node.NFieldAccess(left, id):
                 _processMethodBody(left, scope, func);
                 var expr2 = _processExprValue(left, scope, func);
@@ -346,9 +408,12 @@ class HaxeTypeBuilder {
                 //trace(left);
             case Node.NReturn(expr):
                 if (func != null) func.returns.push(_processExprValue(expr, scope, func));
+            case Node.NArray(items) | Node.NList(items):
+                for (item in items) _processMethodBody(item, scope, func);
             default:
-                //trace('TypeBuilder: Unimplemented body $expr');
-                //if (debug) errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+                trace('TypeBuilder: Unimplemented body $expr');
+                errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+                throw 'TypeBuilder: Unimplemented body $expr';
         }
         return scope;
     }
@@ -379,7 +444,7 @@ class HaxeTypeBuilder {
                     case Node.NList(items):
                         return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) _processExprValue(item, scope, func).type ])));
                     default:
-                        trace('TypeBuilder: Unimplemented body $expr');
+                        trace('TypeBuilder: Unimplemented body array.list $expr');
                 }
             case Node.NArrayAccess(left, index):
                 var lresult = _processExprValue(left, scope, func);
@@ -422,7 +487,7 @@ class HaxeTypeBuilder {
             default:
                 //trace('TypeBuilder: Unimplemented processExprValue $expr');
                 errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented processExprValue $expr'));
-                //throw 'Test';
+                throw 'TypeBuilder: Unimplemented processExprValue $expr';
         }
         return ExpressionResult.withoutValue(types.specTypeDynamic);
     }
@@ -448,35 +513,6 @@ class HaxeCompletion {
         var types = scope.types;
 
         switch (znode.node) {
-            case Node.NFile(items) | Node.NBlock(items): for (item in items) process(item, scope.createChild(item));
-            case Node.NList(items) | Node.NArray(items): for (item in items) process(item, scope);
-            case Node.NVar(name, propertyInfo, type, value, doc):
-                var local = new CompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
-                scope.addLocal(local);
-                local.getReferences().addNode(UsageType.Declaration, name);
-                process(value, scope);
-            case Node.NId(value):
-                switch (value) {
-                    case 'true', 'false', 'null':
-                    default:
-                        var local = scope.getEntryByName(value);
-                        if (local == null) {
-                            errors.add(new ParserError(znode.pos, 'Can\'t find local "$value"'));
-                        } else {
-                            local.getReferences().addNode(UsageType.Read, znode);
-                        }
-                }
-            case Node.NUnary(op, value):
-                process(value, scope);
-            case Node.NIf(condExpr, trueExpr, falseExpr):
-                var condType = scope.getNodeType(condExpr, new ProcessNodeContext());
-                if (!types.specTypeBool.canAssign(condType)) {
-                    errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + condType));
-                }
-                //trace(condType);
-                process(condExpr, scope);
-                process(trueExpr, scope);
-                process(falseExpr, scope);
             case Node.NFor(iteratorName, iteratorExpr, body):
                 var fullForScope = scope.createChild(znode);
                 var forScope = fullForScope.createChild(body);
@@ -493,75 +529,7 @@ class HaxeCompletion {
 
                 process(condExpr, scope);
                 process(body, scope);
-            case Node.NConst(_):
-            case Node.NCast(expr, type):
-                process(expr, scope);
-                //process(type, scope);
-            case Node.NCall(left, args):
-                var lvalue = scope.getNodeResult(left);
-                var callPos = znode.pos;
-                process(left, scope);
 
-                var argnodes:Array<ZNode> = [];
-                if (args != null) switch (args.node) {
-                    case Node.NList(items): argnodes = items;
-                    default: throw 'Invalid args: ' + args;
-                }
-
-                var argscopes = [];
-                for (argnode in argnodes) {
-                    var argscope = scope.createChild(argnode);
-                    argscopes.push(argscope);
-                    process(argnode, argscope);
-                }
-
-                if (!Std.is(lvalue.type.type, FunctionHaxeType)) {
-                    //trace(Type.getClassName(Type.getClass(lvalue.type)));
-                    errors.add(new ParserError(znode.pos, 'Trying to call a non function expression'));
-                } else {
-                    var f:FunctionHaxeType = Std.instance(lvalue.type.type, FunctionHaxeType);
-
-                    if (argnodes.length != f.args.length) {
-                        errors.add(new ParserError((args != null) ? args.pos : left.pos, 'Trying to call function with ' + argnodes.length + ' arguments but required ' + f.args.length));
-                    }
-
-                    var start1 = left.pos.max + 1;
-
-                    var reader = znode.pos.reader;
-                    if (argnodes.length == 0) {
-                        var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
-                        var argscope = scope.createChild(argnode2);
-                        argscope.callInfo = new CallInfo(0, start1, argnode2.pos.min, argnode2, f);
-                    } else {
-                        var lastIndex = 0;
-                        var lastNode:ZNode = null;
-                        for (n in 0 ... argnodes.length) {
-                            var argnode = argnodes[n];
-                            var argscope = argscopes[n];
-                            var arg = f.args[n];
-                            if (argscope != null && argnode != null) {
-                                argscope.callInfo = new CallInfo(n, start1, argnode.pos.min, argnode, f);
-                                lastIndex = n;
-                                lastNode = argnode;
-                            }
-                            if (argnode != null && arg != null) {
-                                var argResult = scope.getNodeResult(argnode);
-                                var expectedArgType = arg.getSpecType(types);
-                                var callArgType = argResult.type;
-                                if (!expectedArgType.canAssign(callArgType)) {
-                                    errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
-                                }
-                            }
-                        }
-                        if (lastNode != null) {
-                            var extraIndex = lastIndex + 1;
-                            var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
-                            var extraNode = new ZNode(extraPos, null);
-                            var extraScope = scope.createChild(extraNode);
-                            extraScope.callInfo = new CallInfo(extraIndex, start1, extraPos.min, extraNode, f);
-                        }
-                    }
-                }
             case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
@@ -708,8 +676,6 @@ class HaxeCompletion {
             case Node.NConst(Const.CInt(value)): return ExpressionResult.withValue(types.specTypeInt, value);
             case Node.NConst(Const.CFloat(value)): return ExpressionResult.withValue(types.specTypeFloat, value);
             case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
-            case Node.NIf(code, trueExpr, falseExpr):
-                return ExpressionResult.withoutValue(types.unify([_getNodeResult(trueExpr, context).type, _getNodeResult(falseExpr, context).type]));
             case Node.NFor(iteratorName, iteratorExpr, body):
                 return _getNodeResult(body, context);
             case Node.NWhile(cond, body):

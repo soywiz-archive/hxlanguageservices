@@ -218,14 +218,14 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString('NStringSq(NStringParts([NStringSqDollarPart(NId(a)@2:3)@1:3,NConst(CString( ))@3:4,NStringSqDollarPart(NId(b)@5:6)@4:6])@1:6)@0:7', hg.parseStringNode(hg.expr, "'$a $b'", 'program.hx'));
     }
     
-    private function processNode(node:ZNode):ZNode {
+    private function processNodeStm(node:ZNode):ZNode {
         var typeBuilder = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
-        typeBuilder.process(node);
+        typeBuilder.processMethodBody(node, new LocalScope());
         return node;
     }
 
     public function testCompletionLocateNode() {
-        var node:ZNode = processNode(hg.parseStringNode(hg.stm, 'if (test) demo else 2', 'program.hx'));
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'if (test) demo else 2', 'program.hx'));
         assertEqualsString(null, node.getIdentifierAt(0));
         assertEqualsString({ pos: '4:8', name: 'test' }, node.getIdentifierAt(5));
         assertEqualsString({ pos: '10:14', name: 'demo' }, node.getIdentifierAt(12));
@@ -233,7 +233,7 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testCompletionLocateNode2() {
-        var node:ZNode = processNode(hg.parseStringNode(hg.stm, 'var test = test;', 'program.hx'));
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'var test = test;', 'program.hx'));
         assertEqualsString({ pos: '4:8', name: 'test' }, node.getIdentifierAt(5));
         assertEqualsString({ pos: '11:15', name: 'test' }, node.getIdentifierAt(12));
         assertEqualsString('test', node.getIdentifierAt(12).pos.text);
@@ -243,7 +243,7 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testCompletionLocateNode3() {
-        var node:ZNode = processNode(hg.parseStringNode(hg.stm, 'for (it in [1,2,3]) var test = it;', 'program.hx'));
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'for (it in [1,2,3]) var test = it;', 'program.hx'));
         assertEqualsString({pos : '5:7', name : 'it'}, node.getIdentifierAt(6));
         assertEqualsString({pos : '31:33', name : 'it'}, node.getIdentifierAt(32));
         //assertEqualsString('', scope.getLocalAt(6));

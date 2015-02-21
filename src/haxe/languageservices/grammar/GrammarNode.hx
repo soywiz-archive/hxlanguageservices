@@ -54,8 +54,10 @@ class GrammarNode<T> {
     }
 
     public function getIdentifier():{ pos: TextRange, name: String } {
-        throw 'must implement!';
-        return null;
+        var text = pos.text;
+        if (~/\s/.match(text)) return null;
+        //throw 'must implement getIdentifier : ' + pos.text + '!';
+        return { pos : pos, name : text };
     }
 
     public function addChild(item:GrammarNode<T>) {
