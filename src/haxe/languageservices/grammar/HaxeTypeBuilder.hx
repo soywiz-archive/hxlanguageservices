@@ -1,4 +1,5 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.error.QuickFixAction;
 import haxe.languageservices.error.QuickFix;
 import haxe.languageservices.error.QuickFix;
@@ -315,6 +316,16 @@ class HaxeTypeBuilder {
         return _processMethodBody(expr, scope, func);
     }
     
+    private function generateCast(exprText:String, fromType:SpecificHaxeType, toType:SpecificHaxeType) {
+        switch ([fromType.toString(), toType.toString()]) {
+            case ['Float', 'Int']: return 'Std.int($exprText)';
+            case ['String', 'Int']: return 'Std.parseInt($exprText)';
+            case ['String', 'Float']: return 'Std.parseFloat($exprText)';
+            default:
+        }
+        return 'cast($exprText, ${toType.toString()})';
+    }
+    
     private function _processMethodBody(expr:ZNode, scope:LocalScope, func:FunctionHaxeType):LocalScope {
         if (!ZNode.isValid(expr)) return scope;
         
@@ -335,8 +346,9 @@ class HaxeTypeBuilder {
             case Node.NBlock(items):
                 var blockScope = new LocalScope(scope);
                 for (item in items) doBody(item, blockScope);
-            case Node.NVar(vname, propertyInfo, _vtype, vvalue, doc):
+            case Node.NVar(vname, propertyInfo, _vtype, _vvalue, doc):
                 var vtype:ZNode = _vtype;
+                var vvalue:ZNode = _vvalue;
                 var localVariable = new HaxeLocalVariable(vname);
             
                 localVariable.getReferences().addNode(UsageType.Declaration, vname);
@@ -350,6 +362,7 @@ class HaxeTypeBuilder {
                     return doExpr(vvalue, context);
                 }
                 if (ntype != null && vvalue != null) {
+                    var toType = ntype;
                     var exprType = doExpr(vvalue).type;
                     if (!ntype.canAssign(exprType)) {
                         error(vvalue.pos, 'Can\'t assign ${exprType} to ${ntype}', [
@@ -357,7 +370,10 @@ class HaxeTypeBuilder {
                                 return [QuickFixAction.QFReplace(vtype.pos, exprType.toString())];
                             }),
                             new QuickFix('Add cast', function() {
-                                return [QuickFixAction.QFReplace(vvalue.pos, 'cast(' + vvalue.pos.text + ', ' + vtype.pos.text + ')')];
+                                return [QuickFixAction.QFReplace(
+                                    vvalue.pos,
+                                    generateCast(vvalue.pos.text, exprType, toType)
+                                )];
                             })
                         ]);
                     }
@@ -377,14 +393,24 @@ class HaxeTypeBuilder {
                         id.getReferences().addNode(UsageType.Read, expr);
                     }
                 }
-            case Node.NBinOp(left, op, right):
+            case Node.NBinOp(_left, _op, _right):
+                var left:ZNode = _left;
+                var op:String = _op;
+                var right:ZNode = _right;
                 if (op == '=') {
                     // @TODO: Check lvalue
                     //checkLValue(left);
                     var tleft = doExpr(left);
                     var tright = doExpr(right);
                     if (!tleft.type.canAssign(tright.type)) {
-                        error(expr.pos, 'Can\'t assign ${tright.type} to ${tleft.type}');
+                        error(expr.pos, 'Can\'t assign ${tright.type} to ${tleft.type}', [
+                            new QuickFix('Add cast', function() {
+                                return [QuickFixAction.QFReplace(
+                                    right.pos,
+                                    generateCast(right.pos.text, tright.type, tleft.type)
+                                )];
+                            })
+                        ]);
                     }
                 } else {
 
