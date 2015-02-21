@@ -125,7 +125,7 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testAutocompletion() {
-        function assert(str:String, callback: ZNode -> CompletionProvider -> Void) {
+        function assert(str:String, callback: HaxeTypeBuilder -> ZNode -> CompletionProvider -> Void) {
             var types = new HaxeTypes();
             var completionIndex = str.indexOf('###');
             str = str.replace('###', '');
@@ -136,7 +136,7 @@ class TestGrammar extends HLSTestCase {
                     var node:ZNode = cast(value);
                     typeBuilder.processMethodBody(node, new LocalScope());
                     //var cc = completion.processCompletion(node);
-                    callback(node, node.locateIndex(completionIndex).getCompletion());
+                    callback(typeBuilder, node, node.locateIndex(completionIndex).getCompletion());
                 default:
                     trace(result);
                     trace(str);
@@ -145,21 +145,21 @@ class TestGrammar extends HLSTestCase {
 
         }
 
-        assert('{var z = 10;###}', function(node:ZNode, scope:CompletionProvider) {
+        assert('{var z = 10;###}', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionProvider) {
             assertEqualsString('[z]', [for (l in scope.getEntries()) l.getName()]);
             assertEqualsString('Int = 10', scope.getEntryByName('z').getResult());
         });
 
         /*
-        assert('{var z = 10; -z; z;###}', function(node:ZNode, scope:CompletionScope) {
+        assert('{var z = 10; -z; z;###}', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionScope) {
             var local = scope.getLocal('z');
             assertEqualsString('5:6', local.pos);
             assertEqualsString('[NId(z)@14:15,NId(z)@17:18]', local.usages);
         });
         */
 
-        assert('if (z) true else false', function(node:ZNode, scope:CompletionProvider) {
-            assertEqualsString('Bool', node.getResult());
+        assert('if (z) true else false', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionProvider) {
+            assertEqualsString('Bool', typeBuilder.processExprValue(node));
         });
     }
 
@@ -237,8 +237,8 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString({ pos: '4:8', name: 'test' }, node.getIdentifierAt(5));
         assertEqualsString({ pos: '11:15', name: 'test' }, node.getIdentifierAt(12));
         assertEqualsString('test', node.getIdentifierAt(12).pos.text);
-        assertEqualsString('test@4:8', node.getLocalAt(5));
-        assertEqualsString('test@4:8', node.getLocalAt(12));
+        assertEqualsString('Local(test:Dynamic)', node.getLocalAt(5));
+        assertEqualsString('Local(test:Dynamic)', node.getLocalAt(12));
         assertEqualsString('[test:Declaration@4:8,test:Read@11:15]', node.getLocalAt(5).getReferences().usages);
     }
 

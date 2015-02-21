@@ -350,8 +350,9 @@ class HaxeTypeBuilder {
                     expr.element = id;
                     //trace(id);
                     if (id == null) {
-                        trace('Not found id: ' + name + ' in ' + expr.pos.reader.str);
-                        trace(scope.getEntries());
+                        //trace('Not found id: ' + name + ' in ' + expr.pos.reader.str);
+                        //trace(scope.getEntries());
+                        error(expr.pos, 'Identifier $name not found');
                     } else {
                         id.getReferences().addNode(UsageType.Read, expr);
                     }
@@ -448,7 +449,12 @@ class HaxeTypeBuilder {
                 } else {
                     var idName:String = (id != null) ? id.pos.text : null;
                     id.completion = new TypeMembersCompletionProvider(lvalue.type.type);
-                    lvalue.type.type.getMember(idName).getReferences().addNode(UsageType.Read, id);
+                    var member = lvalue.type.type.getMember(idName);
+                    if (member != null) {
+                        member.getReferences().addNode(UsageType.Read, id);
+                    } else {
+                        error(id.pos, 'Cant find member $idName in ${lvalue.type.type}. Maybe type recursion?');
+                    }
                 }
             case Node.NReturn(expr):
                 _processMethodBody(expr, scope, func);
@@ -503,7 +509,7 @@ class HaxeTypeBuilder {
         if (context == null) context = new ProcessNodeContext();
         return _processExprValue(expr, scope, func, context);
     }
-
+    
     private function _processExprValue(expr:ZNode, scope:LocalScope, func:FunctionHaxeType, context:ProcessNodeContext):ExpressionResult {
         if (!ZNode.isValid(expr)) return ExpressionResult.withoutValue(types.specTypeDynamic);
         if (context.isExplored(expr)) {
@@ -536,6 +542,8 @@ class HaxeTypeBuilder {
                     default:
                         trace('Invalid array $expr');
                 }
+            case Node.NList(values):
+                return types.result(types.unify([for (value in values) doExpr(value).type]));
             case Node.NIf(cond, trueExpr, falseExpr):
                 var texp = doExpr(trueExpr);
                 var fexp = doExpr(falseExpr);
@@ -687,8 +695,6 @@ class HaxeCompletion {
         switch (znode.node) {
             case Node.NBlock(values):
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
-            case Node.NList(values):
-                return ExpressionResult.withoutValue(types.unify([for (value in values) _getNodeResult(value, context).type]));
             case Node.NWhile(cond, body):
                 return _getNodeResult(body, context);
             case Node.NNew(id, call):

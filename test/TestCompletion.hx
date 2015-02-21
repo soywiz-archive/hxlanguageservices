@@ -38,7 +38,7 @@ class TestCompletion extends HLSTestCase {
         if (callback != null) callback(services);
 
         if (errors != null) {
-            assertEquals('' + errors, '' + services.getErrors(live));
+            assertEquals('' + errors, '' + services.getErrors(live), p);
         } else {
             for (error in services.getErrors(live)) haxe.Log.trace(error, p);
         }
@@ -119,19 +119,17 @@ class TestCompletion extends HLSTestCase {
         );
     }
 
-    /*
     public function testChaining() {
-        assertProgramBody('class A { function method() { this.method().method().###; return this; } }', ['method:Void -> A'], []);
+        assertProgramBody('class A { function chain() { return this; } function method() { this.chain().chain().###chain; } }', ['chain:Void -> A'], []);
     }
 
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
-        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], []);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Cant find member a in Array. Maybe type recursion?']);
         assertProgramBody(
             'class A extends B { function a() { this.###; } } class B { function b() {} }',
             ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],
             '[39:39:expected identifier]'
         );
     }
-    */
 }

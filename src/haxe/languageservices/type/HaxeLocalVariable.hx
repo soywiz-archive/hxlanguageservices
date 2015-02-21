@@ -10,8 +10,8 @@ class HaxeLocalVariable extends HaxeNodeElement {
     }
 
     override public function toString():String {
-        //return 'Local(${getName()}:${getResult()})';
-        return 'Local(${getName()})';
+        return 'Local(${getName()}:${getResult()})';
+        //return 'Local(${getName()})';
     }
 
 }

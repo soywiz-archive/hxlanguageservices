@@ -20,7 +20,9 @@ class SpecificHaxeType {
     }
 
     public function access(name:String):SpecificHaxeType {
-        return type.getMember(name).getType();
+        var member = type.getMember(name);
+        if (member == null) return types.specTypeDynamic;
+        return member.getType();
     }
     
     public function toString() {

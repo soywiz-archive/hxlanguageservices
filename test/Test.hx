@@ -10,9 +10,7 @@ class Test {
         r.add(new TestCallInfo());
         r.add(new TestReferences());
         r.add(new TestCompletion());
-        /*
 		r.add(new TestGrammar());
-		*/
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js
