@@ -1,5 +1,7 @@
 package haxe.languageservices;
 
+import haxe.languageservices.util.StringUtils;
+import haxe.languageservices.type.HaxeDoc;
 import haxe.languageservices.error.QuickFix;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.completion.CallInfo;
@@ -137,7 +139,7 @@ class Conv {
     }
     
     public function func(f:FunctionHaxeType):CompFunction {
-        return new CompFunction(f.optBaseType.fqName, f.name, [for (a in f.args) funcArg(a)], funcRet(f.getReturn()), '');
+        return new CompFunction(f.optBaseType.fqName, f.name, [for (a in f.args) funcArg(a)], funcRet(f.getReturn()), f.doc);
     }
 
     public function toEntry(name:String, result:ExpressionResult):CompEntry {
@@ -318,9 +320,9 @@ class CompFunction {
     public var name:String;
     public var args:Array<CompArgument>;
     public var ret:CompReturn;
-    public var doc:String;
+    public var doc:HaxeDoc;
 
-    public function new(baseType:String, name:String, args:Array<CompArgument>, ret:CompReturn, doc:String) {
+    public function new(baseType:String, name:String, args:Array<CompArgument>, ret:CompReturn, doc:HaxeDoc) {
         this.baseType = baseType;
         this.name = name;
         this.args = args;
@@ -353,6 +355,7 @@ class CompCall {
 
 class HtmlTools {
     static public function escape(str:String) {
+        if (str == null) return '';
         str = new EReg('<', 'g').replace(str, '&lt;');
         str = new EReg('>', 'g').replace(str, '&gt;');
         str = new EReg('"', 'g').replace(str, '&quote;');
@@ -381,7 +384,13 @@ class HtmlTools {
     static public function callToHtml(f:CompCall) {
         var func = f.func;
         var currentIndex = f.argIndex;
-        return escape(func.name) + '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret);
+        
+        var lines = [];
+        lines.push(escape(func.name) + '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret));
+        lines.push(escape(f.func.doc.getParam(currentIndex).nameAndDesc()));
+        lines.push(escape(f.func.doc.heading));
+        lines = lines.filter(function(line) { return !StringUtils.empty(line); });
+        return lines.join('<br />');
     }
 }
 

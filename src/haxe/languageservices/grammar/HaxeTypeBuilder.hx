@@ -258,7 +258,8 @@ class HaxeTypeBuilder {
 
 
                 var method = new MethodHaxeMember(func);
-                method.doc = new HaxeDoc(NodeTools.getId(doc));
+                method.doc = func.doc = new HaxeDoc(NodeTools.getId(doc));
+
                 method.modifiers = mods;
                 method.scope = scope;
 

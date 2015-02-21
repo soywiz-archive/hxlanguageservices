@@ -12,6 +12,7 @@ class Test {
         r.add(new TestCompletion());
 		r.add(new TestGrammar());
         r.add(new TestRenames());
+        r.add(new TestDoc());
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js
