@@ -424,14 +424,6 @@ class HaxeTypeBuilder {
                 }
             case Node.NUnary(op, value):
                 _processMethodBody(value, scope, func);
-            /*
-            case Node.NFieldAccess(left, id):
-                _processMethodBody(left, scope, func);
-                var expr2 = _processExprValue(left, scope, func);
-                //expr2.type.type.membersByName
-                //trace(expr2);
-                //trace(left);
-            */
             case Node.NFieldAccess(_left, _id):
                 var left:ZNode = _left;
                 var id:ZNode = _id;
@@ -440,27 +432,20 @@ class HaxeTypeBuilder {
                 var lvalue = _processExprValue(left, scope, func);
                 id.completion = new TypeMembersCompletionProvider(lvalue.type.type);
                 lvalue.type.type.getMember(idName).getReferences().addNode(UsageType.Read, id);
-
-                /*
-                var tidnode = new ZNode(l.pos.reader.createPos(l.pos.max, (id != null) ? id.pos.max : l.pos.max + 1), null);
-                var cscope = scope.createChild(tidnode);
-                cscope.unlinkFromParent();
-
-                if (idName != null) {
-                    var member = lvalue.type.type.getInheritedMemberByName(idName);
-                    if (member != null) {
-                        member.getReferences().addNode(UsageType.Read, id);
-                    }
-                }
-
-                cscope.addProvider(new TypeMembersCompletionProvider(lvalue.type.type, HaxeMember.staticIsNotStatic));
-                */
-
             case Node.NReturn(expr):
                 _processMethodBody(expr, scope, func);
                 if (func != null) func.returns.push(_processExprValue(expr, scope, func));
             case Node.NArray(items) | Node.NList(items):
                 for (item in items) _processMethodBody(item, scope, func);
+            case Node.NStringSq(part):
+                _processMethodBody(part, scope, func);
+            case Node.NStringParts(parts):
+                for (part in parts) _processMethodBody(part, scope, func);
+            case Node.NStringSqDollarPart(expr):
+                if (expr != null) {
+                    _processMethodBody(expr, scope, func);
+                } else {
+                }
             default:
                 trace('TypeBuilder: Unimplemented body $expr');
                 errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
@@ -535,6 +520,22 @@ class HaxeTypeBuilder {
                     default: throw 'Unknown operator $op';
                 }
                 return ExpressionResult.withoutValue(types.specTypeDynamic);
+            case Node.NStringSqDollarPart(expr):
+                return _processExprValue(expr, scope, func);
+            case Node.NStringParts(parts):
+                var value = '';
+                var hasValue = true;
+                for (part in parts) {
+                    var result = _processExprValue(part, scope, func);
+                    if (result.hasValue) {
+                        value += result.value;
+                    } else {
+                        hasValue = false;
+                    }
+                }
+                return hasValue ? ExpressionResult.withValue(types.specTypeString, value) : ExpressionResult.withoutValue(types.specTypeString);
+            case Node.NStringSq(parts):
+                return _processExprValue(parts, scope, func);
             default:
                 //trace('TypeBuilder: Unimplemented processExprValue $expr');
                 errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented processExprValue $expr'));
@@ -611,15 +612,6 @@ class HaxeCompletion {
             case Node.NNew(id, call):
                 //process(call, scope);
             //case Node.NPackage()
-            case Node.NStringSq(parts):
-                process(parts, scope);
-            case Node.NStringParts(parts):
-                for (part in parts) process(part, scope);
-            case Node.NStringSqDollarPart(expr):
-                if (expr != null) {
-                    process(expr, scope);
-                } else {
-                }
             case Node.NArrayComprehension(expr):
                 process(expr, scope);
             default:
@@ -629,51 +621,6 @@ class HaxeCompletion {
                 //throw ;
         }
         return scope;
-    }
-
-    private function processMember(znode:ZNode, modifiers:ZNode, scope:CompletionScope):CompletionScope {
-        switch (znode.node) {
-            case Node.NVar(name, propertyInfo, type, value, doc):
-                var local = new CompletionEntry(scope, name.pos, type, value, NodeTools.getId(name));
-                scope.addLocal(local);
-                local.getReferences().addNode(UsageType.Declaration, name);
-                process(value, scope);
-
-            case Node.NFunction(name, typeParams, args, ret, expr, doc):
-                var funcScope = scope.createChild(znode);
-                var nameScope = scope.createChild(name);
-                //nameScope.addLocal();
-                var bodyScope = funcScope.createChild(expr);
-
-                if (scope.currentClass != null) {
-                    funcScope.addProvider(new TypeMembersCompletionProvider(scope.currentClass));
-                    bodyScope.addLocal(new CompletionEntryThis(scope, scope.currentClass));
-                    nameScope.addLocal(scope.currentClass.getInheritedMemberByName(NodeTools.getId(name)));
-                }
-
-                processFunctionArgs(args, funcScope, funcScope);
-
-                process(expr, bodyScope);
-            default:
-                errors.add(new ParserError(znode.pos, 'Unhandled completion (III) ${znode}'));
-        }
-        return scope;
-    }
-
-    private function processFunctionArgs(znode:ZNode, scope:CompletionScope, scope2:CompletionScope):Void {
-        if (znode == null || znode.node == null) return;
-        switch (znode.node) {
-            case Node.NList(items): for (item in items) processFunctionArgs(item, scope, scope2);
-            case Node.NFunctionArg(opt, name, type, value, doc):
-                //trace(type);
-                var e = new CompletionEntry(scope2, name.pos, type, value, NodeTools.getId(name));
-                //trace(e.getType(new ProcessNodeContext()));
-                scope.addLocal(e);
-                e.getReferences().addNode(UsageType.Declaration, name);
-            default:
-                throw 'Unhandled completion (I) $znode';
-                errors.add(new ParserError(znode.pos, 'Unhandled completion (I) $znode'));
-        }
     }
 }
 */
@@ -746,23 +693,6 @@ class HaxeCompletion {
                     if (local != null) return local.getResult(context);
                     return ExpressionResult.withoutValue(types.specTypeDynamic);
                 }
-            case Node.NStringSqDollarPart(expr):
-                return _getNodeResult(expr, context);
-            case Node.NStringParts(parts):
-                var value = '';
-                var hasValue = true;
-                for (part in parts) {
-                    var result = _getNodeResult(part, context);
-                    //trace(part + ' :: ' + result);
-                    if (result.hasValue) {
-                        value += result.value;
-                    } else {
-                        hasValue = false;
-                    }
-                }
-                return hasValue ? ExpressionResult.withValue(types.specTypeString, value) : ExpressionResult.withoutValue(types.specTypeString);
-            case Node.NStringSq(parts):
-                return _getNodeResult(parts, context);
             default:
                 throw new js.Error('Not implemented getNodeResult() $znode');
             //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));
