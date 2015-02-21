@@ -252,12 +252,49 @@ class TestGrammar extends HLSTestCase {
     public function testNewCompletion() {
         var node:ZNode = hg.parseStringNode(hg.stm, '{ var z = 7; { var m = z * z * 2; } }', 'program.hx');
         var htb = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
-        htb.debug = true;
         var cp = htb.processMethodBody(node, new LocalScope());
-        htb.complete();
         assertEqualsString('[z:Declaration@6:7,z:Read@23:24,z:Read@27:28]', node.locateIndex(16).getCompletion().getEntryByName('z').getReferences().usages);
-        //var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
-        //assertEqualsString({pos : '5:7', name : 'it'}, scope.getIdentifierAt(6));
-        //assertEqualsString({pos : '31:33', name : 'it'}, scope.getIdentifierAt(32));
+    }
+
+    public function testNewCompletion2() {
+        var node:ZNode = hg.parseStringNode(hg.stm, '{ var z = [1,2,3]; }', 'program.hx');
+        var htb = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
+        var cp = htb.processMethodBody(node, new LocalScope());
+        assertEqualsString('Array<Int>', node.locateIndex(5).getCompletion().getEntryByName('z').getResult());
+    }
+
+    public function testNewCompletion3() {
+        var str = '{ var z = true; if (z) { var m = 7; z = false; m.||| } else { z = true; } }';
+        var index = str.indexOf('|||');
+        var node:ZNode = hg.parseStringNode(hg.stm, str.replace('|||', ''), 'program.hx');
+        var htb = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
+        var cp = htb.processMethodBody(node, new LocalScope());
+
+        //trace(node.locateIndex(index));
+        //assertEqualsString('Local(m:Int = 7)', node.locateIndex(index));
+        assertEqualsString('Local(m:Int = 7)', node.locateIndex(29).getCompletion().getEntryByName('m'));
+        assertEqualsString('Bool = true', node.locateIndex(5).getCompletion().getEntryByName('z').getResult());
+    }
+    
+    private function doProgram(str:String):HaxeTypes {
+        var node:ZNode = hg.parseStringNode(hg.program, str, 'program.hx');
+        var htb = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
+        var cp = htb.process(node);
+        return htb.types;
+    }
+
+    public function testNewCompletion4() {
+        var types = doProgram('class Test { function test() { return 7; } }');
+        assertEqualsString('Int = 7', types.getClass('Test').getMethod('test').func.getReturn());
+    }
+    
+    public function testNewCompletion5() {
+        var types = doProgram('class Test { function test() { return 7; return 2; } }');
+        assertEqualsString('Int', types.getClass('Test').getMethod('test').func.getReturn());
+    }
+
+    public function testNewCompletion6() {
+        var types = doProgram('class Test { function test():Int { } }');
+        assertEqualsString('Int', types.getClass('Test').getMethod('test').func.getReturn());
     }
 }

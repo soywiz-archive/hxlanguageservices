@@ -1,4 +1,8 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.type.HaxeThisElement;
+import haxe.languageservices.type.SpecificHaxeType;
+import haxe.languageservices.completion.CompletionEntryThis;
+import haxe.languageservices.node.Const;
 import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.node.ConstTools;
@@ -95,7 +99,9 @@ class HaxeTypeBuilder {
                         if (Std.is(member, MethodHaxeMember)) {
                             var method:MethodHaxeMember = cast(member, MethodHaxeMember);
                             //trace(method);
-                            processMethodBody(method.func.body, new LocalScope(TypeMembersCompletionProvider.forType(type, !member.modifiers.isStatic, true)));
+                            var scope = new LocalScope(TypeMembersCompletionProvider.forType(type, !member.modifiers.isStatic, true));
+                            scope.add(new HaxeThisElement(type));
+                            _processMethodBody(method.func.body, scope, method.func);
                         }
                     }
                 }
@@ -282,25 +288,21 @@ class HaxeTypeBuilder {
     }
     
     public var debug = false;
-    
-    private var completionQueue:Array<Void -> Void> = [];
-    
-    public function complete() {
-        while (completionQueue.length > 0) {
-            var item = completionQueue.shift();
-            item();
-        }
-    }
 
-    public function processMethodBody(expr:ZNode, scope:LocalScope):LocalScope {
+    public function processMethodBody(expr:ZNode, scope:LocalScope, ?func:FunctionHaxeType):LocalScope {
+        //new FunctionHaxeType(types, );
+        return _processMethodBody(expr, scope, func);
+    }
+    
+    private function _processMethodBody(expr:ZNode, scope:LocalScope, func:FunctionHaxeType):LocalScope {
         if (!ZNode.isValid(expr)) return scope;
         expr.completion = scope;
         //if (debug) trace(expr.node);
         switch (expr.node) {
-            case Node.NList(items): for (item in items) processMethodBody(item, scope);
+            case Node.NList(items): for (item in items) _processMethodBody(item, scope, func);
             case Node.NBlock(items):
                 var blockScope = new LocalScope(scope);
-                for (item in items) processMethodBody(item, blockScope);
+                for (item in items) _processMethodBody(item, blockScope, func);
             case Node.NVar(vname, propertyInfo, vtype, vvalue, doc):
                 var localVariable = new HaxeLocalVariable(vname);
             
@@ -310,9 +312,9 @@ class HaxeTypeBuilder {
                 scope.add(localVariable);
                 checkType(vtype);
                 localVariable.resultResolver = function(context) {
-                    return processExprValue(vvalue, scope);
+                    return _processExprValue(vvalue, scope, func);
                 }
-                return processMethodBody(vvalue, scope);
+                return _processMethodBody(vvalue, scope, func);
             case Node.NId(name):
                 //trace('field: ' + name);
                 if (!ConstTools.isPredefinedConstant(name)) {
@@ -327,9 +329,27 @@ class HaxeTypeBuilder {
                     }
                 }
             case Node.NBinOp(left, op, right):
-                processMethodBody(left, scope);
-                processMethodBody(right, scope);
+                _processMethodBody(left, scope, func);
+                _processMethodBody(right, scope, func);
             case Node.NConst(value):
+            case Node.NCall(left, args):
+                //processMethodBody(left, scope);
+                if (args != null) {
+                    //switch (args) {
+                    //}
+                }
+            case Node.NIf(cond, trueExpr, falseExpr):
+                _processMethodBody(cond, scope, func);
+                _processMethodBody(trueExpr, scope, func);
+                _processMethodBody(falseExpr, scope, func);
+            case Node.NFieldAccess(left, id):
+                _processMethodBody(left, scope, func);
+                var expr2 = _processExprValue(left, scope, func);
+                //expr2.type.type.membersByName
+                //trace(expr2);
+                //trace(left);
+            case Node.NReturn(expr):
+                if (func != null) func.returns.push(_processExprValue(expr, scope, func));
             default:
                 //trace('TypeBuilder: Unimplemented body $expr');
                 //if (debug) errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
@@ -337,7 +357,12 @@ class HaxeTypeBuilder {
         return scope;
     }
 
-    public function processExprValue(expr:ZNode, scope:LocalScope):ExpressionResult {
+    public function processExprValue(expr:ZNode, ?scope:LocalScope, ?func:FunctionHaxeType):ExpressionResult {
+        if (scope == null) scope = new LocalScope();
+        return _processExprValue(expr, scope, func);
+    }
+
+    private function _processExprValue(expr:ZNode, scope:LocalScope, func:FunctionHaxeType):ExpressionResult {
         if (!ZNode.isValid(expr)) return ExpressionResult.withoutValue(types.specTypeDynamic);
         expr.completion = scope;
         switch (expr.node) {
@@ -353,12 +378,47 @@ class HaxeTypeBuilder {
                     var id = scope.getEntryByName(name);
                     if (id != null) return id.getResult();
                 }
-            case Node.NArray(items):
-                return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) processExprValue(item, scope).type ])));
+            case Node.NArray(pp):
+                switch (pp[0].node) {
+                    case Node.NList(items):
+                        return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) _processExprValue(item, scope, func).type ])));
+                    default:
+                        trace('TypeBuilder: Unimplemented body $expr');
+                }
             case Node.NUnary(op, value):
-                return processExprValue(value, scope);
+                return _processExprValue(value, scope, func);
+            case Node.NConst(Const.CInt(value)): return ExpressionResult.withValue(types.specTypeInt, value);
+            case Node.NConst(Const.CFloat(value)): return ExpressionResult.withValue(types.specTypeFloat, value);
+            case Node.NConst(Const.CString(value)): return ExpressionResult.withValue(types.specTypeString, value);
+            case Node.NFieldAccess(left, id):
+                var expr2 = _processExprValue(left, scope, func);
+                return ExpressionResult.withoutValue(expr2.type.access(NodeTools.getId(id)));
+            // @TODO: CompletionScope
+            case Node.NBinOp(left, op, right):
+                var lv = _processExprValue(left, scope, func);
+                var rv = _processExprValue(right, scope, func);
+
+                function operator(doOp: Dynamic -> Dynamic -> Dynamic) {
+                    if (lv.hasValue && rv.hasValue) {
+                        return ExpressionResult.withValue(lv.type, doOp(lv.value, rv.value));
+                    }
+                    return ExpressionResult.withoutValue(types.specTypeInt);
+                }
+
+                switch (op) {
+                    case '==', '!=': return ExpressionResult.withoutValue(types.specTypeBool);
+                    case '...': return ExpressionResult.withoutValue(types.createArray(types.specTypeInt));
+                    case '+': return operator(function(a, b) return a + b);
+                    case '-': return operator(function(a, b) return a - b);
+                    case '%': return operator(function(a, b) return a % b);
+                    case '/': return operator(function(a, b) return a / b);
+                    case '*': return operator(function(a, b) return a * b);
+                    default: throw 'Unknown operator $op';
+                }
+                return ExpressionResult.withoutValue(types.specTypeDynamic);
             default:
-                errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
+                //trace('TypeBuilder: Unimplemented processExprValue $expr');
+                errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented processExprValue $expr'));
                 //throw 'Test';
         }
         return ExpressionResult.withoutValue(types.specTypeDynamic);

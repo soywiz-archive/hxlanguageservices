@@ -10,6 +10,7 @@ class FunctionHaxeType extends HaxeType {
     //public var name:String;
     public var nameNode:ZNode;
     public var retval:FunctionRetval = new FunctionRetval('Dynamic', '');
+    public var returns:Array<ExpressionResult> = [];
 
     public function new(types:HaxeTypes, optBaseType:HaxeType, pos:TextRange, nameNode:ZNode, args:Array<FunctionArgument>, retval:FunctionRetval, body:ZNode = null) {
         super(types.rootPackage, pos, nameNode.pos.text);
@@ -19,6 +20,12 @@ class FunctionHaxeType extends HaxeType {
         this.nameNode = nameNode;
         this.retval = retval;
         this.body = body;
+    }
+    
+    public function getReturn():ExpressionResult {
+        if (retval == null || retval.fqName == 'Dynamic') return ExpressionResult.unify(returns);
+        //if (retval.getSpecType(types))
+        return ExpressionResult.withoutValue(retval.getSpecType(types));
     }
 
     override public function toString() return 'FunctionType(' + args.join(',') + '):' + retval;

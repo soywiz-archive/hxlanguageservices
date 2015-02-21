@@ -11,4 +11,9 @@ class HaxeLocalVariable extends HaxeNodeElement {
         if (context == null) context = new ProcessNodeContext();
         return resultResolver(context);
     }
+
+    override public function toString():String {
+        return 'Local(${getName()}:${getResult()})';
+    }
+
 }

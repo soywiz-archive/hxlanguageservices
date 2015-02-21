@@ -19,6 +19,18 @@ class ExpressionResult {
         return '$type';
     }
 
+    static public function unify(items:Array<ExpressionResult>):ExpressionResult {
+        if (items.length == 0) return null;
+        if (items.length == 1) return items[0];
+        return unify2(items[0], unify(items.slice(1)));
+    }
+
+    static public function unify2(a:ExpressionResult, b:ExpressionResult):ExpressionResult {
+        if (a.type == b.type && a.hasValue == b.hasValue && a.value == b.value) return a;
+        if (a.type == b.type) return withoutValue(a.type);
+        return withoutValue(a.type.type.types.unify([a.type, b.type]));
+    }
+
     static public function withoutValue(type:SpecificHaxeType):ExpressionResult return new ExpressionResult(type, false, null);
     static public function withValue(type:SpecificHaxeType, value:Dynamic):ExpressionResult return new ExpressionResult(type, true, value);
 }

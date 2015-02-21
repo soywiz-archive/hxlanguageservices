@@ -8,7 +8,7 @@ enum Node {
     NKeyword(value:String);
     NOp(value:String);
     NDoc(value:String);
-    NConst(value:Dynamic);
+    NConst(value:Const);
     NList(value:Array<ZNode>);
     NListDummy(value:Array<ZNode>);
     NIdList(value:Array<ZNode>);

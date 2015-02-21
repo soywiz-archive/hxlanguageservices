@@ -11,6 +11,10 @@ class SpecificHaxeType {
         this.parameters = parameters;
     }
     
+    public function access(name:String):SpecificHaxeType {
+        return type.getMember(name).getType();
+    }
+    
     public function toString() {
         var res = '$type';
         if (parameters.length > 0) {

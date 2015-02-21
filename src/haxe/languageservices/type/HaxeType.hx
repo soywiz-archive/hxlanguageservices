@@ -41,6 +41,7 @@ class HaxeType {
 
     public function existsMember(name:String):Bool return membersByName.exists(name);
     public function getMember(name:String):HaxeMember return membersByName[name];
+    public function getMethod(name:String):MethodHaxeMember return cast(membersByName[name], MethodHaxeMember);
     
     public function addMember(member:HaxeMember):Void {
         members.push(member);

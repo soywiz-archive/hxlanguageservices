@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.type.HaxeCompilerElement;
 import haxe.languageservices.completion.CompletionProvider;
 import haxe.languageservices.node.TextRange;
@@ -11,6 +12,7 @@ class GrammarNode<T> {
     public var parent:GrammarNode<T>;
     public var children:Array<GrammarNode<T>> = [];
     public var element:HaxeCompilerElement;
+    public var callInfo:CallInfo;
     
     public function new(pos:TextRange, node:T) { this.pos = pos; this.node = node; }
     
@@ -23,6 +25,12 @@ class GrammarNode<T> {
     public function getElement():HaxeCompilerElement {
         if (element != null) return element;
         if (parent != null) return parent.getElement();
+        return null;
+    }
+
+    public function getCallInfo():CallInfo {
+        if (callInfo != null) return callInfo;
+        if (parent != null) return parent.getCallInfo();
         return null;
     }
 
