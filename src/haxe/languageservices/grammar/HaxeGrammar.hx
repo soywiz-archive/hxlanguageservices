@@ -181,6 +181,18 @@ class HaxeGrammar extends Grammar<Node> {
         importDecl = seq(['import', sure(), fqName, ';'], buildNode('NImport'));
         usingDecl = seq(['using', sure(), fqName, ';'], buildNode('NUsing'));
         //expr.term
+
+        var typeList = opt(list(type, ',', 1, false, rlist));
+        var typeParamItem = any([
+            seq([identifier, ':', type], buildNode('NWrapper')),
+            seq([identifier, ':', '(', typeList, ')'], buildNode('NWrapper')),
+            identifier
+        ]);
+        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));
+
+        var optType = opt(seq([':', sure(), type], buildNode('NWrapper')));
+
+
         var ifStm = seq(['if', sure(), '(', expr, ')', stm, opt(seqi(['else', stm]))], buildNode('NIf'));
         var ifExpr = seq(['if', sure(), '(', expr, ')', expr, opt(seqi(['else', expr]))], buildNode('NIf'));
         var forStm = seq(['for', sure(), '(', identifier, 'in', expr, ')', stm], buildNode('NFor'));
@@ -192,21 +204,15 @@ class HaxeGrammar extends Grammar<Node> {
         var continueStm = seq(['continue', sure(), ';'], buildNode('NContinue'));
         var returnStm = seq(['return', sure(), opt(expr), ';'], buildNode('NReturn'));
         var blockStm = seq(['{', list2(stm, 0, rlist), '}'], buildNode2('NBlock'));
+        var catchStm2 = seq(['catch', sure(), '(', identifier, optType, ')', stm], buildNode('NCatch'));
+        var tryCatchStm = seq(['try', sure(), stm, list2(catchStm2, 1, rlist)], buildNode('NTryCatch'));
 
         var switchCaseStm = seq(['case', sure(), identifier, ':'], buildNode2('NCase'));
         var switchDefaultStm = seq(['default', sure(), ':'], buildNode2('NDefault'));
         var switchStm = seq(['switch', sure(), '(', expr, ')', '{', list2(any([switchCaseStm, switchDefaultStm, stm]), 0), '}'], buildNode2('NSwitch'));
         var parenExpr = seqi(['(', sure(), expr, ')']);
         var constant = any([ float, int, stringDqLit, stringSqLit, identifier ]);
-        var typeList = opt(list(type, ',', 1, false, rlist));
-        var typeParamItem = any([
-            seq([identifier, ':', type], buildNode('NWrapper')),
-            seq([identifier, ':', '(', typeList, ')'], buildNode('NWrapper')),
-            identifier
-        ]);
-        var typeParamDecl = seq(['<', sure(), list(typeParamItem, ',', 1, false, rlist), '>'], buildNode2('NTypeParams'));	
 
-        var optType = opt(seq([':', sure(), type], buildNode('NWrapper')));
         var reqType = seq([':', sure(), type], buildNode('NWrapper'));
 
         var typeName = seq([identifier, optType], buildNode('NIdWithType'));
@@ -269,6 +275,7 @@ class HaxeGrammar extends Grammar<Node> {
         setRef(stm, anyRecover([
             varStm,
             blockStm,
+            tryCatchStm,
             ifStm, switchStm,
             forStm,  whileStm,  doWhileStm, breakStm,  continueStm,
             returnStm,

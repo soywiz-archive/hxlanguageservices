@@ -25,6 +25,8 @@ enum Node {
     NWhile(cond:ZNode, body:ZNode);
     NDoWhile(body:ZNode, cond:ZNode);
     NSwitch(subject:ZNode, cases:ZNode);
+    NTryCatch(tryCode:ZNode, catches:ZNode);
+    NCatch(name:ZNode, type:ZNode, catchCode:ZNode);
 
     NCase(item:ZNode);
     NDefault();

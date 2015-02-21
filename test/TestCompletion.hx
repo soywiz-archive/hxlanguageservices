@@ -106,6 +106,11 @@ class TestCompletion extends HLSTestCase {
         //assertFuntionBody('var a = [for (n in 0...10) if (true) 1]; ###', ['a:Array<Dynamic>'], []);
     }
 
+    public function testTryCatch() {
+        assertFuntionBody('try { ### } catch (e:Int) { }', [], ['e:Int']);
+        assertFuntionBody('try { } catch (e:Int) { ### }', ['e:Int'], []);
+    }
+
     public function testStringInterpolation() {
         assertFuntionBody("var a = 1; var z = '$###a';", ['a:Int = 1'], []);
     }

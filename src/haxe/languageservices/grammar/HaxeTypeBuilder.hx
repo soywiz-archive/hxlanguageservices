@@ -549,7 +549,26 @@ class HaxeTypeBuilder {
                 doBody(expr);
             case Node.NNew(id, call):
                 //doBody(call);
-
+            case Node.NTryCatch(tryCode, catches):
+                doBody(tryCode);
+                doBody(catches);
+            case Node.NCatch(_name, _type, _code):
+                var name:ZNode = _name;
+                var type:ZNode = _type;
+                var code:ZNode = _code;
+                //doBody(name);
+                //doBody(type);
+                var catchScope = new LocalScope(scope);
+                var local = new HaxeLocalVariable(name, function(context) {
+                    return types.result(getTypeNodeType2(type));
+                });
+                if (type == null) {
+                    error(name.pos, 'Catch must specify type');
+                }
+                local.getReferences().addNode(UsageType.Declaration, name);
+                name.completion = catchScope;
+                catchScope.add(local);
+                doBody(code, catchScope);
             default:
                 trace('TypeBuilder: Unimplemented body $expr');
                 errors.add(new ParserError(expr.pos, 'TypeBuilder: Unimplemented body $expr'));
