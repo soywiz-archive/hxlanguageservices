@@ -361,6 +361,7 @@ class HaxeTypeBuilder {
                     if (argnodes.length == 0) {
                         var argnode2 = new ZNode(reader.createPos(left.pos.max + 1, callPos.max), null);
                         argnode2.callInfo = new CallInfo(0, start1, argnode2.pos.min, argnode2, f);
+                        znode.children.unshift(argnode2);
                     } else {
                         var lastIndex = 0;
                         var lastNode:ZNode = null;
@@ -387,6 +388,7 @@ class HaxeTypeBuilder {
                             var extraPos = reader.createPos(lastNode.pos.max, callPos.max);
                             var extraNode = new ZNode(extraPos, null);
                             extraNode.callInfo = new CallInfo(extraIndex, start1, extraPos.min, extraNode, f);
+                            znode.children.unshift(extraNode);
                         }
                     }
                 }

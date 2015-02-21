@@ -95,7 +95,7 @@ class HaxeLanguageServices {
      **/
     public function getCallInfoAt(path:String, offset:Int):CompCall {
         var context:CompFileContext = getContext(path);
-        var callInfo:CallInfo = context.rootNode.locateIndex(offset).getCallInfo();
+        var callInfo:CallInfo = context.rootNode.getCallInfoAt(offset);
         var call:CompCall = null;
         if (callInfo != null) {
             var f = callInfo.f;

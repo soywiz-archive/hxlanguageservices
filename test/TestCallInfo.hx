@@ -7,7 +7,7 @@ import haxe.PosInfos;
 using StringTools;
 
 class TestCallInfo extends HLSTestCase {
-    private function assertCallInfo(program:String, assert:String, ?p:PosInfos) {
+    private function assertCallInfo(assert:String, program:String, ?p:PosInfos) {
         var index = program.indexOf('###');
         program = program.replace('###', '');
         var hls = new HaxeLanguageServices(new MemoryVfs().set('live.hx', program));
@@ -16,36 +16,27 @@ class TestCallInfo extends HLSTestCase {
     }
 
     public function test1() {
-        assertCallInfo(
-            'class Test { function a(test:Int) { a(###1); } }',
-            '0:a(test:Int):Dynamic'
-        );
+        assertCallInfo('0:a(test:Int):Dynamic', 'class Test { function a(test:Int) { a(###1); } }');
+        assertCallInfo('1:a(test:Int, arg:Int):Dynamic', 'class Test { function a(test:Int, arg:Int) { a(1, ###2); } }');
+    }
 
-        assertCallInfo(
-            'class Test { function a(test:Int) { a(###); } }',
-            '0:a(test:Int):Dynamic'
-        );
+    public function test2() {
+        assertCallInfo('0:a(test:Int):Dynamic', 'class Test { function a(test:Int) { a(###); } }');
+        assertCallInfo('0:a(test:Int):Dynamic', 'class Test { function a(test:Int) { a( ### ); } }');
+        assertCallInfo('0:a(test:Int):Dynamic', 'class Test { function a(test:Int) { a( ###); } }');
+    }
 
-        assertCallInfo(
-            'class Test { function a(test:Int) { a( ### ); } }',
-            '0:a(test:Int):Dynamic'
-        );
+    public function test3() {
+        //assertCallInfo('0:a(test:Int, arg:Int):Dynamic', 'class Test { function a(test:Int, arg:Int) { a(1###, ); } }');
+        assertCallInfo('1:a(test:Int, arg:Int):Dynamic', 'class Test { function a(test:Int, arg:Int) { a(1, ###); } }');
+    }
 
-        assertCallInfo(
-            'class Test { function a(test:Int, arg:Int) { a(1, ###2); } }',
-            '1:a(test:Int, arg:Int):Dynamic'
-        );
-
-        assertCallInfo(
-            'class Test { function a(test:Int, arg:Int) { a(1, ###); } }',
-            '1:a(test:Int, arg:Int):Dynamic'
-        );
-
-        /*
+/*
+    public function test3() {
         assertCallInfo(
             'class Test { function a(test:Int, arg:Int) { a(1,### 2); } }',
             '1:(test:Int, arg:Int):Dynamic'
         );
-        */
     }
+*/
 }

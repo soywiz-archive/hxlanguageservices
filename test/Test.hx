@@ -6,12 +6,12 @@ class Test {
 		r.add(new TestProject());
 		r.add(new TestHaxeSdk());
         r.add(new TestErrorReporting());
+        r.add(new TestIndentWriter());
+        r.add(new TestCallInfo());
         /*
 		r.add(new TestCompletion());
 		r.add(new TestGrammar());
-		r.add(new TestIndentWriter());
 		r.add(new TestReferences());
-		r.add(new TestCallInfo());
 		*/
 		var result = r.run();
 		var code = result ? 0 : -1;

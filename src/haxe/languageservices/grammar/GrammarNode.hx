@@ -34,6 +34,8 @@ class GrammarNode<T> {
     }
 
     public function getCallInfo():CallInfo {
+        //trace(this);
+        //trace(children);
         if (callInfo != null) return callInfo;
         if (parent != null) return parent.getCallInfo();
         return null;
@@ -43,6 +45,11 @@ class GrammarNode<T> {
         var id = getIdentifier();
         var completion = getCompletion();
         return (id != null && completion != null) ? completion.getEntryByName(id.name) : null;
+    }
+
+    public function getCallInfoAt(index:Int):CallInfo {
+        //trace('getCallInfoAt($index)');
+        return locateIndex(index).getCallInfo();
     }
 
     public function getIdentifierAt(index:Int):{ pos: TextRange, name: String } {
