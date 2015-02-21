@@ -1,5 +1,6 @@
 package haxe.languageservices.grammar;
 
+import haxe.languageservices.type.ExpressionResult;
 import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.type.HaxeCompilerElement;
 import haxe.languageservices.completion.CompletionProvider;
@@ -21,6 +22,10 @@ class GrammarNode<T> {
         if (parent != null) return parent.getCompletion();
         return null;
     }
+    
+    public function getResult():ExpressionResult {
+        return null;
+    }
 
     public function getElement():HaxeCompilerElement {
         if (element != null) return element;
@@ -29,9 +34,37 @@ class GrammarNode<T> {
     }
 
     public function getCallInfo():CallInfo {
+        //trace(this);
+        //trace(children);
         if (callInfo != null) return callInfo;
         if (parent != null) return parent.getCallInfo();
         return null;
+    }
+
+    public function getLocal():HaxeCompilerElement {
+        var id = getIdentifier();
+        var completion = getCompletion();
+        return (id != null && completion != null) ? completion.getEntryByName(id.name) : null;
+    }
+
+    public function getCallInfoAt(index:Int):CallInfo {
+        //trace('getCallInfoAt($index)');
+        return locateIndex(index).getCallInfo();
+    }
+
+    public function getIdentifierAt(index:Int):{ pos: TextRange, name: String } {
+        return locateIndex(index).getIdentifier();
+    }
+
+    public function getLocalAt(index:Int):HaxeCompilerElement {
+        return locateIndex(index).getLocal();
+    }
+
+    public function getIdentifier():{ pos: TextRange, name: String } {
+        var text = pos.text;
+        if (!~/^\w+$/.match(text)) return null;
+        //throw 'must implement getIdentifier : ' + pos.text + '!';
+        return { pos : pos, name : text };
     }
 
     public function addChild(item:GrammarNode<T>) {

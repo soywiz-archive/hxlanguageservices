@@ -38,7 +38,7 @@ class TestCompletion extends HLSTestCase {
         if (callback != null) callback(services);
 
         if (errors != null) {
-            assertEquals('' + errors, '' + services.getErrors(live));
+            assertEquals('' + errors, '' + services.getErrors(live), p);
         } else {
             for (error in services.getErrors(live)) haxe.Log.trace(error, p);
         }
@@ -55,17 +55,18 @@ class TestCompletion extends HLSTestCase {
         assertFuntionBody('var a = [1,2,3]; ###', ['a:Array<Int>'], []);
         assertFuntionBody('var a = []; ###', ['a:Array<Dynamic>'], []);
         assertFuntionBody('var a = [false]; ###', ['a:Array<Bool>'], []);
-        assertFuntionBody('for (a in []) ### a;', ['a:Dynamic'], []);
+        assertFuntionBody('for (a in []) { ###a; }', ['a:Dynamic'], []);
         assertFuntionBody('for (a in []) a; ###', [], ['a']);
         assertFuntionBody('var a = 10; { var a = false; ### }', ['a:Bool = false'], []);
         assertFuntionBody('var a = 10; { var a = false; } ###', ['a:Int = 10'], []);
-        assertFuntionBody('for (a in [1, 2, 3]) ### a;', ['a:Int'], []);
-        assertFuntionBody('for (a in [false, true, false]) ### a;', ['a:Bool'], []);
+        assertFuntionBody('for (a in [1, 2, 3]) { ### a; }', ['a:Int'], []);
+        assertFuntionBody('for (a in [false, true, false]) { ### a; }', ['a:Bool'], []);
         assertFuntionBody('var a = false; for (a in [1, 2, 3]) a; ###', ['a:Bool = false'], []);
         assertFuntionBody('var a = "test"; ###', ['a:String = "test"'], []);
     }
 
-    public function test2() {
+
+    public function testInfiniteLoop() {
         assertFuntionBody('var a = a; ###', ['a:Dynamic'], []);
     }
 
@@ -105,26 +106,30 @@ class TestCompletion extends HLSTestCase {
         //assertFuntionBody('var a = [for (n in 0...10) if (true) 1]; ###', ['a:Array<Dynamic>'], []);
     }
 
-    public function testFieldAccessCompletion() {
-        assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
-        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], []);
-        assertProgramBody(
-            'class A extends B { function a() { this.###; } } class B { function b() {} }',
-            ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],
-            '[39:39:expected identifier]'
-        );
-    }
-
     public function testStringInterpolation() {
         assertFuntionBody("var a = 1; var z = '$###a';", ['a:Int = 1'], []);
     }
 
     public function testComments() {
         assertProgramBody(
-            'class Test { /** MemberDoc */ function funcname() { ### } }', [], [], [],
+            'class Test { /** MemberDoc *'+'/ function funcname() { ### } }', [], [], [],
             function(services:HaxeLanguageServices) {
                 assertEqualsString('MemberDoc', services.getTypeMembers('Test')[0].doc);
             }
+        );
+    }
+
+    public function testChaining() {
+        assertProgramBody('class A { function chain() { return this; } function method() { this.chain().chain().###chain; } }', ['chain:Void -> A'], []);
+    }
+
+    public function testFieldAccessCompletion() {
+        assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Cant find member a in Array. Maybe type recursion?']);
+        assertProgramBody(
+            'class A extends B { function a() { this.###; } } class B { function b() {} }',
+            ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],
+            '[39:39:expected identifier]'
         );
     }
 }

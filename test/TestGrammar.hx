@@ -1,17 +1,16 @@
 package ;
+import haxe.languageservices.completion.CompletionProvider;
+import haxe.Json;
 import haxe.languageservices.completion.LocalScope;
 import haxe.languageservices.grammar.GrammarTerm;
 import haxe.languageservices.grammar.GrammarResult;
-import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.node.NodeTools;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.type.HaxeTypes;
-import haxe.languageservices.grammar.HaxeCompletion;
-import haxe.languageservices.grammar.HaxeTypeChecker;
-import haxe.Json;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
+import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.PosInfos;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.Grammar;
@@ -126,18 +125,18 @@ class TestGrammar extends HLSTestCase {
     }
 
     public function testAutocompletion() {
-        function assert(str:String, callback: ZNode -> CompletionScope -> Void) {
+        function assert(str:String, callback: HaxeTypeBuilder -> ZNode -> CompletionProvider -> Void) {
             var types = new HaxeTypes();
             var completionIndex = str.indexOf('###');
             str = str.replace('###', '');
             var result = hg.parseString(hg.stm, str, 'program.hx');
-            var completion = new HaxeCompletion(types);
             switch (result) {
                 case GrammarResult.RMatchedValue(value):
+                    var typeBuilder = new HaxeTypeBuilder(types, new HaxeErrors());
                     var node:ZNode = cast(value);
-                    var cc = completion.processCompletion(node);
-                    var scope = cc.locateIndex(completionIndex);
-                    callback(node, scope);
+                    typeBuilder.processMethodBody(node, new LocalScope());
+                    //var cc = completion.processCompletion(node);
+                    callback(typeBuilder, node, node.locateIndex(completionIndex).getCompletion());
                 default:
                     trace(result);
                     trace(str);
@@ -146,21 +145,21 @@ class TestGrammar extends HLSTestCase {
 
         }
 
-        assert('{var z = 10;###}', function(node:ZNode, scope:CompletionScope) {
+        assert('{var z = 10;###}', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionProvider) {
             assertEqualsString('[z]', [for (l in scope.getEntries()) l.getName()]);
             assertEqualsString('Int = 10', scope.getEntryByName('z').getResult());
         });
 
         /*
-        assert('{var z = 10; -z; z;###}', function(node:ZNode, scope:CompletionScope) {
+        assert('{var z = 10; -z; z;###}', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionScope) {
             var local = scope.getLocal('z');
             assertEqualsString('5:6', local.pos);
             assertEqualsString('[NId(z)@14:15,NId(z)@17:18]', local.usages);
         });
         */
 
-        assert('if (z) true else false', function(node:ZNode, scope:CompletionScope) {
-            assertEqualsString('Bool', scope.getNodeType(node));
+        assert('if (z) true else false', function(typeBuilder:HaxeTypeBuilder, node:ZNode, scope:CompletionProvider) {
+            assertEqualsString('Bool', typeBuilder.processExprValue(node));
         });
     }
 
@@ -218,33 +217,35 @@ class TestGrammar extends HLSTestCase {
         assertEqualsString('NStringSq(NStringParts([NConst(CString(hello ))@1:7,NStringSqDollarPart(NBinOp(NConst(CInt(1))@9:10,+,NConst(CInt(2))@13:14)@9:14)@7:15])@1:15)@0:16', hg.parseStringNode(hg.expr, "'hello ${1 + 2}'", 'program.hx'));
         assertEqualsString('NStringSq(NStringParts([NStringSqDollarPart(NId(a)@2:3)@1:3,NConst(CString( ))@3:4,NStringSqDollarPart(NId(b)@5:6)@4:6])@1:6)@0:7', hg.parseStringNode(hg.expr, "'$a $b'", 'program.hx'));
     }
+    
+    private function processNodeStm(node:ZNode):ZNode {
+        var typeBuilder = new HaxeTypeBuilder(new HaxeTypes(), new HaxeErrors());
+        typeBuilder.processMethodBody(node, new LocalScope());
+        return node;
+    }
 
     public function testCompletionLocateNode() {
-        var node:ZNode = hg.parseStringNode(hg.stm, 'if (test) demo else 2', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
-        assertEqualsString(null, scope.getIdentifierAt(0));
-        assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
-        assertEqualsString({ pos: '10:14', name: 'demo' }, scope.getIdentifierAt(12));
-        assertEqualsString(null, scope.getLocalAt(5));
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'if (test) demo else 2', 'program.hx'));
+        assertEqualsString(null, node.getIdentifierAt(0));
+        assertEqualsString({ pos: '4:8', name: 'test' }, node.getIdentifierAt(5));
+        assertEqualsString({ pos: '10:14', name: 'demo' }, node.getIdentifierAt(12));
+        assertEqualsString(null, node.getLocalAt(12));
     }
 
     public function testCompletionLocateNode2() {
-        var node:ZNode = hg.parseStringNode(hg.stm, 'var test = test;', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
-        assertEqualsString(null, scope.getIdentifierAt(0));
-        assertEqualsString({ pos: '4:8', name: 'test' }, scope.getIdentifierAt(5));
-        assertEqualsString({ pos: '11:15', name: 'test' }, scope.getIdentifierAt(12));
-        assertEqualsString('test', scope.getIdentifierAt(12).pos.text);
-        assertEqualsString('test@4:8', scope.getLocalAt(5));
-        assertEqualsString('test@4:8', scope.getLocalAt(12));
-        assertEqualsString('[test:Declaration@4:8,test:Read@11:15]', scope.getLocalAt(5).getReferences().usages);
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'var test = test;', 'program.hx'));
+        assertEqualsString({ pos: '4:8', name: 'test' }, node.getIdentifierAt(5));
+        assertEqualsString({ pos: '11:15', name: 'test' }, node.getIdentifierAt(12));
+        assertEqualsString('test', node.getIdentifierAt(12).pos.text);
+        assertEqualsString('Local(test:Dynamic)', node.getLocalAt(5));
+        assertEqualsString('Local(test:Dynamic)', node.getLocalAt(12));
+        assertEqualsString('[test:Declaration@4:8,test:Read@11:15]', node.getLocalAt(5).getReferences().usages);
     }
 
     public function testCompletionLocateNode3() {
-        var node:ZNode = hg.parseStringNode(hg.stm, 'for (it in [1,2,3]) var test = it;', 'program.hx');
-        var scope = new HaxeCompletion(new HaxeTypes()).processCompletion(node);
-        assertEqualsString({pos : '5:7', name : 'it'}, scope.getIdentifierAt(6));
-        assertEqualsString({pos : '31:33', name : 'it'}, scope.getIdentifierAt(32));
+        var node:ZNode = processNodeStm(hg.parseStringNode(hg.stm, 'for (it in [1,2,3]) var test = it;', 'program.hx'));
+        assertEqualsString({pos : '5:7', name : 'it'}, node.getIdentifierAt(6));
+        assertEqualsString({pos : '31:33', name : 'it'}, node.getIdentifierAt(32));
         //assertEqualsString('', scope.getLocalAt(6));
         //assertEqualsString('', scope.getLocalAt(32));
     }

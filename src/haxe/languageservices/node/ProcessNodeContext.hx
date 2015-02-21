@@ -6,6 +6,7 @@ class ProcessNodeContext {
     public function new() { }
 
     public function isExplored(node:ZNode):Bool {
+        if (node == null) return false;
         return nodes.exists(node);
     }
 
@@ -14,6 +15,7 @@ class ProcessNodeContext {
     }
 
     public function markExplored(node:ZNode) {
+        if (node == null) return;
         nodes[node] = true;
     }
 }

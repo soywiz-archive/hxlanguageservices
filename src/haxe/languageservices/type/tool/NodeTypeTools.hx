@@ -6,11 +6,6 @@ import haxe.languageservices.type.HaxeTypes;
 import haxe.languageservices.node.ZNode;
 
 class NodeTypeTools {
-    static public function getFunctionBodyReturnType(types:HaxeTypes, body:ZNode):SpecificHaxeType {
-        throw 'Not implemented';
-        return null;
-    }
-
     static public function getTypeDeclType(types:HaxeTypes, typeDecl:ZNode):SpecificHaxeType {
         if (ZNode.isValid(typeDecl)) switch (typeDecl.node) {
             case Node.NList(items):
@@ -24,10 +19,5 @@ class NodeTypeTools {
             default: throw 'Invalid $typeDecl';
         }
         return types.specTypeDynamic;
-    }
-
-    static public function getExprResult(types:HaxeTypes, typeDecl:ZNode):ExpressionResult {
-        throw 'Not implemented';
-        return null;
     }
 }

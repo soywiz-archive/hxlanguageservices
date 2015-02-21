@@ -5,12 +5,12 @@ class Test {
 		var r = new haxe.unit.TestRunner();
 		r.add(new TestProject());
 		r.add(new TestHaxeSdk());
-		r.add(new TestCompletion());
-		r.add(new TestErrorReporting());
+        r.add(new TestErrorReporting());
+        r.add(new TestIndentWriter());
+        r.add(new TestCallInfo());
+        r.add(new TestReferences());
+        r.add(new TestCompletion());
 		r.add(new TestGrammar());
-		r.add(new TestIndentWriter());
-		r.add(new TestReferences());
-		r.add(new TestCallInfo());
 		var result = r.run();
 		var code = result ? 0 : -1;
 		#if js

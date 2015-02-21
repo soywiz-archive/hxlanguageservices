@@ -1,9 +1,8 @@
 package haxe.languageservices;
 
+import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.grammar.GrammarResult;
-import haxe.languageservices.completion.CompletionScope;
 import haxe.languageservices.type.HaxeMember;
-import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.UsageType;
 import haxe.languageservices.type.ExpressionResult;
@@ -15,7 +14,6 @@ import haxe.languageservices.node.ZNode;
 import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.grammar.HaxeTypeChecker;
 import haxe.languageservices.grammar.HaxeTypeBuilder;
-import haxe.languageservices.grammar.HaxeCompletion;
 import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.grammar.HaxeGrammar;
 import haxe.languageservices.grammar.GrammarTerm;
@@ -68,8 +66,8 @@ class HaxeLanguageServices {
      **/
     public function getCompletionAt(path:String, offset:Int):CompList {
         var context = getContext(path);
-        if (context.completionScope == null) return new CompList([]);
-        var scope2 = context.completionScope.locateIndex(offset);
+        
+        var scope2 = context.rootNode.locateIndex(offset).getCompletion();
         if (scope2 == null) return new CompList([]);
         var locals = scope2.getEntries();
         return new CompList([for (l in locals) conv.toEntry(l.getName(), l.getResult())]);
@@ -79,20 +77,20 @@ class HaxeLanguageServices {
         var context = getContext(path);
         var id = getIdAt(path, offset);
         if (id == null) return null;
-        var entry = context.completionScope.locateIndex(offset).getEntryByName(id.name);
+        var node = context.rootNode.locateIndex(offset);
+        if (node == null) return null;
+        var completion = node.getCompletion();
+        if (completion == null) return null;
+        var entry = completion.getEntryByName(id.name);
         if (entry == null) return null;
         return new CompReferences(id.name, [for (usage in entry.getReferences().usages) new CompReference(conv.pos(usage.pos), conv.usageType(usage.type)) ]);
     }
     
-    public function getIdAt(path:String, offset:Int):{ pos: CompPosition, name: String } {
+    public function getIdAt(path:String, offset:Int):CompRange {
         var context = getContext(path);
-        if (context.completionScope == null) return null;
-        var id = context.completionScope.getIdentifierAt(offset);
+        var id = context.rootNode.locateIndex(offset).getIdentifier();
         if (id == null) return null;
-        return {
-            pos: conv.pos(id.pos),
-            name: id.name
-        };
+        return new CompRange(conv.pos(id.pos), id.name);
     }
     
     /**
@@ -100,8 +98,7 @@ class HaxeLanguageServices {
      **/
     public function getCallInfoAt(path:String, offset:Int):CompCall {
         var context:CompFileContext = getContext(path);
-        var scope = context.completionScope.locateIndex(offset);
-        var callInfo = scope.callInfo;
+        var callInfo:CallInfo = context.rootNode.getCallInfoAt(offset);
         var call:CompCall = null;
         if (callInfo != null) {
             var f = callInfo.f;
@@ -144,7 +141,7 @@ class Conv {
     }
 
     public function funcArg(fa:FunctionArgument):CompArgument {
-        return new CompArgument(fa.index, fa.name, toType(fa.getSpecType(types)), fa.opt, fa.doc);
+        return new CompArgument(fa.index, fa.getName(), toType(fa.getResult().type), fa.opt, fa.doc);
     }
     
     public function usageType(type:UsageType):CompReferenceType {
@@ -163,7 +160,7 @@ class Conv {
         if (type == null) return new BaseCompType('Dynamic');
         if (Std.is(type.type, FunctionHaxeType)) {
             var ftype = cast(type.type, FunctionHaxeType);
-            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.getRetvalFqName()));
+            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.getFqName())], new BaseCompType(ftype.getRetvalFqName()));
         }
         return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) toType(i)] : null);
     }
@@ -176,8 +173,6 @@ class CompFileContext {
     public var types:HaxeTypes;
     public var typeBuilder:HaxeTypeBuilder;
     public var typeChecker:HaxeTypeChecker;
-    public var completion:HaxeCompletion;
-    public var completionScope:CompletionScope;
     public var grammarResult:GrammarResult;
     public var rootNode:ZNode;
     public var errors:HaxeErrors = new HaxeErrors();
@@ -206,8 +201,6 @@ class CompFileContext {
         grammarResult = grammar.parse(term, reader, errors);
         typeBuilder = new HaxeTypeBuilder(types, errors);
         typeChecker = new HaxeTypeChecker(types, errors);
-        completion = new HaxeCompletion(types, errors);
-        completionScope = null;
         switch (grammarResult) {
             case GrammarResult.RUnmatched(_, _) | GrammarResult.RMatched: rootNode = null;
             case GrammarResult.RMatchedValue(value): rootNode = cast(value);
@@ -217,7 +210,6 @@ class CompFileContext {
             typeBuilder.process(rootNode, builtTypes);
             //trace('builtTypes:' + builtTypes);
             for (type in builtTypes) typeChecker.checkType(type);
-            completionScope = completion.processCompletion(rootNode);
         }
         //typeBuilder.
     } 
@@ -247,6 +239,15 @@ class CompReference {
         this.type = type;
     }
     public function toString() return '$pos:$type';
+}
+
+class CompRange {
+    public var pos:CompPosition;
+    public var name:String;
+    public function new(pos:CompPosition, name:String) {
+        this.pos = pos;
+        this.name = name;
+    } 
 }
 
 class CompPosition {

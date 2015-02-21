@@ -4,6 +4,7 @@ import haxe.languageservices.node.Node;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.TextRange;
+
 class HaxeTypes {
     public var rootPackage:HaxePackage;
 
@@ -23,7 +24,29 @@ class HaxeTypes {
     public var specTypeFloat(default, null):SpecificHaxeType;
     public var specTypeString(default, null):SpecificHaxeType;
 
+    public var resultAnyDynamic(default, null):ExpressionResult;
+
     public var typeArray(default, null):HaxeType;
+    
+    public function result(specType:SpecificHaxeType):ExpressionResult {
+        return ExpressionResult.withoutValue(specType);
+    }
+
+    public function resultValue(specType:SpecificHaxeType, value:Dynamic):ExpressionResult {
+        return ExpressionResult.withValue(specType, value);
+    }
+
+    private function anoRange(text:String) {
+        return new Reader(text).createPos(0, text.length);
+    }
+
+    private function idNode(text:String) {
+        return new ZNode(new Reader(text).createPos(0, text.length), Node.NId(text));
+    }
+
+    private function er(t:SpecificHaxeType) {
+        return ExpressionResult.withoutValue(t);
+    }
 
     public function new() {
         var typesPos = new TextRange(0, 0, new Reader('', '_Types.hx'));
@@ -45,16 +68,25 @@ class HaxeTypes {
         specTypeInt = createSpecific(typeInt);
         specTypeFloat = createSpecific(typeFloat);
         specTypeString = createSpecific(typeString);
-        
+
+        resultAnyDynamic = ExpressionResult.withoutValue(specTypeDynamic);
 
         function nameNode(name:String) return new ZNode(typesPos, Node.NId(name));
 
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod'), [], new FunctionRetval('Dynamic'))));
-        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod2'), [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod'), [], new FunctionRetval('Dynamic'))));
-        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod2'), [], new FunctionRetval('Dynamic'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('indexOf'), [new FunctionArgument(0, 'element', 'Dynamic')], new FunctionRetval('Int'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('charAt'), [new FunctionArgument(0, 'index', 'Int')], new FunctionRetval('String'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod'), [], createReferenceName('Dynamic'))));
+        typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod2'), [], createReferenceName('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod'), [], createReferenceName('Dynamic'))));
+        typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod2'), [], createReferenceName('Dynamic'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('indexOf'), [new FunctionArgument(this, 0, idNode('element'), er(specTypeDynamic))], createReferenceName('Int'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('charAt'), [new FunctionArgument(this, 0, idNode('index'), er(specTypeInt))], createReferenceName('String'))));
+    }
+    
+    public function createReference(fqNameNode:ZNode) {
+        return TypeReference.create(this, fqNameNode);
+    }
+
+    public function createReferenceName(fqName:String) {
+        return TypeReference.create(this, idNode(fqName));
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
@@ -80,11 +112,6 @@ class HaxeTypes {
     
     public function createSpecific(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
         return new SpecificHaxeType(this, type, parameters);
-    }
-    
-    public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
-        if (arrayType == null || arrayType.parameters.length < 1) return specTypeDynamic;
-        return arrayType.parameters[0];
     }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();
