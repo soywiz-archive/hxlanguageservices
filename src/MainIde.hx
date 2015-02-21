@@ -1,5 +1,11 @@
 package;
 
+import js.html.DivElement;
+import js.html.SpanElement;
+import haxe.languageservices.node.TextRange;
+import haxe.languageservices.error.QuickFixAction;
+import haxe.languageservices.error.QuickFix;
+import js.html.ButtonElement;
 import Ace;
 import Ace.Annotation;
 import Ace.Editor;
@@ -90,6 +96,7 @@ class MainIde {
                             result
                         );
                     }
+                    editor.focus();
                 }
             } else {
                 window.alert('nothing to rename!');
@@ -177,7 +184,9 @@ class MainIde {
         var errorsOverlay = document.getElementById('errorsOverlay');
         var autocompletionOverlay = document.getElementById('autocompletionOverlay');
         var callinfoOverlay = document.getElementById('callinfoOverlay');
+        var currentNodeOverlay = document.getElementById('currentNodeOverlay');
         errorsOverlay.innerText = '';
+        currentNodeOverlay.innerText = '';
 
         function addError(e:CompError) {
             //trace(e);
@@ -190,7 +199,35 @@ class MainIde {
                 row: pos1.row, column: pos1.column,
                 text: e.text, type: 'error'
             });
-            errorsOverlay.innerText += '${e.pos}:${e.text}\n';
+            var fixText:DivElement = cast document.createElement('div');
+            fixText.innerText = '${e.pos}:${e.text}\n';
+            errorsOverlay.appendChild(fixText);
+
+            if (e.fixes != null) Lambda.foreach(e.fixes, function(fix:QuickFix) {
+                var fixButton:ButtonElement = cast document.createElement('button');
+                fixButton.textContent = fix.name;
+                fixButton.onclick = function(e) {
+                    var actions = fix.fixer();
+                    trace(actions);
+                    for (action in actions) {
+                        switch (action) {
+                            case QuickFixAction.QFReplace(_pos, _newtext):
+                                var pos:TextRange = _pos;
+                                var newtext:String = _newtext;
+
+                                editor.session.replace(
+                                    AceTools.createRangeIndices(editor, pos.min, pos.max),
+                                    newtext
+                                );
+                        }
+                    }
+                    editor.focus();
+//trace(actions);
+                }
+                fixText.appendChild(fixButton);
+                return true;
+            });
+
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
         }
 
@@ -204,6 +241,9 @@ class MainIde {
         var file = 'live.hx';
         try {
             // Completion
+            var curParent = services._getNodeAt(file, cursorIndex);
+
+            currentNodeOverlay.innerText = curParent.getAncestors(4).join('\n');
             var items = services.getCompletionAt(file, cursorIndex);
             if (items.items.length == 0) {
                 autocompletionOverlay.innerText = 'no autocompletion info';
@@ -243,7 +283,7 @@ class MainIde {
         } catch (e:Dynamic) {
             try { Browser.window.console.error(e.stack); } catch (e2:Dynamic) { }
             Browser.window.console.error(e);
-            addError(new CompError(new CompPosition(0, 0), '' + e));
+            addError(new CompError(new CompPosition(0, 0), '' + e, []));
         }
 
         for (reference in references) {
