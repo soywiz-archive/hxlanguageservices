@@ -3,7 +3,6 @@ package haxe.languageservices;
 import haxe.languageservices.completion.CallInfo;
 import haxe.languageservices.grammar.GrammarResult;
 import haxe.languageservices.type.HaxeMember;
-import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionArgument;
 import haxe.languageservices.type.UsageType;
 import haxe.languageservices.type.ExpressionResult;
@@ -78,7 +77,11 @@ class HaxeLanguageServices {
         var context = getContext(path);
         var id = getIdAt(path, offset);
         if (id == null) return null;
-        var entry = context.rootNode.locateIndex(offset).getCompletion().getEntryByName(id.name);
+        var node = context.rootNode.locateIndex(offset);
+        if (node == null) return null;
+        var completion = node.getCompletion();
+        if (completion == null) return null;
+        var entry = completion.getEntryByName(id.name);
         if (entry == null) return null;
         return new CompReferences(id.name, [for (usage in entry.getReferences().usages) new CompReference(conv.pos(usage.pos), conv.usageType(usage.type)) ]);
     }
@@ -138,7 +141,7 @@ class Conv {
     }
 
     public function funcArg(fa:FunctionArgument):CompArgument {
-        return new CompArgument(fa.index, fa.name, toType(fa.getSpecType(types)), fa.opt, fa.doc);
+        return new CompArgument(fa.index, fa.getName(), toType(fa.getResult().type), fa.opt, fa.doc);
     }
     
     public function usageType(type:UsageType):CompReferenceType {
@@ -157,7 +160,7 @@ class Conv {
         if (type == null) return new BaseCompType('Dynamic');
         if (Std.is(type.type, FunctionHaxeType)) {
             var ftype = cast(type.type, FunctionHaxeType);
-            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.fqName)], new BaseCompType(ftype.getRetvalFqName()));
+            return new FunctionCompType([for (a in ftype.args) new BaseCompType(a.getFqName())], new BaseCompType(ftype.getRetvalFqName()));
         }
         return new BaseCompType(type.type.fqName, (type.parameters != null) ? [for (i in type.parameters) toType(i)] : null);
     }

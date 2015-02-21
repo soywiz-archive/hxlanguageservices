@@ -18,6 +18,12 @@ class HaxeType {
 
     public var node:ZNode;
     
+    public var references = new HaxeCompilerReferences();
+
+    public function getReferences():HaxeCompilerReferences {
+        return references;
+    }
+    
     public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
         if (out == null) out = [];
         for (member in members) out.push(member);

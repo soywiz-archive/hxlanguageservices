@@ -1,6 +1,6 @@
 package haxe.languageservices.type;
 
 class FieldHaxeMember extends HaxeMember {
-    public var fieldtype:FunctionRetval;
+    public var fieldtype:TypeReference;
     override public function toString() return 'Field($name)';
 }

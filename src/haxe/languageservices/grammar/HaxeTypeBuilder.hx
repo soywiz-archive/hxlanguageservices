@@ -19,7 +19,6 @@ import haxe.languageservices.error.HaxeErrors;
 import haxe.languageservices.type.HaxeDoc;
 import haxe.languageservices.type.tool.NodeTypeTools;
 import haxe.languageservices.type.FunctionArgument;
-import haxe.languageservices.type.FunctionRetval;
 import haxe.languageservices.type.FunctionHaxeType;
 import haxe.languageservices.type.EnumHaxeType;
 import haxe.languageservices.type.AbstractHaxeType;
@@ -94,9 +93,7 @@ class HaxeTypeBuilder {
                         if (Std.is(member, MethodHaxeMember)) {
                             var method:MethodHaxeMember = cast(member, MethodHaxeMember);
                             //trace(method);
-                            var scope = new LocalScope(TypeMembersCompletionProvider.forType(type, !member.modifiers.isStatic, true));
-                            scope.add(new HaxeThisElement(type));
-                            _processMethodBody(method.func.body, scope, method.func);
+                            _processMethodBody(method.func.body, new LocalScope(method.scope), method.func);
                         }
                     }
                 }
@@ -144,6 +141,7 @@ class HaxeTypeBuilder {
                         default: throw 'Invalid';
                     }
                 }
+                item.completion = new TypeMembersCompletionProvider(type);
 
 //trace(extendsImplementsList);
                 type.node = item;
@@ -152,22 +150,26 @@ class HaxeTypeBuilder {
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:InterfaceHaxeType = info.packag.accessTypeCreate(typeName, item.pos, InterfaceHaxeType);
+                item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
                 processClass(type, decls);
             case Node.NTypedef(name):
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:TypedefHaxeType = info.packag.accessTypeCreate(typeName, item.pos, TypedefHaxeType);
+                item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             case Node.NAbstract(name):
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:AbstractHaxeType = info.packag.accessTypeCreate(typeName, item.pos, AbstractHaxeType);
+                item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             case Node.NEnum(name):
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:EnumHaxeType = info.packag.accessTypeCreate(typeName, item.pos, EnumHaxeType);
+                item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             default:
                 error(item.pos, 'invalid node');
@@ -223,13 +225,26 @@ class HaxeTypeBuilder {
             case Node.NFunction(vname, vtypeParams, vargs, vret, vexpr, doc):
                 checkFunctionDeclArgs(vargs);
                 checkType(vret);
+                var fretval = getTypeNodeType(vret);
+                var func = new FunctionHaxeType(types, type, member.pos, vname, [], fretval, vexpr);
 
-                var ffargs = [];
+                var scope = new LocalScope(TypeMembersCompletionProvider.forType(type, !mods.isStatic, true));
+                if (!mods.isStatic) {
+                    scope.add(new HaxeThisElement(type));
+                }
+
                 if (ZNode.isValid(vargs)) switch (vargs.node) {
                     case Node.NList(_vargs): for (arg in _vargs) {
                         if (ZNode.isValid(arg)) switch (arg.node) {
                             case Node.NFunctionArg(opt, name, type, value, doc):
-                                ffargs.push(new FunctionArgument(ffargs.length, NodeTools.getId(name), NodeTypeTools.getTypeDeclType(types, type).type.fqName));
+                                var vexpr = _processExprValue(value, scope, func);
+                                var arg = new FunctionArgument(types, func.args.length, name);
+                                arg.result = vexpr;
+                                arg.type = getTypeNodeType2(type);
+                                func.args.push(arg);
+                                name.completion = scope;
+                                arg.getReferences().addNode(UsageType.Declaration, name);
+                                scope.add(arg);
                             default:
                                 throw 'Invalid (VII) $arg';
                         }
@@ -237,11 +252,12 @@ class HaxeTypeBuilder {
                     default: throw 'Invalid (VI) $vargs';
                 }
 
-                var fretval:FunctionRetval = getTypeNodeType(vret);
 
-                var method = new MethodHaxeMember(new FunctionHaxeType(types, type, member.pos, vname, ffargs, fretval, vexpr));
+                var method = new MethodHaxeMember(func);
                 method.doc = new HaxeDoc(NodeTools.getId(doc));
                 method.modifiers = mods;
+                method.scope = scope;
+
                 if (type.existsMember(method.name)) {
                     error(vname.pos, 'Duplicate class field declaration : ${method.name}');
                 }
@@ -251,11 +267,16 @@ class HaxeTypeBuilder {
         }
     }
     
-    private function getTypeNodeType(vret:ZNode):FunctionRetval {
-        if (vret == null) return new FunctionRetval('Dynamic');
-        return new FunctionRetval(vret.pos.text.trim(), '');
+    private function getTypeNodeType(vret:ZNode):TypeReference {
+        if (vret == null) return new TypeReference(types, 'Dynamic', null);
+        return new TypeReference(types, vret.pos.text.trim(), vret);
     }
-    
+
+    private function getTypeNodeType2(vret:ZNode):SpecificHaxeType {
+        if (vret == null) return types.specTypeDynamic;
+        return types.createSpecific(types.getType(vret.pos.text.trim()));
+    }
+
     private function checkFunctionDeclArgs(znode:ZNode):Void {
         if (!ZNode.isValid(znode)) return;
         switch (znode.node) {
@@ -375,11 +396,12 @@ class HaxeTypeBuilder {
                             }
                             if (argnode != null && arg != null) {
                                 //var argResult = scope.getNodeResult(argnode);
+                                var argName = arg.getName();
                                 var argResult = _processExprValue(argnode, scope, func);
-                                var expectedArgType = arg.getSpecType(types);
+                                var expectedArgType = arg.getResult().type;
                                 var callArgType = argResult.type;
                                 if (!expectedArgType.canAssign(callArgType)) {
-                                    errors.add(new ParserError(argnode.pos, 'Invalid argument ${arg.name} expected $expectedArgType but found $argResult'));
+                                    errors.add(new ParserError(argnode.pos, 'Invalid argument $argName expected $expectedArgType but found $argResult'));
                                 }
                             }
                         }
@@ -402,13 +424,40 @@ class HaxeTypeBuilder {
                 }
             case Node.NUnary(op, value):
                 _processMethodBody(value, scope, func);
+            /*
             case Node.NFieldAccess(left, id):
                 _processMethodBody(left, scope, func);
                 var expr2 = _processExprValue(left, scope, func);
                 //expr2.type.type.membersByName
                 //trace(expr2);
                 //trace(left);
+            */
+            case Node.NFieldAccess(_left, _id):
+                var left:ZNode = _left;
+                var id:ZNode = _id;
+                var idName:String = (id != null) ? id.pos.text : null;
+                _processMethodBody(left, scope, func);
+                var lvalue = _processExprValue(left, scope, func);
+                id.completion = new TypeMembersCompletionProvider(lvalue.type.type);
+                lvalue.type.type.getMember(idName).getReferences().addNode(UsageType.Read, id);
+
+                /*
+                var tidnode = new ZNode(l.pos.reader.createPos(l.pos.max, (id != null) ? id.pos.max : l.pos.max + 1), null);
+                var cscope = scope.createChild(tidnode);
+                cscope.unlinkFromParent();
+
+                if (idName != null) {
+                    var member = lvalue.type.type.getInheritedMemberByName(idName);
+                    if (member != null) {
+                        member.getReferences().addNode(UsageType.Read, id);
+                    }
+                }
+
+                cscope.addProvider(new TypeMembersCompletionProvider(lvalue.type.type, HaxeMember.staticIsNotStatic));
+                */
+
             case Node.NReturn(expr):
+                _processMethodBody(expr, scope, func);
                 if (func != null) func.returns.push(_processExprValue(expr, scope, func));
             case Node.NArray(items) | Node.NList(items):
                 for (item in items) _processMethodBody(item, scope, func);
@@ -535,29 +584,6 @@ class HaxeCompletion {
             case Node.NArrayAccess(left, index):
                 process(left, scope);
                 process(index, scope);
-            case Node.NFieldAccess(_left, _id):
-                var left:ZNode = _left;
-                var id:ZNode = _id;
-                var idName:String = (id != null) ? id.pos.text : null;
-                process(left, scope);
-                var lvalue = scope.getNodeResult(left);
-
-                var l:ZNode = left;
-
-                var tidnode = new ZNode(l.pos.reader.createPos(l.pos.max, (id != null) ? id.pos.max : l.pos.max + 1), null);
-                var cscope = scope.createChild(tidnode);
-                cscope.unlinkFromParent();
-
-                if (idName != null) {
-                    var member = lvalue.type.type.getInheritedMemberByName(idName);
-                    if (member != null) {
-                        member.getReferences().addNode(UsageType.Read, id);
-                        //cscope.addLocal(member);
-                        //trace(member);
-                    }
-                }
-
-                cscope.addProvider(new TypeMembersCompletionProvider(lvalue.type.type, HaxeMember.staticIsNotStatic));
             case Node.NBinOp(left, op, right):
                 process(left, scope);
                 process(right, scope);

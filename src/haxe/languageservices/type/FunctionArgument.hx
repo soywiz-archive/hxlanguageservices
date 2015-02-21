@@ -1,24 +1,35 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.node.ZNode;
-class FunctionArgument {
-    public var index:Int;
+class FunctionArgument extends HaxeNodeElement {
+    private var types:HaxeTypes;
     public var opt:Bool;
-    public var name:String;
-    public var fqName:String;
+    public var index:Int;
+    public var func:FunctionHaxeType;
     public var defaultValue:ZNode;
+    public var type:SpecificHaxeType;
     public var doc:String;
-
-    public function new(index:Int, name:String, fqName:String, opt:Bool = false, defaultValue:ZNode = null, doc:String = '') {
-        this.index = index;
+    
+    public function new(types:HaxeTypes, index:Int, node:ZNode, result:ExpressionResult = null, opt:Bool = false, doc:String = '') {
+        this.types = types;
         this.opt = opt;
-        this.name = name;
-        this.fqName = fqName;
-        this.defaultValue = defaultValue;
+        this.index = index;
         this.doc = doc;
+        this.result = result;
+        super(node);
     }
-    public function getSpecType(types:HaxeTypes):SpecificHaxeType {
-        return types.createSpecific(types.getType(fqName));
+
+    public function getFqName() {
+        return getResult().type.type.fqName;
     }
-    public function toString() return '$name:$fqName';
+
+    override public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        if (type != null) return ExpressionResult.withoutValue(type);
+        var v = super.getResult(context);
+        if (v != null) return v;
+        return ExpressionResult.withoutValue(types.specTypeDynamic);
+    }
+
+    //override public function toString() return '$name:$fqName';
 }

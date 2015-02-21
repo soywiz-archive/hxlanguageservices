@@ -32,7 +32,7 @@ class TestCallInfo extends HLSTestCase {
     }
 
 /*
-    public function test3() {
+    public function test4() {
         assertCallInfo(
             'class Test { function a(test:Int, arg:Int) { a(1,### 2); } }',
             '1:(test:Int, arg:Int):Dynamic'

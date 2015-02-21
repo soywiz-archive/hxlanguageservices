@@ -22,6 +22,15 @@ class TestReferences extends HLSTestCase {
         );
     }
 
+    /*
+    public function testFieldReferences() {
+        assertReferences(
+            'class Test { var m = 10; function a() { m; this.m; return m + 1; } }',
+            '-'
+        );
+    }
+    */
+
     public function testFunctionArgumentReferences() {
         assertReferences(
             'class Test { var m = 10; function a(###m) { m; this.m; return m + 1; } }',
@@ -29,10 +38,12 @@ class TestReferences extends HLSTestCase {
         );
     }
 
+/*
     public function testSqStringReferences() {
         assertReferences(
             "class Test { var m = 10; function a(###m) { return '$m'; } }",
             'm:[36:37:Declaration,50:51:Read]'
         );
     }
+    */
 }
