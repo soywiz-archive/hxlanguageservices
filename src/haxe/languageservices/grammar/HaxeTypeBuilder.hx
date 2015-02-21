@@ -354,9 +354,10 @@ class HaxeTypeBuilder {
                     if (!ntype.canAssign(exprType)) {
                         error(vvalue.pos, 'Can\'t assign ${exprType} to ${ntype}', [
                             new QuickFix('Change type', function() {
-                                return [
-                                    QuickFixAction.QFReplace(vtype.pos, exprType.toString())
-                                ];
+                                return [QuickFixAction.QFReplace(vtype.pos, exprType.toString())];
+                            }),
+                            new QuickFix('Add cast', function() {
+                                return [QuickFixAction.QFReplace(vvalue.pos, 'cast(' + vvalue.pos.text + ', ' + vtype.pos.text + ')')];
                             })
                         ]);
                     }

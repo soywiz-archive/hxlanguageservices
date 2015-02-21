@@ -34,7 +34,13 @@ class TestRenames extends HLSTestCase {
     }
 
     public function test1() {
-        assertQuickFix('[Change type:[QFReplace(36:43,Int)]]', 'class Test { function a() { var str:String = 10; } }');
-        assertQuickFix('[Change type:[QFReplace(34:38,String)]]', 'class Test { function a() { var i:Int = "string"; } }');
+        assertQuickFix(
+            '[Change type:[QFReplace(36:43,Int)],Add cast:[QFReplace(45:47,cast(10, String ))]]',
+            'class Test { function a() { var str:String = 10; } }'
+        );
+        assertQuickFix(
+            '[Change type:[QFReplace(34:38,String)],Add cast:[QFReplace(40:48,cast("string", Int ))]]',
+            'class Test { function a() { var i:Int = "string"; } }'
+        );
     }
 }
