@@ -51,5 +51,15 @@ class TestRenames extends HLSTestCase {
         );
     }
 
+    public function testRemoveOverride() {
+        assertQuickFix(
+            '[Remove override:[QFReplace(13:22,)]]',
+            'class Test { override function demo():Void { }  } }'
+        );
 
+        assertQuickFix(
+            '[Add override:[QFReplace(23:23,override )]]',
+            'class Test extends A { function a():Void { } } class A { function a():Void { }  } }'
+        );
+    }
 }

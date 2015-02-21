@@ -106,14 +106,22 @@ class HaxeTypeChecker {
             if (ancestorMembers.exists(mem.name)) {
                 var ancestorMem:HaxeMember = ancestorMembers[mem.name];
                 if (!mem.modifiers.isOverride) {
-                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} should be declared with \'override\' since it is inherited from superclass'));
+                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} should be declared with \'override\' since it is inherited from superclass', [
+                        new QuickFix('Add override', function() {
+                            return [QuickFixAction.QFReplace(mem.modifiers.mods.pos, mem.modifiers.addCloned('override').toString() + ' ')];
+                        })
+                    ]));
                 }
                 if (ancestorMem.modifiers.isStatic) {
                     errors.add(new ParserError(mem.nameNode.pos, 'static member ${mem.name} cannot be overriden'));
                 }
             } else {
                 if (mem.modifiers.isOverride) {
-                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} is declared \'override\' but doesn\'t override any field'));
+                    errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} is declared \'override\' but doesn\'t override any field', [
+                        new QuickFix('Remove override', function() {
+                            return [QuickFixAction.QFReplace(mem.modifiers.mods.pos, mem.modifiers.removeCloned('override').toString())];
+                        })
+                    ]));
                 }
             }
         }

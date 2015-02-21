@@ -87,6 +87,15 @@ class GrammarNode<T> {
         }
         return this;
     }
+
+    public function locateNodeText(text:String):GrammarNode<T> {
+        if (pos.text == text) return this;
+        for (child in children) {
+            var result = child.locateNodeText(text);
+            if (result != null) return result;
+        }
+        return null;
+    }
     
     static public function isValid<T>(node:GrammarNode<T>):Bool {
         return node != null && node.node != null;

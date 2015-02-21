@@ -181,7 +181,7 @@ class HaxeTypeBuilder {
     }
     
     private function processMemberModifiers(modifiers:ZNode) {
-        var mods = new HaxeModifiers();
+        var mods = new HaxeModifiers(modifiers);
         if (ZNode.isValid(modifiers)) switch (modifiers.node) {
             case Node.NList(parts):
                 for (part in parts) {

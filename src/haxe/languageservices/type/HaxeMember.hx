@@ -13,6 +13,7 @@ class HaxeMember implements HaxeCompilerElement {
     public var doc:HaxeDoc;
     public var typeNode:ZNode;
     public var valueNode:ZNode;
+    public var modsNode:ZNode;
     public var nameNode:ZNode;
     public var refs = new HaxeCompilerReferences();
 
