@@ -18,6 +18,10 @@ class ExpressionResult {
         }
         return '$type';
     }
+    
+    public function getArrayElement() {
+        return withoutValue(type.getArrayElement());
+    }
 
     static public function unify(types:HaxeTypes, items:Array<ExpressionResult>):ExpressionResult {
         if (items.length == 0) return withoutValue(types.specTypeDynamic);

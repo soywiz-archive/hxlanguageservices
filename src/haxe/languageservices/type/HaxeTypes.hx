@@ -24,8 +24,18 @@ class HaxeTypes {
     public var specTypeFloat(default, null):SpecificHaxeType;
     public var specTypeString(default, null):SpecificHaxeType;
 
+    public var resultAnyDynamic(default, null):ExpressionResult;
+
     public var typeArray(default, null):HaxeType;
     
+    public function result(specType:SpecificHaxeType):ExpressionResult {
+        return ExpressionResult.withoutValue(specType);
+    }
+
+    public function resultValue(specType:SpecificHaxeType, value:Dynamic):ExpressionResult {
+        return ExpressionResult.withValue(specType, value);
+    }
+
     private function anoRange(text:String) {
         return new Reader(text).createPos(0, text.length);
     }
@@ -58,7 +68,8 @@ class HaxeTypes {
         specTypeInt = createSpecific(typeInt);
         specTypeFloat = createSpecific(typeFloat);
         specTypeString = createSpecific(typeString);
-        
+
+        resultAnyDynamic = ExpressionResult.withoutValue(specTypeDynamic);
 
         function nameNode(name:String) return new ZNode(typesPos, Node.NId(name));
 
@@ -101,12 +112,6 @@ class HaxeTypes {
     
     public function createSpecific(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
         return new SpecificHaxeType(this, type, parameters);
-    }
-    
-    public function getArrayElement(arrayType:SpecificHaxeType):SpecificHaxeType {
-        if (arrayType.type.fqName == 'Array') return specTypeDynamic;
-        if (arrayType == null || arrayType.parameters.length < 1) return specTypeDynamic;
-        return arrayType.parameters[0];
     }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();

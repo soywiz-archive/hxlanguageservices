@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.completion.CompletionProvider;
 class MethodHaxeMember extends HaxeMember {
     public var func:FunctionHaxeType;
@@ -9,7 +10,7 @@ class MethodHaxeMember extends HaxeMember {
         this.func = func;
     }
     override public function toString() return 'Method($name)';
-    override public function getType():SpecificHaxeType {
+    override public function getType(?context:ProcessNodeContext):SpecificHaxeType {
         return func.types.createSpecific(func);
     }
 }

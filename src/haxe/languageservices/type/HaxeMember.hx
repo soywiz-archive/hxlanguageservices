@@ -26,14 +26,16 @@ class HaxeMember implements HaxeCompilerElement {
     
     public function toString() return 'Member($name)';
 
-    public function getType():SpecificHaxeType return baseType.types.specTypeDynamic;
+    public function getType(?context:ProcessNodeContext):SpecificHaxeType {
+        return baseType.types.specTypeDynamic;
+    }
 
     public function getPosition():TextRange return this.pos;
     public function getNode():ZNode return valueNode;
     public function getName():String return name;
     public function getReferences():HaxeCompilerReferences return refs;
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
-        return ExpressionResult.withoutValue(getType());
+        return ExpressionResult.withoutValue(getType(context));
     }
 
     static public function staticIsStatic(member:HaxeMember):Bool {

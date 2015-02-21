@@ -62,7 +62,7 @@ class GrammarNode<T> {
 
     public function getIdentifier():{ pos: TextRange, name: String } {
         var text = pos.text;
-        if (~/\s/.match(text)) return null;
+        if (!~/^\w+$/.match(text)) return null;
         //throw 'must implement getIdentifier : ' + pos.text + '!';
         return { pos : pos, name : text };
     }
