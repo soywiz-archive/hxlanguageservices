@@ -1,5 +1,7 @@
 package;
 
+import js.html.DivElement;
+import js.html.SpanElement;
 import haxe.languageservices.node.TextRange;
 import haxe.languageservices.error.QuickFixAction;
 import haxe.languageservices.error.QuickFix;
@@ -183,10 +185,8 @@ class MainIde {
         var autocompletionOverlay = document.getElementById('autocompletionOverlay');
         var callinfoOverlay = document.getElementById('callinfoOverlay');
         var currentNodeOverlay = document.getElementById('currentNodeOverlay');
-        var quickFixOverlay = document.getElementById('quickFixOverlay');
         errorsOverlay.innerText = '';
         currentNodeOverlay.innerText = '';
-        quickFixOverlay.innerText = '';
 
         function addError(e:CompError) {
             //trace(e);
@@ -199,7 +199,10 @@ class MainIde {
                 row: pos1.row, column: pos1.column,
                 text: e.text, type: 'error'
             });
-            //quickFixOverlay
+            var fixText:DivElement = cast document.createElement('div');
+            fixText.innerText = '${e.pos}:${e.text}\n';
+            errorsOverlay.appendChild(fixText);
+
             if (e.fixes != null) Lambda.foreach(e.fixes, function(fix:QuickFix) {
                 var fixButton:ButtonElement = cast document.createElement('button');
                 fixButton.textContent = fix.name;
@@ -211,7 +214,7 @@ class MainIde {
                             case QuickFixAction.QFReplace(_pos, _newtext):
                                 var pos:TextRange = _pos;
                                 var newtext:String = _newtext;
-                                
+
                                 editor.session.replace(
                                     AceTools.createRangeIndices(editor, pos.min, pos.max),
                                     newtext
@@ -219,12 +222,12 @@ class MainIde {
                         }
                     }
                     editor.focus();
-                    //trace(actions);
+//trace(actions);
                 }
-                quickFixOverlay.appendChild(fixButton);
+                fixText.appendChild(fixButton);
                 return true;
             });
-            errorsOverlay.innerText += '${e.pos}:${e.text}\n';
+
             markerIds.push(editor.session.addMarker(AceTools.createRange(pos1, pos2), 'mark_error', 'mark_error', true));
         }
 
