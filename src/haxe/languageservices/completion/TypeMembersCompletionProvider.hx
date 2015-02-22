@@ -31,7 +31,7 @@ class TypeMembersCompletionProvider implements CompletionProvider {
 
     public function getEntries(?out:Array<HaxeCompilerElement>):Array<HaxeCompilerElement> {
         if (out == null) out = [];
-        for (member in type.getAllMembers()) {
+        if (type != null) for (member in type.getAllMembers()) {
             if (filter != null && !filter(member)) continue;
             out.push(member);
         }

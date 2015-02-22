@@ -13,13 +13,17 @@ class ClassHaxeType extends HaxeType {
 
     override public function getAllMembers(?out2:Array<HaxeMember>):Array<HaxeMember> {
         var out = super.getAllMembers(out2);
-        if (extending != null) getExtending().getAllMembers(out);
+        var extending = getExtending();
+        if (extending != null) extending.getAllMembers(out);
         return out;
     }
 
     override public function getInheritedMemberByName(name:String):HaxeMember {
         var result = super.getInheritedMemberByName(name);
-        if (result == null && extending != null) return extending.getType().getInheritedMemberByName(name);
+        if (result == null) {
+            var extending = getExtending();
+            if (extending != null) return extending.getInheritedMemberByName(name);
+        }
         return result;
     }
 
