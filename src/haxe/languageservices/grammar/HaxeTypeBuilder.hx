@@ -505,11 +505,11 @@ class HaxeTypeBuilder {
                 } else {
                     var idName:String = (id != null) ? id.pos.text : null;
                     id.completion = new TypeMembersCompletionProvider(lvalue.type.type);
-                    var member = lvalue.type.type.getMember(idName);
+                    var member = lvalue.type.type.getInheritedMemberByName(idName);
                     if (member != null) {
                         member.getReferences().addNode(UsageType.Read, id);
                     } else {
-                        error(id.pos, 'Cant find member $idName in ${lvalue.type.type}. Maybe type recursion?');
+                        error(id.pos, 'Can\'t find member $idName in ${lvalue.type.type}');
                     }
                 }
             case Node.NReturn(expr):

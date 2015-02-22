@@ -20,7 +20,7 @@ class SpecificHaxeType {
     }
 
     public function access(name:String):SpecificHaxeType {
-        var member = type.getMember(name);
+        var member = type.getInheritedMemberByName(name);
         if (member == null) return types.specTypeDynamic;
         return member.getType();
     }

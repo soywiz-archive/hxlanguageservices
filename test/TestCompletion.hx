@@ -136,11 +136,19 @@ class TestCompletion extends HLSTestCase {
 
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
-        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Cant find member a in Array. Maybe type recursion?']);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Can\'t find member a in Array']);
         assertProgramBody(
             'class A extends B { function a() { this.###; } } class B { function b() {} }',
             ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],
             '[39:39:expected identifier]'
+        );
+    }
+
+    public function testFieldAccessInheritedCompletion() {
+        assertProgramBody(
+            'class A extends B { function a() { var m = this.b; ### } } class B { function b(a:Int):String { return "test"; } }',
+            ['m:Int -> String'],
+            [], []
         );
     }
 }
