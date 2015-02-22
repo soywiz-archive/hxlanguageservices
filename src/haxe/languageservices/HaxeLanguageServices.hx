@@ -329,6 +329,10 @@ class CompFunction {
         this.ret = ret;
         this.doc = doc;
     }
+    
+    public function getArg(index:Int) {
+        return (index >= 0 && index < args.length) ? args[index] : null;
+    }
 
     public function toString() {
         return name + '(' + args.join(', ') + '):' + ret;
@@ -386,8 +390,11 @@ class HtmlTools {
         var currentIndex = f.argIndex;
         
         var lines = [];
+        var a = f.func.args[currentIndex];
         lines.push(escape(func.name) + '(' + [for (a in func.args) argumentToHtml(a, currentIndex)].join(', ') + '):' + retvalToHtml(func.ret));
-        lines.push(escape(f.func.doc.getParam(currentIndex).nameAndDesc()));
+        if (a != null) {
+            lines.push(escape(f.func.doc.getParamByName(a.name).nameAndDesc()));
+        }
         lines.push(escape(f.func.doc.heading));
         lines = lines.filter(function(line) { return !StringUtils.empty(line); });
         return lines.join('<br />');

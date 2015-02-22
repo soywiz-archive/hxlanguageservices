@@ -119,7 +119,7 @@ class HaxeTypeChecker {
                 if (mem.modifiers.isOverride) {
                     errors.add(new ParserError(mem.nameNode.pos, 'Field ${mem.name} is declared \'override\' but doesn\'t override any field', [
                         new QuickFix('Remove override', function() {
-                            return [QuickFixAction.QFReplace(mem.modifiers.mods.pos, mem.modifiers.removeCloned('override').toString())];
+                            return [QuickFixAction.QFReplace(mem.modifiers.mods.pos, mem.modifiers.removeCloned('override').toString() + ' ')];
                         })
                     ]));
                 }
