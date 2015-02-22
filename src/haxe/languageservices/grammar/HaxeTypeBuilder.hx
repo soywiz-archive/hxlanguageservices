@@ -105,7 +105,20 @@ class HaxeTypeBuilder {
             default:
                 throw 'Expected haxe file but found $znode';
         }
+        executePending();
         return builtTypes;
+    }
+    
+    private var later:Array<Void -> Void> = [];
+    private function addLater(c: Void -> Void) {
+        later.push(c);
+    }
+    
+    private function executePending() {
+        while (later.length > 0) {
+            var e = later.shift();
+            e();
+        }
     }
 
     public function processTopLevel(item:ZNode, info: { index: Int, packag: HaxePackage, types: Array<HaxeType> }, builtTypes:Array<HaxeType>) {
@@ -119,7 +132,8 @@ class HaxeTypeBuilder {
                 }
             case Node.NImport(name) | Node.NUsing(name):
                 if (builtTypes.length > 0) error(item.pos, 'Import should appear before any type decl');
-            case Node.NClass(name, typeParams, extendsImplementsList, decls):
+            case Node.NClass(_name, typeParams, extendsImplementsList, decls):
+                var name:ZNode = _name;
                 var typeName = getId(name);
 
                 checkClassName(name.pos, typeName);
@@ -128,16 +142,33 @@ class HaxeTypeBuilder {
                     error(item.pos, 'Type name $typeName is already defined in this module');
                 }
                 var type:ClassHaxeType = info.packag.accessTypeCreate(typeName, item.pos, ClassHaxeType);
+
+                var ls = new LocalScope();
+                name.completion = ls;
+                type.nameElement = new HaxeLocalVariable(name, ls, function(context) {
+                    return types.resultAnyDynamic;
+                });
+                ls.add(type.nameElement);
+                type.nameElement.getReferences().addNode(UsageType.Declaration, name);
+
                 builtTypes.push(type);
                 if (ZNode.isValid(extendsImplementsList)) {
                     switch (extendsImplementsList.node) {
                         case Node.NList(items): for (item in items) { switch (item.node) {
-                            case Node.NExtends(type2, params2):
+                            case Node.NExtends(_type2, params2):
+                                var type2:ZNode = _type2;
                                 if (type.extending != null) {
                                     error(item.pos, 'multiple inheritance not supported in haxe');
                                 }
                                 var className2 = type2.pos.text.trim();
                                 type.extending = new TypeReference(types, className2, item);
+                                addLater(function() {
+                                    var e = type.extending.getClass();
+                                    if (e != null) {
+                                        type2.completion = e.nameElement.scope;
+                                        e.nameElement.getReferences().addNode(UsageType.Read, type2);
+                                    }
+                                });
                             case Node.NImplements(type2, params2):
                                 var className2 = type2.pos.text.trim();
                                 type.implementing.push(new TypeReference(types, className2, item));
@@ -242,7 +273,7 @@ class HaxeTypeBuilder {
                         if (ZNode.isValid(arg)) switch (arg.node) {
                             case Node.NFunctionArg(opt, name, type, value, doc):
                                 var vexpr = processExprValue(value, scope, func);
-                                var arg = new FunctionArgument(types, func.args.length, name);
+                                var arg = new FunctionArgument(types, func.args.length, name, scope);
                                 arg.result = vexpr;
                                 arg.type = getTypeNodeType2(type);
                                 func.args.push(arg);
@@ -350,8 +381,7 @@ class HaxeTypeBuilder {
             case Node.NVar(vname, propertyInfo, _vtype, _vvalue, doc):
                 var vtype:ZNode = _vtype;
                 var vvalue:ZNode = _vvalue;
-                var localVariable = new HaxeLocalVariable(vname);
-            
+                var localVariable = new HaxeLocalVariable(vname, scope);
                 localVariable.getReferences().addNode(UsageType.Declaration, vname);
                 expr.element = localVariable;
                 //trace('declared var: ' + vname);
@@ -532,7 +562,7 @@ class HaxeTypeBuilder {
                 var body:ZNode = _body;
                 var innerScope = new LocalScope(scope);
                 doBody(iteratorExpr);
-                var local = new HaxeLocalVariable(iteratorName, function(context:ProcessNodeContext) {
+                var local = new HaxeLocalVariable(iteratorName, innerScope, function(context:ProcessNodeContext) {
                     return doExpr(iteratorExpr, context).getArrayElement();
                 });
                 local.getReferences().addNode(UsageType.Declaration, iteratorName);
@@ -571,7 +601,7 @@ class HaxeTypeBuilder {
                 //doBody(name);
                 //doBody(type);
                 var catchScope = new LocalScope(scope);
-                var local = new HaxeLocalVariable(name, function(context) {
+                var local = new HaxeLocalVariable(name, scope, function(context) {
                     return types.result(getTypeNodeType2(type));
                 });
                 if (type == null) {

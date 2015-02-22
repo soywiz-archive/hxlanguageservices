@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.completion.LocalScope;
 import haxe.languageservices.node.Node;
 import haxe.languageservices.node.Reader;
 import haxe.languageservices.node.ZNode;
@@ -77,8 +78,8 @@ class HaxeTypes {
         typeBool.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeBool, typeBool.pos, nameNode('testBoolMethod2'), [], createReferenceName('Dynamic'))));
         typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod'), [], createReferenceName('Dynamic'))));
         typeInt.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeInt, typeInt.pos, nameNode('testIntMethod2'), [], createReferenceName('Dynamic'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('indexOf'), [new FunctionArgument(this, 0, idNode('element'), er(specTypeDynamic))], createReferenceName('Int'))));
-        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('charAt'), [new FunctionArgument(this, 0, idNode('index'), er(specTypeInt))], createReferenceName('String'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('indexOf'), [new FunctionArgument(this, 0, idNode('element'), new LocalScope(), er(specTypeDynamic))], createReferenceName('Int'))));
+        typeArray.addMember(new MethodHaxeMember(new FunctionHaxeType(this, typeArray, typeArray.pos, nameNode('charAt'), [new FunctionArgument(this, 0, idNode('index'), new LocalScope(), er(specTypeInt))], createReferenceName('String'))));
     }
     
     public function createReference(fqNameNode:ZNode) {

@@ -46,4 +46,11 @@ class TestReferences extends HLSTestCase {
             'm:[36:37:Declaration,50:51:Read]'
         );
     }
+
+    public function testClassReferences() {
+        assertReferences(
+            "class Test extends D###emo { } class Demo { }",
+            'Demo:[34:38:Declaration,19:24:Read]'
+        );
+    }
 }

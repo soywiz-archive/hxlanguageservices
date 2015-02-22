@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.completion.CompletionProvider;
 import js.html.svg.AnimatedBoolean;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.TextRange;
@@ -11,7 +12,8 @@ class HaxeType {
     public var doc:HaxeDoc;
     //public var nameNode:String;
     public var fqName:String;
-    
+    public var nameElement:HaxeLocalVariable;
+
     public var typeParameters = new Array<HaxeTypeParameter>();
     public var members = new Array<HaxeMember>();
     private var membersByName = new Map<String, HaxeMember>();

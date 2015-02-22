@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.completion.CompletionProvider;
 import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.node.ZNode;
 class FunctionArgument extends HaxeNodeElement {
@@ -11,13 +12,13 @@ class FunctionArgument extends HaxeNodeElement {
     public var type:SpecificHaxeType;
     public var doc:String;
     
-    public function new(types:HaxeTypes, index:Int, node:ZNode, result:ExpressionResult = null, opt:Bool = false, doc:String = '') {
+    public function new(types:HaxeTypes, index:Int, node:ZNode, scope:CompletionProvider, result:ExpressionResult = null, opt:Bool = false, doc:String = '') {
         this.types = types;
         this.opt = opt;
         this.index = index;
         this.doc = doc;
         this.result = result;
-        super(node);
+        super(node, scope);
     }
 
     public function getFqName() {
