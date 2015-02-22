@@ -541,6 +541,17 @@ class HaxeTypeBuilder {
                 iteratorName.completion = innerScope;
                 body.completion = innerScope;
                 doBody(body, innerScope);
+            case Node.NWhile(condExpr, body) | Node.NDoWhile(body, condExpr):
+                var condType = doExpr(condExpr).type;
+                if (!types.specTypeBool.canAssign(condType)) {
+                    errors.add(new ParserError(condExpr.pos, 'While condition must be Bool but was ' + condType));
+                }
+
+                doBody(condExpr);
+                doBody(body);
+            case Node.NSwitch(subject, cases):
+                doBody(subject);
+                doBody(cases);
             case Node.NCast(expr, type):
                 doBody(expr);
             
@@ -690,6 +701,8 @@ class HaxeTypeBuilder {
                 return types.result(types.createArray(itResult.type));
             case Node.NFor(iteratorName, iteratorExpr, body):
                 return doExpr(body);
+            case Node.NWhile(condExpr, body) | Node.NDoWhile(body, condExpr):
+                return doExpr(body);
             case Node.NNew(id, call):
                 var type = NodeTypeTools.getTypeDeclType(types, id);
                 return types.result(type);
@@ -700,85 +713,4 @@ class HaxeTypeBuilder {
         }
         return ExpressionResult.withoutValue(types.specTypeDynamic);
     }
-
-/*
-
-class HaxeCompletion {
-    public var errors:HaxeErrors;
-    public var types:HaxeTypes;
-
-    public function new(types:HaxeTypes, ?errors:HaxeErrors) {
-        this.types = types;
-        this.errors = (errors != null) ? errors : new HaxeErrors();
-    }
-
-    public function processCompletion(znode:ZNode):CompletionScope {
-        return process(znode, new CompletionScope(this, znode));
-    }
-
-    private function process(znode:ZNode, scope:CompletionScope):CompletionScope {
-        if (znode == null || znode.node == null) return scope;
-
-        var types = scope.types;
-
-        switch (znode.node) {
-            case Node.NWhile(condExpr, body) | Node.NDoWhile(body, condExpr):
-                var condType = scope.getNodeType(condExpr, new ProcessNodeContext());
-                if (!types.specTypeBool.canAssign(condType)) {
-                    errors.add(new ParserError(condExpr.pos, 'If condition must be Bool but was ' + condType));
-                }
-
-                process(condExpr, scope);
-                process(body, scope);
-
-            case Node.NBinOp(left, op, right):
-                process(left, scope);
-                process(right, scope);
-                var ltype = scope.getNodeType(left);
-                var rtype = scope.getNodeType(right);
-            case Node.NPackage(fqName):
-            case Node.NImport(fqName):
-            case Node.NUsing(fqName):
-            case Node.NClass(name, typeParams, extendsImplementsList, decls):
-                var classScope = scope.createChild(decls);
-                var clazz = types.getClass(NodeTools.getId(name));
-                classScope.currentClass = clazz;
-                process(decls, classScope);
-            case Node.NInterface(name, typeParams, extendsImplementsList, decls):
-                process(decls, scope.createChild(decls));
-            case Node.NSwitch(subject, cases):
-                process(subject, scope);
-                process(cases, scope);
-            case Node.NEnum(name):
-            case Node.NAbstract(name):
-            case Node.NMember(modifiers, decl):
-                processMember(decl, modifiers, scope);
-            case Node.NReturn(expr):
-                process(expr, scope);
-            //case Node.NPackage()
-            default:
-                trace('Unhandled completion (II) ${znode}');
-                //throw 'Unhandled completion (II) ${znode}';
-                errors.add(new ParserError(znode.pos, 'Unhandled completion (II) ${znode}'));
-                //throw ;
-        }
-        return scope;
-    }
-}
-*/
-
-    /*
-        private function _getNodeResult(znode:ZNode, context:ProcessNodeContext):ExpressionResult {
-        //trace(znode);
-        switch (znode.node) {
-            case Node.NWhile(cond, body):
-                return _getNodeResult(body, context);
-            default:
-                throw new js.Error('Not implemented getNodeResult() $znode');
-            //completion.errors.add(new ParserError(znode.pos, 'Not implemented getNodeType() $znode'));
-        }
-
-        return ExpressionResult.withoutValue(types.specTypeDynamic);
-    }
-    */
 }

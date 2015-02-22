@@ -73,6 +73,11 @@ class TestErrorReporting extends HLSTestCase {
         assertMethodErrors('if (1) 1; else 2;', '[29:30:If condition must be Bool but was Int]');
     }
 
+    public function testWhileCheck() {
+        assertMethodErrors('while (1) { a; }', '[32:33:While condition must be Bool but was Int]');
+        assertMethodErrors('do { a; } while (1);', '[42:43:While condition must be Bool but was Int]');
+    }
+
     public function testCallCount() {
         assertProgramErrors('class A { function b(a, b, c) { } function a() { b(1,2,3); } }', '[]');
         assertProgramErrors('class A { function b(a, b, c) { } function a() { b(); } }', '[49:50:Trying to call function with 0 arguments but required 3]');
