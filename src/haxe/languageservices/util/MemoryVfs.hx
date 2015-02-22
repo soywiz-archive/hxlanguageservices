@@ -9,7 +9,7 @@ class MemoryVfs extends Vfs {
     override private function _listFiles(path:String):Array<String> return root.access(path).filenames();
     override private function _readString(path:String):String return root.access(path).content;
 
-    public function set(path:String, content:String) {
+    public function set(path:String, content:String):MemoryVfs {
         root.access(path, true).content = content;
         return this;
     }

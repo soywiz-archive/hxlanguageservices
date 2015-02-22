@@ -37,7 +37,7 @@ class HaxeLanguageServices {
         this.vfs = vfs;
         this.conv = new Conv(types);
     }
-    
+
     public function updateHaxeFile(path:String):Void {
         try {
             var context:CompFileContext;

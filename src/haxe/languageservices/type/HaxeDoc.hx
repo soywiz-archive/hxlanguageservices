@@ -10,6 +10,7 @@ class HaxeDoc {
     public var params(default, null):Array<HaxeDocParam>;
 
     public function new(text:String) {
+        if (text == null) text = '';
         this.text = text;
         var lines = text.split('\n').map(function(v:String) {
             return v.trim().removeStart('*').trim();
@@ -27,8 +28,8 @@ class HaxeDoc {
                     var name = '?';
                     var doc = '?';
                     if (reg.match(paramInfo)) {
-                        name = reg.matched(1).trim();
-                        doc = reg.matched(2).trim();
+                        if (reg.matched(1) != null) name = reg.matched(1).trim();
+                        if (reg.matched(2) != null) doc = reg.matched(2).trim();
                     }
                     params.push(new HaxeDocParam(params.length, name, doc));
                     //trace(line);
