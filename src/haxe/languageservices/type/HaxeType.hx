@@ -63,11 +63,18 @@ class HaxeType {
     @:final public function canAssignFrom(that:HaxeType):Bool {
         return that.canAssignTo(this);
     }
+    
+    public function hasAncestor(ancestor:HaxeType):Bool {
+        return this == ancestor;
+    }
 
     public function canAssignTo(that:HaxeType):Bool {
+        //trace('AA:' + this + ',' + that);
         if (this.fqName == 'Int' && that.fqName == 'Float') return true;
         if (this.fqName == 'Dynamic' || that.fqName == 'Dynamic') return true;
-        if (this != that) return false;
-        return true;
+        if (this == that) return true;
+        if (this.hasAncestor(that)) return true;
+
+        return false;
     }
 }

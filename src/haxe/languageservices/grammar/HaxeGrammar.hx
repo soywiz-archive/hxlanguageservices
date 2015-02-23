@@ -258,7 +258,7 @@ class HaxeGrammar extends Grammar<Node> {
             castExpr,
             parenExpr,
             unaryExpr,
-            seq(['new', sure(), identifier, callEmptyPart, callPart], buildNode('NNew')),
+            seq(['new', sure(), identifier, any([callEmptyPart, callPart])], buildNode('NNew')),
             seq(
                 [constant, list2(any([fieldAccess, arrayAccess, callEmptyPart, callPart, binaryPart]), 0, rlist)],
                 buildNode('NAccessList')

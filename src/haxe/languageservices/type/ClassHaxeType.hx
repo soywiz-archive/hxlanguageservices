@@ -11,6 +11,12 @@ class ClassHaxeType extends HaxeType {
         return extending.getClass();
     }
 
+    override public function hasAncestor(ancestor:HaxeType):Bool {
+        if (extending != null && extending.getType().hasAncestor(ancestor)) return true;
+        for (i in implementing) if (i.getType().hasAncestor(ancestor)) return true;
+        return false;
+    }
+
     override public function getAllMembers(?out2:Array<HaxeMember>):Array<HaxeMember> {
         var out = super.getAllMembers(out2);
         var extending = getExtending();

@@ -62,7 +62,7 @@ class TestErrorReporting extends HLSTestCase {
 
     public function testMethodChecks() {
         assertMethodErrors('var a = 1;', '[]');
-        assertMethodErrors('var a:bool;', '[31:35:Type name should start with an uppercase letter]');
+        assertMethodErrors('var a:bool;', '[31:35:Type name should start with an uppercase letter,31:35:Unknown type bool]');
         assertMethodErrors('var a = 1; if (a) 1; else 2;', '[40:41:If condition must be Bool but was Int]');
         assertMethodErrors('var a = true; if (a) 1; else 2;', '[]');
         //assertMethodErrors('var a:Bool = 1;', '...');

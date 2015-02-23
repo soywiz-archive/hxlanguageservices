@@ -247,8 +247,13 @@ class HaxeTypeBuilder {
     
     private function processMember(type:HaxeType, member:ZNode, mods:HaxeModifiers, decl:ZNode) {
         if (ZNode.isValid(decl)) switch (decl.node) {
-            case Node.NVar(vname, propInfo, vtype, vvalue, doc):
-                checkType(vtype);
+            case Node.NVar(vname, propInfo, _vtype, vvalue, doc):
+                var vtype:ZNode = _vtype;
+                if (checkType(vtype)) {
+                    addLater(function() {
+                        addRefType(vtype);
+                    });
+                }
                 var field = new FieldHaxeMember(type, member.pos, vname);
                 field.modifiers = mods;
                 field.fieldtype = getTypeNodeType(vtype);
@@ -269,21 +274,27 @@ class HaxeTypeBuilder {
                 }
 
                 if (ZNode.isValid(vargs)) switch (vargs.node) {
-                    case Node.NList(_vargs): for (arg in _vargs) {
-                        if (ZNode.isValid(arg)) switch (arg.node) {
-                            case Node.NFunctionArg(opt, name, type, value, doc):
-                                var vexpr = processExprValue(value, scope, func);
-                                var arg = new FunctionArgument(types, func.args.length, name, scope);
-                                arg.result = vexpr;
-                                arg.type = getTypeNodeType2(type);
-                                func.args.push(arg);
-                                name.completion = scope;
-                                arg.getReferences().addNode(UsageType.Declaration, name);
-                                scope.add(arg);
-                            default:
-                                throw 'Invalid (VII) $arg';
-                        }
-                    }
+                    case Node.NList(_vargs):
+                        var _vargs2:Array<ZNode> = _vargs;
+                        _vargs2.map(function(arg) {
+                            if (ZNode.isValid(arg)) switch (arg.node) {
+                                case Node.NFunctionArg(opt, name, _type, value, doc):
+                                    var type:ZNode = _type;
+                                    var vexpr = processExprValue(value, scope, func);
+                                    var arg = new FunctionArgument(types, func.args.length, name, scope);
+                                    addLater(function() {
+                                        addRefType(type);
+                                    });
+                                    arg.result = vexpr;
+                                    arg.type = getTypeNodeType2(type);
+                                    func.args.push(arg);
+                                    name.completion = scope;
+                                    arg.getReferences().addNode(UsageType.Declaration, name);
+                                    scope.add(arg);
+                                default:
+                                    throw 'Invalid (VII) $arg';
+                            }
+                        });
                     default: throw 'Invalid (VI) $vargs';
                 }
 
@@ -322,22 +333,26 @@ class HaxeTypeBuilder {
         }
     }
     
-    private function checkType(znode:ZNode):Void {
-        if (!ZNode.isValid(znode)) return;
+    private function checkType(znode:ZNode):Bool {
+        if (!ZNode.isValid(znode)) return false;
         switch (znode.node) {
             case Node.NId(name):
-                checkClassName(znode.pos, name);
-            case Node.NWrapper(item): checkType(item);
+                return checkClassName(znode.pos, name);
+            case Node.NWrapper(item): return checkType(item);
             case Node.NTypeParams(items):
-            case Node.NList(items): for (item in items) checkType(item);
+            case Node.NList(items): for (item in items) if (!checkType(item)) return false;
             default: throw 'Invalid (VII) $znode';
         }
         //checkClassName(znode.pos, znode.pos.text);
+        return true;
     }
     
-    private function checkClassName(pos:TextRange, typeName:String):Void {
+    private function checkClassName(pos:TextRange, typeName:String):Bool {
         if (!StringUtils.isFirstUpper(typeName)) {
             error(pos, 'Type name should start with an uppercase letter');
+            return true;
+        } else {
+            return false;
         }
     }
     
@@ -382,11 +397,12 @@ class HaxeTypeBuilder {
                 var vtype:ZNode = _vtype;
                 var vvalue:ZNode = _vvalue;
                 var localVariable = new HaxeLocalVariable(vname, scope);
+                checkType(vtype);
+                if (vtype != null) addRefType(vtype);
                 localVariable.getReferences().addNode(UsageType.Declaration, vname);
                 expr.element = localVariable;
                 //trace('declared var: ' + vname);
                 scope.add(localVariable);
-                checkType(vtype);
                 var ntype:SpecificHaxeType = vtype != null ? getTypeNodeType2(vtype) : null;
                 localVariable.resultResolver = function(context) {
                     if (ntype != null) return types.result(ntype);
@@ -589,7 +605,10 @@ class HaxeTypeBuilder {
                 //doBody(type);
             case Node.NArrayComprehension(expr):
                 doBody(expr);
-            case Node.NNew(id, call):
+            case Node.NNew(_id, _call):
+                var id:ZNode = _id;
+                var call:ZNode = _call;
+                addRefType(id);
                 //doBody(call);
             case Node.NTryCatch(tryCode, catches):
                 doBody(tryCode);
@@ -617,6 +636,19 @@ class HaxeTypeBuilder {
                 throw 'TypeBuilder: Unimplemented body $expr';
         }
         return scope;
+    }
+    
+    private function addRefType(id:ZNode) {
+        if (id == null) return;
+        
+        var className = id.pos.text.trim();
+        var refClass = types.getType(className);
+        if (refClass == null) {
+            error(id.pos, 'Unknown type $className');
+        } else if (refClass.nameElement != null) {
+            id.completion = refClass.nameElement.scope;
+            refClass.nameElement.getReferences().addNode(UsageType.Read, id);
+        }
     }
 
     public function processExprValue(expr:ZNode, ?scope:LocalScope, ?func:FunctionHaxeType, ?context:ProcessNodeContext):ExpressionResult {
