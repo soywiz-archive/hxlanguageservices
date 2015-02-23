@@ -185,7 +185,7 @@ class TestGrammar extends HLSTestCase {
         */
 
         //assert(hg.expr, '{ var a = 10; var c = 9 }', '[24:24:expected semicolon]');
-        assert(hg.program, 'package a.b.c package d', '[14:14:expected ";",23:23:expected ";"]');
+        assert(hg.program, 'package a.b.c package d', '[13:13:expected ";",23:23:expected ";"]');
         assert(hg.program, 'class Test', '[10:10:expected "{"]');
         assert(hg.program, 'class Test {', '[12:12:expected "}"]');
         //trace(hg.parseStringNode(hg.program, 'class Test {', 'file.hx'));

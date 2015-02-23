@@ -93,6 +93,9 @@ class HaxeTypeBuilder {
                     processTopLevel(item, info, builtTypes);
                     info.index++;
                 }
+                
+                executePending();
+                
                 for (type in builtTypes) {
                     for (member in type.members) {
                         if (Std.is(member, MethodHaxeMember)) {
@@ -321,9 +324,9 @@ class HaxeTypeBuilder {
                                     var arg = new FunctionArgument(types, func.args.length, name, scope);
                                     addLater(function() {
                                         addRefType(type);
+                                        arg.type = getTypeNodeType2(type);
                                     });
                                     arg.result = vexpr;
-                                    arg.type = getTypeNodeType2(type);
                                     func.args.push(arg);
                                     name.completion = scope;
                                     arg.getReferences().addNode(UsageType.Declaration, name);
@@ -680,14 +683,20 @@ class HaxeTypeBuilder {
     
     private function addRefType(id:ZNode) {
         if (id == null) return;
-        
-        var className = id.pos.text.trim();
-        var refClass = types.getType(className);
-        if (refClass == null) {
-            error(id.pos, 'Unknown type $className');
-        } else if (refClass.nameElement != null) {
-            id.completion = refClass.nameElement.scope;
-            refClass.nameElement.getReferences().addNode(UsageType.Read, id);
+        switch (id.node) {
+            case Node.NList(items):
+                for (item in items) addRefType(item);
+                return;
+            case Node.NId(className):
+                var refClass = types.getType(className);
+                if (refClass == null) {
+                    error(id.pos, 'Unknown type $className');
+                } else if (refClass.nameElement != null) {
+                    id.completion = refClass.nameElement.scope;
+                    refClass.nameElement.getReferences().addNode(UsageType.Read, id);
+                }
+            default:
+                throw 'Invalid node for type $id';
         }
     }
 

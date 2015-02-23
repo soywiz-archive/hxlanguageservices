@@ -236,9 +236,11 @@ class Grammar<TNode> {
                 var separatorCount = 0;
                 var lastSeparatorPos = reader.createPos(start, start);
                 while (true) {
+                    var rpos = reader.pos;
                     var resultItem = _parse(item, grammarContext, skipper);
                     switch (resultItem) {
                         case GrammarResult.RUnmatched(_):
+                            //reader.pos = rpos;
                             break;
                         case GrammarResult.RMatched:
                         case GrammarResult.RMatchedValue(value): items.push(value);
@@ -248,7 +250,9 @@ class Grammar<TNode> {
                         var rpos = reader.pos;
                         var resultSep = _parse(separator, grammarContext, skipper);
                         switch (resultSep) {
-                            case GrammarResult.RUnmatched(_): break;
+                            case GrammarResult.RUnmatched(_):
+                                reader.pos = rpos;
+                                break;
                             default:
                                 lastSeparatorPos = reader.createPos(rpos, reader.pos);
                         }
