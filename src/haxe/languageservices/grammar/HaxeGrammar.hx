@@ -144,7 +144,7 @@ class HaxeGrammar extends Grammar<Node> {
         //var stringSqLit = Term.TReg('string', ~/^'[^']*'/, function(v) return Node.NConst(Const.CString(parseString(v))));
         var identifier = GrammarTerm.TReg(
             'identifier',
-            ~/^[a-zA-Z]\w*/,
+            ~/^[a-zA-Z_\$]\w*/,
             function(v) return Node.NId(v),
             function(v) return !ConstTools.isKeyword(v)
             //function(v) return !ConstTools.isKeyword(v) && !ConstTools.isPredefinedConstant(v)
@@ -206,6 +206,7 @@ class HaxeGrammar extends Grammar<Node> {
         var blockStm = seq(['{', list2(stm, 0, rlist), '}'], buildNode2('NBlock'));
         var catchStm2 = seq(['catch', sure(), '(', identifier, optType, ')', stm], buildNode('NCatch'));
         var tryCatchStm = seq(['try', sure(), stm, list2(catchStm2, 1, rlist)], buildNode('NTryCatch'));
+        var throwStm = seq(['throw', sure(), expr, ';'], buildNode('NThrow'));
 
         var switchCaseStm = seq(['case', sure(), identifier, ':'], buildNode2('NCase'));
         var switchDefaultStm = seq(['default', sure(), ':'], buildNode2('NDefault'));
@@ -279,6 +280,7 @@ class HaxeGrammar extends Grammar<Node> {
             ifStm, switchStm,
             forStm,  whileStm,  doWhileStm, breakStm,  continueStm,
             returnStm,
+            throwStm,
             seq([primaryExpr, sure(), ';'], rlist)
         ], [';', '}']));
 

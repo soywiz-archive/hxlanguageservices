@@ -120,8 +120,32 @@ class HaxeTypeBuilder {
             e();
         }
     }
-
+    
     public function processTopLevel(item:ZNode, info: { index: Int, packag: HaxePackage, types: Array<HaxeType> }, builtTypes:Array<HaxeType>) {
+        function declareType(type:HaxeType, name:ZNode) {
+            var ls = new LocalScope();
+            name.completion = ls;
+            type.nameElement = new HaxeLocalVariable(name, ls, function(context) {
+                return types.resultAnyDynamic;
+            });
+            ls.add(type.nameElement);
+            type.nameElement.getReferences().addNode(UsageType.Declaration, name);
+            return ls;
+        }
+        
+        function declareExtType(type2:ZNode, params2:ZNode, item:ZNode):TypeReference {
+            var className2 = type2.pos.text.trim();
+            var typeEx = new TypeReference(types, className2, item);
+            addLater(function() {
+                var e = typeEx.getType();
+                if (e != null) {
+                    type2.completion = e.nameElement.scope;
+                    e.nameElement.getReferences().addNode(UsageType.Read, type2);
+                }
+            });
+            return typeEx;
+        }
+        
         switch (item.node) {
             case Node.NPackage(name):
                 if (info.index != 0) {
@@ -143,37 +167,27 @@ class HaxeTypeBuilder {
                 }
                 var type:ClassHaxeType = info.packag.accessTypeCreate(typeName, item.pos, ClassHaxeType);
 
-                var ls = new LocalScope();
-                name.completion = ls;
-                type.nameElement = new HaxeLocalVariable(name, ls, function(context) {
-                    return types.resultAnyDynamic;
-                });
-                ls.add(type.nameElement);
-                type.nameElement.getReferences().addNode(UsageType.Declaration, name);
+                declareType(type, name);
 
                 builtTypes.push(type);
                 if (ZNode.isValid(extendsImplementsList)) {
                     switch (extendsImplementsList.node) {
-                        case Node.NList(items): for (item in items) { switch (item.node) {
-                            case Node.NExtends(_type2, params2):
-                                var type2:ZNode = _type2;
-                                if (type.extending != null) {
-                                    error(item.pos, 'multiple inheritance not supported in haxe');
+                        case Node.NList(items):
+                            for (item in items) {
+                                switch (item.node) {
+                                    case Node.NExtends(type2, params2):
+                                        var typeEx = declareExtType(type2, params2, item);
+                                        if (type.extending != null) {
+                                            error(item.pos, 'multiple inheritance not supported in haxe');
+                                        }
+                                        type.extending = typeEx;
+                                    case Node.NImplements(type2, params2):
+                                        var typeEx = declareExtType(type2, params2, item);
+                                        type.implementing.push(typeEx);
+
+                                    default: throw 'Invalid';
                                 }
-                                var className2 = type2.pos.text.trim();
-                                type.extending = new TypeReference(types, className2, item);
-                                addLater(function() {
-                                    var e = type.extending.getClass();
-                                    if (e != null) {
-                                        type2.completion = e.nameElement.scope;
-                                        e.nameElement.getReferences().addNode(UsageType.Read, type2);
-                                    }
-                                });
-                            case Node.NImplements(type2, params2):
-                                var className2 = type2.pos.text.trim();
-                                type.implementing.push(new TypeReference(types, className2, item));
-                            default: throw 'Invalid';
-                        } }
+                            }
                         default: throw 'Invalid';
                     }
                 }
@@ -186,6 +200,26 @@ class HaxeTypeBuilder {
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:InterfaceHaxeType = info.packag.accessTypeCreate(typeName, item.pos, InterfaceHaxeType);
+                declareType(type, name);
+
+                if (ZNode.isValid(extendsImplementsList)) {
+                    switch (extendsImplementsList.node) {
+                        case Node.NList(items):
+                            for (item in items) {
+                                switch (item.node) {
+                                    case Node.NExtends(type2, params2):
+                                        var typeEx = declareExtType(type2, params2, item);
+                                        addLater(function() {
+                                            type.implementing.push(typeEx.getInterface());
+                                        });
+
+                                    default: throw 'Invalid';
+                                }
+                            }
+                        default: throw 'Invalid';
+                    }
+                }
+
                 item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
                 processClass(type, decls);
@@ -193,18 +227,21 @@ class HaxeTypeBuilder {
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:TypedefHaxeType = info.packag.accessTypeCreate(typeName, item.pos, TypedefHaxeType);
+                declareType(type, name);
                 item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             case Node.NAbstract(name):
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:AbstractHaxeType = info.packag.accessTypeCreate(typeName, item.pos, AbstractHaxeType);
+                declareType(type, name);
                 item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             case Node.NEnum(name):
                 var typeName = getId(name);
                 if (info.packag.accessType(typeName) != null) error(item.pos, 'Type name $typeName is already defined in this module');
                 var type:EnumHaxeType = info.packag.accessTypeCreate(typeName, item.pos, EnumHaxeType);
+                declareType(type, name);
                 item.completion = new TypeMembersCompletionProvider(type);
                 builtTypes.push(type);
             default:
@@ -610,6 +647,9 @@ class HaxeTypeBuilder {
                 var call:ZNode = _call;
                 addRefType(id);
                 //doBody(call);
+            case Node.NThrow(_expr):
+                var expr:ZNode = _expr;
+                doBody(expr);
             case Node.NTryCatch(tryCode, catches):
                 doBody(tryCode);
                 doBody(catches);

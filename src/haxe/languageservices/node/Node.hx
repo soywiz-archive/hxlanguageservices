@@ -70,6 +70,7 @@ enum Node {
     NAccessList(node:ZNode, accessors:ZNode);
     NMember(modifiers:ZNode, decl:ZNode);
     NNew(id:ZNode, call:ZNode);
+    NThrow(expr:ZNode);
     NUnary(op:ZNode, value:ZNode);
     NIdWithType(id:ZNode, type:ZNode);
     NTypeParams(items:Array<ZNode>);
