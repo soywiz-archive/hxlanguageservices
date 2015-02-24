@@ -23,7 +23,7 @@ class TestErrorReporting extends HLSTestCase {
         assertProgramErrors('class Z { }  class T extends Z {}', []);
         assertProgramErrors('package A; package B;', '[8:9:package should be lowercase,11:21:Package should be first element in the file]');
         assertProgramErrors('class A { public function test() { } }', []);
-        assertProgramErrors('class A { function test():int { } }', '[26:29:Type name should start with an uppercase letter]');
+        assertProgramErrors('class A { function test():int { } }', '[26:29:Type name should start with an uppercase letter,26:29:Unknown type int]');
         assertProgramErrors('class A { function test(a,b,c) { } }', []);
         assertProgramErrors('class A { function test(a:Int) { } }', []);
         //assertProgramErrors('class A { function test(a:int, b:Int, c:int) { } }', []);

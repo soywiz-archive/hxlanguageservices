@@ -60,4 +60,11 @@ class TestReferences extends HLSTestCase {
             'Test:[6:10:Declaration,35:39:Read,46:50:Read]'
         );
     }
+
+    public function testNewReferencesArgs() {
+        assertReferences(
+            "class Test { function a(arg:Te###st):Test { } }",
+            'Test:[6:10:Declaration,34:38:Read,28:32:Read]'
+        );
+    }
 }

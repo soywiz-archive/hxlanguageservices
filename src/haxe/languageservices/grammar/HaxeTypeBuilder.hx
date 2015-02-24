@@ -302,9 +302,17 @@ class HaxeTypeBuilder {
                     error(vname.pos, 'Duplicate class field declaration : ${field.name}');
                 }
                 type.addMember(field);
-            case Node.NFunction(doc, vname, vtypeParams, vargs, vret, vexpr):
+            case Node.NFunction(doc, vname, vtypeParams, vargs, _vret, vexpr):
+                var vret:ZNode = _vret;
                 checkFunctionDeclArgs(vargs);
+
                 checkType(vret);
+                if (vret != null) {
+                    addLater(function() {
+                        addRefType(vret);
+                    });
+                }
+
                 var fretval = getTypeNodeType(vret);
                 var func = new FunctionHaxeType(types, type, member.pos, vname, [], fretval, vexpr);
 
