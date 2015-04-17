@@ -39,6 +39,18 @@ class HaxeType implements HaxeCompilerElement {
         for (member in members) out.push(member);
         return out;
     }
+
+    public function getAllStaticMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
+        if (out == null) out = [];
+        for (member in members) if (member.modifiers.isStatic) out.push(member);
+        return out;
+    }
+
+    public function getStaticMemberByName(name:String):HaxeMember {
+        var member:HaxeMember = membersByName[name];
+        if (!member.modifiers.isStatic) return null;
+        return member;
+    }
     
     public function getInheritedMemberByName(name:String):HaxeMember {
         return membersByName[name];

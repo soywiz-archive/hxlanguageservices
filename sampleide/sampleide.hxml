@@ -3,4 +3,5 @@
 -main MainIde
 #-dce no
 -debug
+-D source-map-content
 -js mainide.js

@@ -37,16 +37,25 @@ class SpecificHaxeType implements HaxeCompilerElement  {
         return ExpressionResult.withoutValue(this);
     }
 
-    public function getInheritedMemberByName(name:String):HaxeMember {
-        if (type.fqName == 'Class') {
-            return parameters[0].type.getInheritedMemberByName(name);
+    public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
+        if (out == null) out = [];
+        if (this.type.fqName == 'Class') {
+            return parameters[0].type.getAllStaticMembers();
         } else {
-            return type.getInheritedMemberByName(name);
+            return this.type.getAllMembers();
+        }
+    }
+
+    public function getInheritedMemberByName(name:String):HaxeMember {
+        if (this.type.fqName == 'Class') {
+            return parameters[0].type.getStaticMemberByName(name);
+        } else {
+            return this.type.getInheritedMemberByName(name);
         }
     }
 
     public function access(name:String):SpecificHaxeType {
-        var member = type.getInheritedMemberByName(name);
+        var member = this.type.getInheritedMemberByName(name);
         if (member == null) return types.specTypeDynamic;
         return member.getType();
     }
