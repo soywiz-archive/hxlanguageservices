@@ -1,4 +1,6 @@
 package haxe.languageservices.grammar;
+import haxe.languageservices.completion.CombinedCompletionProvider;
+import haxe.languageservices.completion.TypesCompletionProvider;
 import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.error.QuickFixAction;
 import haxe.languageservices.error.QuickFix;
@@ -316,7 +318,9 @@ class HaxeTypeBuilder {
                 var fretval = getTypeNodeType(vret);
                 var func = new FunctionHaxeType(types, type, member.pos, vname, [], fretval, vexpr);
 
-                var scope = new LocalScope(TypeMembersCompletionProvider.forType(type, !mods.isStatic, true));
+                var typesProvider = new TypesCompletionProvider(type.types);
+                var typeMemberProvider = TypeMembersCompletionProvider.forType(type, !mods.isStatic, true);
+                var scope = new LocalScope(new CombinedCompletionProvider([typesProvider, typeMemberProvider]));
                 if (!mods.isStatic) {
                     scope.add(new HaxeThisElement(type));
                 }

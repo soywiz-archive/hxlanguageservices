@@ -54,7 +54,8 @@ class MainIde {
         });
         editor.setTheme("ace/theme/xcode");
         editor.getSession().setMode("ace/mode/haxe");
-        cast(editor).completers = [
+        var ed:Dynamic = editor;
+        ed.completers = [
             {
                 getCompletions: function(editor, session, pos, prefix:String, callback) {
                     callback(null, getAutocompletion());
@@ -177,7 +178,7 @@ class MainIde {
     }
     
     private function updateIde() {
-        var document = Browser.document;
+        var document:Dynamic = Browser.document;
 
         for (id in markerIds) editor.session.removeMarker(id);
         var annotations = new Array<Ace.Annotation>();
@@ -200,7 +201,8 @@ class MainIde {
                 text: e.text, type: 'error'
             });
             var fixText:DivElement = cast document.createElement('div');
-            fixText.innerText = '${e.pos}:${e.text}\n';
+            var ft2:Dynamic = fixText;
+            ft2.innerText = '${e.pos}:${e.text}\n';
             errorsOverlay.appendChild(fixText);
 
             if (e.fixes != null) Lambda.foreach(e.fixes, function(fix:QuickFix) {

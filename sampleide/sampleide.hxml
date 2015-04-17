@@ -1,6 +1,6 @@
 -cp src
 -cp ../src
 -main MainIde
--dce no
+#-dce no
 -debug
 -js mainide.js

@@ -23,7 +23,7 @@ class TypeMembersCompletionProvider implements CompletionProvider {
     }
 
     public function getEntryByName(name:String):HaxeCompilerElement {
-        var member = type.getInheritedMemberByName(name);
+        var member = this.type.getInheritedMemberByName(name);
         if (filter != null && !filter(member)) return null;
         if (member == null) return null;
         return member;

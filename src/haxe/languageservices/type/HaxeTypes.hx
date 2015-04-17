@@ -120,4 +120,8 @@ class HaxeTypes {
     public function getLeafPackageNames():Array<String> {
         return rootPackage.getLeafs().map(function(p:HaxePackage) return p.fqName);
     }
+
+    public function getPackage(path:String):HaxePackage {
+        return rootPackage.access(path, false);
+    }
 }

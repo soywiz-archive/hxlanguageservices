@@ -7,11 +7,12 @@ import haxe.unit.TestCase;
 using StringTools;
 
 class TestReferences extends HLSTestCase {
-    private function assertReferences(program:String, assert:String, ?p:PosInfos) {
+    private function assertReferences(program:String, assert:String, errors:String = '[]', ?p:PosInfos) {
         var index = program.indexOf('###');
         program = program.replace('###', '');
         var hls = new HaxeLanguageServices(new MemoryVfs().set('live.hx', program));
         hls.updateHaxeFile('live.hx');
+        assertEqualsString(errors, hls.getErrors('live.hx'), p);
         assertEqualsString(assert, hls.getReferencesAt('live.hx', index), p);
     }
 
@@ -67,4 +68,13 @@ class TestReferences extends HLSTestCase {
             'Test:[6:10:Declaration,34:38:Read,28:32:Read]'
         );
     }
+
+    /*
+    public function testStaticCall() {
+        assertReferences(
+            "class Test { static function sme###thod() { } function method() { Test.smethod(); } }",
+            '---'
+        );
+    }
+    */
 }

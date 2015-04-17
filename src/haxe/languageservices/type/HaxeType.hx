@@ -1,10 +1,12 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.node.ProcessNodeContext;
 import haxe.languageservices.completion.CompletionProvider;
 import js.html.svg.AnimatedBoolean;
 import haxe.languageservices.node.ZNode;
 import haxe.languageservices.node.TextRange;
-class HaxeType {
+
+class HaxeType implements HaxeCompilerElement {
     public var pos:TextRange;
     public var packag:HaxePackage;
     public var types:HaxeTypes;
@@ -25,7 +27,11 @@ class HaxeType {
     public function getReferences():HaxeCompilerReferences {
         return references;
     }
-    
+
+    public function getPosition():TextRange return pos;
+    public function getNode():ZNode return node;
+    public function getResult(?context:ProcessNodeContext):ExpressionResult return types.resultAnyDynamic;
+
     public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
         if (out == null) out = [];
         for (member in members) out.push(member);
@@ -44,7 +50,8 @@ class HaxeType {
         this.fqName = (packag.fqName != '') ? '${packag.fqName}.$name' : name;
     }
     
-    public function getName() return 'Type("$fqName", $members)';
+    public function getName() return name;
+    public function getDebugName() return 'Type("$fqName", $members)';
     public function toString() return '$fqName';
 
     public function existsMember(name:String):Bool return membersByName.exists(name);
