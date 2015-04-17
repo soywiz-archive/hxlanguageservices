@@ -8,13 +8,17 @@ import haxe.languageservices.node.TextRange;
 
 class Grammar<TNode> {
     private function term(z:Dynamic, ?conv: Dynamic -> Dynamic):GrammarTerm {
-        if (Std.is(z, String)) return GrammarTerm.TLit(cast(z, String), conv);
-        if (Std.is(z, EReg)) {
-            throw 'unsupported $z';
-            //return Term.TReg(cast(z, EReg), conv);
+        try {
+            if (Std.is(z, String)) return GrammarTerm.TLit(cast(z, String), conv);
+            if (Std.is(z, EReg)) {
+                throw 'unsupported $z';
+                //return Term.TReg(cast(z, EReg), conv);
+            }
+            if (Std.is(z, GrammarTermRef)) return GrammarTerm.TRef(z);
+        } catch (e:Dynamic) {
+
         }
-        if (Std.is(z, GrammarTermRef)) return GrammarTerm.TRef(z);
-        return cast(z, GrammarTerm);
+        return cast z;
     }
 
     private function _term(z:Dynamic):GrammarTerm return term(z);

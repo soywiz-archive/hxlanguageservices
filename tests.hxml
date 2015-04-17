@@ -4,3 +4,4 @@
 -dce no
 -debug
 -js tests.js
+-cmd node tests.js
