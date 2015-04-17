@@ -10,7 +10,7 @@ class TestHaxeSdk extends HLSTestCase {
         var sdkVersion = sdk.getVersion();
         assertEquals('3.1.3', sdkVersion);
         var libraries = sdk.libraries;
-        assertEquals("{cairo => HaxeLibrary(cairo), nme => HaxeLibrary(nme), }", '' + libraries);
+        assertEquals("[HaxeLibrary(cairo),HaxeLibrary(nme)]", '' + Lambda.array(libraries));
         var cairo:HaxeLibrary = libraries['cairo'];
         assertEquals(true, cairo.exists);
         assertEquals(true, cairo.currentVersion.exists);
