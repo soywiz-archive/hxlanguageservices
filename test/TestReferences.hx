@@ -72,7 +72,7 @@ class TestReferences extends HLSTestCase {
     /*
     public function testStaticCall() {
         assertReferences(
-            "class Test { static function sme###thod() { } function method() { Test.smethod(); } }",
+            "class Test { static public function sme###thod() { } function method() { Test.smethod(); } }",
             '---'
         );
     }

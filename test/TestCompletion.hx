@@ -136,7 +136,7 @@ class TestCompletion extends HLSTestCase {
 
     public function testFieldAccessCompletion() {
         assertProgramBody('class A { function a() { var m = []; m.###; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['38:38:expected identifier']);
-        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Can\'t find member a in Array']);
+        assertProgramBody('class A { function a() { var m = []; m.###a; } }', ['indexOf:Dynamic -> Int', 'charAt:Int -> String'], [], ['39:40:Can\'t find member a in Array<Dynamic>']);
         assertProgramBody(
             'class A extends B { function a() { this.###; } } class B { function b() {} }',
             ['a:Void -> Dynamic', 'b:Void -> Dynamic'], [],

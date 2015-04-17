@@ -25,7 +25,7 @@ class FunctionHaxeType extends HaxeType {
     }
     
     public function getRetvalFqName() {
-        return getReturn().type.type.fqName;
+        return getReturn().stype.type.fqName;
     }
     
     public function getReturn():ExpressionResult {

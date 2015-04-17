@@ -143,15 +143,15 @@ class Conv {
     }
 
     public function toEntry(name:String, result:ExpressionResult):CompEntry {
-        return new CompEntry(name, toType(result.type), result.hasValue, result.value);
+        return new CompEntry(name, toType(result.stype), result.hasValue, result.value);
     }
     
     public function funcRet(f:ExpressionResult):CompReturn {
-        return new CompReturn(toType(f.type), '');
+        return new CompReturn(toType(f.stype), '');
     }
 
     public function funcArg(fa:FunctionArgument):CompArgument {
-        return new CompArgument(fa.index, fa.getName(), toType(fa.getResult().type), fa.opt, fa.doc);
+        return new CompArgument(fa.index, fa.getName(), toType(fa.getResult().stype), fa.opt, fa.doc);
     }
     
     public function usageType(type:UsageType):CompReferenceType {

@@ -79,7 +79,7 @@ class HaxeTypeChecker {
                             var mmem:MethodHaxeMember = cast(mem, MethodHaxeMember);
                             var func = mmem.func;
                             var retval = func.getReturn();
-                            var rettypeString = retval.type.toString();
+                            var rettypeString = retval.stype.toString();
                             var mods:String = mmem.modifiers.toString();
                             var argstrl = [];
                             for (arg in func.args) {

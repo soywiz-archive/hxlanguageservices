@@ -1,5 +1,6 @@
 package haxe.languageservices.type;
 
+import haxe.languageservices.type.SpecificHaxeType;
 import haxe.languageservices.completion.LocalScope;
 import haxe.languageservices.node.Node;
 import haxe.languageservices.node.Reader;
@@ -16,6 +17,7 @@ class HaxeTypes {
     public var typeInt(default, null):HaxeType;
     public var typeFloat(default, null):HaxeType;
     public var typeString(default, null):HaxeType;
+    public var typeClass(default, null):HaxeType;
 
     public var specTypeVoid(default, null):SpecificHaxeType;
     public var specTypeDynamic(default, null):SpecificHaxeType;
@@ -28,7 +30,10 @@ class HaxeTypes {
     public var resultAnyDynamic(default, null):ExpressionResult;
 
     public var typeArray(default, null):HaxeType;
-    
+
+    public var dummyPosition:TextRange;
+    public var dummyNode:ZNode;
+
     public function result(specType:SpecificHaxeType):ExpressionResult {
         return ExpressionResult.withoutValue(specType);
     }
@@ -51,7 +56,10 @@ class HaxeTypes {
 
     public function new() {
         var typesPos = new TextRange(0, 0, new Reader('', '_Types.hx'));
-    
+
+        this.dummyPosition = typesPos;
+        this.dummyNode = new ZNode(this.dummyPosition, Node.NId('dummy'));
+
         rootPackage = new HaxePackage(this, '');
         typeVoid = rootPackage.accessTypeCreate('Void', typesPos, ClassHaxeType);
         typeDynamic = rootPackage.accessTypeCreate('Dynamic', typesPos, ClassHaxeType);
@@ -61,6 +69,7 @@ class HaxeTypes {
         typeFloat = rootPackage.accessTypeCreate('Float', typesPos, ClassHaxeType);
         typeArray = rootPackage.accessTypeCreate('Array', typesPos, ClassHaxeType);
         typeString = rootPackage.accessTypeCreate('String', typesPos, ClassHaxeType);
+        typeClass = rootPackage.accessTypeCreate('Class', typesPos, ClassHaxeType);
 
         specTypeVoid = createSpecific(typeVoid);
         specTypeDynamic = createSpecific(typeDynamic);
@@ -113,6 +122,10 @@ class HaxeTypes {
     
     public function createSpecific(type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
         return new SpecificHaxeType(this, type, parameters);
+    }
+
+    public function createSpecificClass(classType:HaxeType):SpecificHaxeType {
+        return new SpecificHaxeType(this, typeClass, [new SpecificHaxeType(this, classType)]);
     }
 
     public function getAllTypes():Array<HaxeType> return rootPackage.getAllTypes();

@@ -30,7 +30,9 @@ class HaxeType implements HaxeCompilerElement {
 
     public function getPosition():TextRange return pos;
     public function getNode():ZNode return node;
-    public function getResult(?context:ProcessNodeContext):ExpressionResult return types.resultAnyDynamic;
+    public function getResult(?context:ProcessNodeContext):ExpressionResult {
+        return ExpressionResult.withoutValue(types.createSpecificClass(this));
+    }
 
     public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
         if (out == null) out = [];

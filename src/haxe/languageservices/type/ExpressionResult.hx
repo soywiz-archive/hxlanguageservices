@@ -1,26 +1,26 @@
 package haxe.languageservices.type;
 
 class ExpressionResult {
-    public var type:SpecificHaxeType;
+    public var stype:SpecificHaxeType;
     public var hasValue:Bool;
     public var value:Dynamic;
 
-    private function new(type:SpecificHaxeType, hasValue:Bool, value:Dynamic) {
-        this.type = type;
+    private function new(stype:SpecificHaxeType, hasValue:Bool, value:Dynamic) {
+        this.stype = stype;
         this.hasValue = hasValue;
         this.value = value;
     }
 
     public function toString() {
         if (hasValue) {
-            if (Std.is(value, String)) return '$type = "$value"';
-            return '$type = $value';
+            if (Std.is(value, String)) return '$stype = "$value"';
+            return '$stype = $value';
         }
-        return '$type';
+        return '$stype';
     }
     
     public function getArrayElement() {
-        return withoutValue(type.getArrayElement());
+        return withoutValue(stype.getArrayElement());
     }
 
     static public function unify(types:HaxeTypes, items:Array<ExpressionResult>):ExpressionResult {
@@ -30,9 +30,9 @@ class ExpressionResult {
     }
 
     static public function unify2(types:HaxeTypes, a:ExpressionResult, b:ExpressionResult):ExpressionResult {
-        if (a.type == b.type && a.hasValue == b.hasValue && a.value == b.value) return a;
-        if (a.type == b.type) return withoutValue(a.type);
-        return withoutValue(a.type.type.types.unify([a.type, b.type]));
+        if (a.stype == b.stype && a.hasValue == b.hasValue && a.value == b.value) return a;
+        if (a.stype == b.stype) return withoutValue(a.stype);
+        return withoutValue(a.stype.type.types.unify([a.stype, b.stype]));
     }
 
     static public function withoutValue(type:SpecificHaxeType):ExpressionResult return new ExpressionResult(type, false, null);

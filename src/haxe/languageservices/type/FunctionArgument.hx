@@ -22,7 +22,7 @@ class FunctionArgument extends HaxeNodeElement {
     }
 
     public function getFqName() {
-        return getResult().type.type.fqName;
+        return getResult().stype.type.fqName;
     }
 
     override public function getResult(?context:ProcessNodeContext):ExpressionResult {
