@@ -48,7 +48,7 @@ class HaxeType implements HaxeCompilerElement {
 
     public function getStaticMemberByName(name:String):HaxeMember {
         var member:HaxeMember = membersByName[name];
-        if (!member.modifiers.isStatic) return null;
+        if (member == null || !member.modifiers.isStatic) return null;
         return member;
     }
     

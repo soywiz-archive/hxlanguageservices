@@ -23,6 +23,7 @@ class TypeMembersCompletionProvider implements CompletionProvider {
 
     static public function forSpecificType(stype:SpecificHaxeType, viewInstance:Bool, viewPrivate:Bool):CompletionProvider {
         return new TypeMembersCompletionProvider(stype, function(member:HaxeMember) {
+            if (member == null) return false;
             if (!viewInstance && !member.modifiers.isStatic) return false;
             if (!viewPrivate && member.modifiers.isPrivate) return false;
             return true;
