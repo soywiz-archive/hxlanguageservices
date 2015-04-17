@@ -151,4 +151,12 @@ class TestCompletion extends HLSTestCase {
             [], []
         );
     }
+
+    public function testStaticCall() {
+        assertProgramBody(
+            'class A { function a() { var m = B.b(10); ### } } class B { static public function b(a:Int):String { return "test"; } }',
+            ['m:String'],
+            [], []
+        );
+    }
 }

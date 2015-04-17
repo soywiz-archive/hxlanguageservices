@@ -55,7 +55,7 @@ class SpecificHaxeType implements HaxeCompilerElement  {
     }
 
     public function access(name:String):SpecificHaxeType {
-        var member = this.type.getInheritedMemberByName(name);
+        var member = getInheritedMemberByName(name);
         if (member == null) return types.specTypeDynamic;
         return member.getType();
     }
