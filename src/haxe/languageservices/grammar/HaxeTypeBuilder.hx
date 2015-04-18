@@ -483,7 +483,6 @@ class HaxeTypeBuilder {
                 if (!ConstTools.isPredefinedConstant(name)) {
                     var id = scope.getEntryByName(name);
                     expr.element = id;
-                    //trace(id);
                     if (id == null) {
                         //trace('Not found id: ' + name + ' in ' + expr.pos.reader.str);
                         //trace(scope.getEntries());
@@ -699,13 +698,13 @@ class HaxeTypeBuilder {
             case Node.NList(items):
                 for (item in items) addRefType(item);
                 return;
-            case Node.NId(className):
-                var refClass = types.getType(className);
-                if (refClass == null) {
-                    error(id.pos, 'Unknown type $className');
-                } else if (refClass.nameElement != null) {
-                    id.completion = refClass.nameElement.scope;
-                    refClass.nameElement.getReferences().addNode(UsageType.Read, id);
+            case Node.NId(typeName):
+                var refType = types.getType(typeName);
+                if (refType == null) {
+                    error(id.pos, 'Unknown type $typeName');
+                } else if (refType.nameElement != null) {
+                    id.completion = refType.nameElement.scope;
+                    refType.getReferences().addNode(UsageType.Read, id);
                 }
             default:
                 throw 'Invalid node for type $id';

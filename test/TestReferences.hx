@@ -75,4 +75,11 @@ class TestReferences extends HLSTestCase {
             'smethod:[36:43:Declaration,75:82:Read]'
         );
     }
+
+    public function testStaticCallTypeReference() {
+        assertReferences(
+            "class T###est { static public function smethod() { Test.smethod; } }",
+            'Test:[6:10:Declaration,48:52:Read]'
+        );
+    }
 }

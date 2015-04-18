@@ -24,10 +24,10 @@ class TypeReference implements HaxeCompilerElement {
     public function getClass():ClassHaxeType return types.getClass(fqName);
     public function getInterface():InterfaceHaxeType return types.getInterface(fqName);
 
-    public function getPosition():TextRange { return expr.pos; }
-    public function getNode():ZNode { return expr; }
-    public function getName():String { return fqName; }
-    public function getReferences():HaxeCompilerReferences { return getType().getReferences(); }
+    public function getPosition():TextRange return expr.pos;
+    public function getNode():ZNode return expr;
+    public function getName():String return fqName;
+    public function getReferences():HaxeCompilerReferences return getType().getReferences();
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         return ExpressionResult.withoutValue(getSpecType());
     }

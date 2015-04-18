@@ -21,11 +21,12 @@ class HaxeType implements HaxeCompilerElement {
     private var membersByName = new Map<String, HaxeMember>();
 
     public var node:ZNode;
-    
-    public var references = new HaxeCompilerReferences();
 
+    private var _references:HaxeCompilerReferences;
     public function getReferences():HaxeCompilerReferences {
-        return references;
+        if (nameElement != null) return nameElement.getReferences();
+        if (_references == null) _references = new HaxeCompilerReferences();
+        return _references;
     }
 
     public function getPosition():TextRange return pos;

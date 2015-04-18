@@ -7,7 +7,6 @@ class SpecificHaxeType implements HaxeCompilerElement  {
     public var types:HaxeTypes;
     public var type:HaxeType;
     public var parameters:Array<SpecificHaxeType>;
-    public var refs = new HaxeCompilerReferences();
 
     public function new(types:HaxeTypes, type:HaxeType, ?parameters:Array<SpecificHaxeType>) {
         if (type == null) type = types.typeDynamic;
@@ -31,7 +30,7 @@ class SpecificHaxeType implements HaxeCompilerElement  {
         return type.name + '<' + parameters.map(function(p) return p.getName()).join(', ') + '>';
     }
 
-    public function getReferences():HaxeCompilerReferences return refs;
+    public function getReferences():HaxeCompilerReferences return type.getReferences();
 
     public function getResult(?context:ProcessNodeContext):ExpressionResult {
         return ExpressionResult.withoutValue(this);
