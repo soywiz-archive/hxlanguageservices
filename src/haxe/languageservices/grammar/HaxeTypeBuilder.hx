@@ -215,7 +215,7 @@ class HaxeTypeBuilder {
                                     case Node.NExtends(type2, params2):
                                         var typeEx = declareExtType(type2, params2, item);
                                         addLater(function() {
-                                            type.implementing.push(typeEx.getInterface());
+                                            type.implementing.push(typeEx);
                                         });
 
                                     default: throw 'Invalid';

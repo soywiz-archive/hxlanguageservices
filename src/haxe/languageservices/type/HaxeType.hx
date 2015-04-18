@@ -34,6 +34,10 @@ class HaxeType implements HaxeCompilerElement {
         return ExpressionResult.withoutValue(types.createSpecificClass(this));
     }
 
+    public function getAllBaseTypes():Array<HaxeType> {
+        return [this];
+    }
+
     public function getAllMembers(?out:Array<HaxeMember>):Array<HaxeMember> {
         if (out == null) out = [];
         for (member in members) out.push(member);

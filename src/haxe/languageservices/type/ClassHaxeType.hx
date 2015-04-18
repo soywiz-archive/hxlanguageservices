@@ -17,6 +17,13 @@ class ClassHaxeType extends HaxeType {
         return false;
     }
 
+    override public function getAllBaseTypes():Array<HaxeType> {
+        var out = super.getAllBaseTypes();
+        if (extending != null) out = out.concat(extending.getType().getAllBaseTypes());
+        for (interfaze in implementing) out = out.concat(interfaze.getType().getAllBaseTypes());
+        return out;
+    }
+
     override public function getAllMembers(?out2:Array<HaxeMember>):Array<HaxeMember> {
         var out = super.getAllMembers(out2);
         var extending = getExtending();

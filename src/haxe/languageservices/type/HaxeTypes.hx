@@ -15,7 +15,7 @@ class HaxeTypes {
     public var typeUnknown(default, null):HaxeType;
     public var typeBool(default, null):HaxeType;
     public var typeInt(default, null):HaxeType;
-    public var typeFloat(default, null):HaxeType;
+    public var typeFloat(default, null):ClassHaxeType;
     public var typeString(default, null):HaxeType;
     public var typeClass(default, null):HaxeType;
 
@@ -71,6 +71,8 @@ class HaxeTypes {
         typeString = rootPackage.accessTypeCreate('String', typesPos, ClassHaxeType);
         typeClass = rootPackage.accessTypeCreate('Class', typesPos, ClassHaxeType);
 
+        //typeFloat.extending = new TypeReference(this, 'Int', dummyNode);
+
         specTypeVoid = createSpecific(typeVoid);
         specTypeDynamic = createSpecific(typeDynamic);
         specTypeUnknown = createSpecific(typeUnknown);
@@ -100,9 +102,42 @@ class HaxeTypes {
     }
 
     public function unify(types:Array<SpecificHaxeType>):SpecificHaxeType {
-        // @TODO
         if (types.length == 0) return specTypeDynamic;
-        return types[0];
+        var out = types[0];
+        for (n in 1 ... types.length) out = unify2(out, types[n]);
+        return out;
+    }
+
+    public function unify2(a:SpecificHaxeType, b:SpecificHaxeType):SpecificHaxeType {
+        if (a.type == typeDynamic) return specTypeDynamic;
+        if (b.type == typeDynamic) return specTypeDynamic;
+        if (a.type == b.type) return unifyGenerics(a, b);
+
+        // This should be work
+        if ((a.type == typeFloat && b.type == typeInt) || (a.type == typeInt && b.type == typeFloat)) return specTypeFloat;
+
+        var pair = matchPair(a.type.getAllBaseTypes(), b.type.getAllBaseTypes());
+        if (pair != null) {
+            // @TODO: Check generics!
+            return new SpecificHaxeType(this, pair.l);
+        }
+        return specTypeDynamic;
+    }
+
+    private function unifyGenerics(a:SpecificHaxeType, b:SpecificHaxeType):SpecificHaxeType {
+        if (a.type != b.type) throw "Trying to unify generics of distinct types";
+        return a;
+    }
+
+    private function matchPair<T>(a:Array<T>, b:Array<T>):{l:T, r:T} {
+        for (t1 in a) {
+            for (t2 in b) {
+                if (t1 == t2) {
+                    return { l : t1, r : t2 };
+                }
+            }
+        }
+        return null;
     }
 
     public function getType(path:String):HaxeType {

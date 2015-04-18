@@ -159,4 +159,30 @@ class TestCompletion extends HLSTestCase {
             [], []
         );
     }
+
+    public function testArrayUnification() {
+        assertProgramBody(
+            'class A { function a() { var m = [1, 1.2]; ### } }',
+            ['m:Array<Float>'],
+            [], []
+        );
+    }
+
+    public function testArrayUnification2() {
+        assertProgramBody(
+            '
+            class Test { static public function create() { var b = [new Test1(), new Test2(), new Test3()]; ### } }
+            class Test1 implements B { }
+            class Test2 extends Test1 implements A { }
+            class Test3 implements A { }
+            interface B { }
+            interface A extends B { }
+            '
+            ,
+            ['b:Array<B>'],
+            [], []
+        );
+    }
+
+
 }
