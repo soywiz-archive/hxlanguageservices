@@ -102,7 +102,7 @@ class TestCompletion extends HLSTestCase {
     }
 
     public function testArrayComprehension() {
-        assertFuntionBody('var a = [for (n in 0 ... 10) n]; ###', ['a:Array<Dynamic>'], []);
+        assertFuntionBody('var a = [for (n in 0 ... 10) n]; ###', ['a:Array<Int>'], []);
         //assertFuntionBody('var a = [for (n in 0...10) if (true) 1]; ###', ['a:Array<Dynamic>'], []);
     }
 

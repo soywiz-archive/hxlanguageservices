@@ -430,7 +430,7 @@ class HaxeTypeBuilder {
         
         function doExpr(expr:ZNode, ?context:ProcessNodeContext):ExpressionResult {
             if (context == null) context = new ProcessNodeContext();
-            return _processExprValue(expr, scope, func, context);
+            return _processExprValue(expr, func, context);
         }
 
         function doBody(expr:ZNode, ?scope2:LocalScope):LocalScope {
@@ -628,7 +628,6 @@ class HaxeTypeBuilder {
                 var iteratorExpr:ZNode = _iteratorExpr;
                 var body:ZNode = _body;
                 var innerScope = new LocalScope(scope);
-                doBody(iteratorExpr);
                 var local = new HaxeLocalVariable(iteratorName, innerScope, function(context:ProcessNodeContext) {
                     return doExpr(iteratorExpr, context).getArrayElement();
                 });
@@ -637,6 +636,8 @@ class HaxeTypeBuilder {
                 // @TODO: there should be a completion scope for searching and for declaring?
                 iteratorName.completion = innerScope;
                 body.completion = innerScope;
+                //iteratorExpr.completion = innerScope;
+                doBody(iteratorExpr);
                 doBody(body, innerScope);
             case Node.NWhile(condExpr, body) | Node.NDoWhile(body, condExpr):
                 var condType = doExpr(condExpr).stype;
@@ -714,10 +715,10 @@ class HaxeTypeBuilder {
     public function processExprValue(expr:ZNode, ?scope:LocalScope, ?func:FunctionHaxeType, ?context:ProcessNodeContext):ExpressionResult {
         if (scope == null) scope = new LocalScope();
         if (context == null) context = new ProcessNodeContext();
-        return _processExprValue(expr, scope, func, context);
+        return _processExprValue(expr, func, context);
     }
     
-    private function _processExprValue(expr:ZNode, scope:LocalScope, func:FunctionHaxeType, context:ProcessNodeContext):ExpressionResult {
+    private function _processExprValue(expr:ZNode, func:FunctionHaxeType, context:ProcessNodeContext):ExpressionResult {
         if (!ZNode.isValid(expr)) return ExpressionResult.withoutValue(types.specTypeDynamic);
         if (context.isExplored(expr)) {
             context.recursionDetected();
@@ -725,9 +726,9 @@ class HaxeTypeBuilder {
         }
         context.markExplored(expr);
         //trace(expr + ' : ' + context);
-        expr.completion = scope;
+        //expr.completion = scope;
         function doExpr(expr:ZNode):ExpressionResult {
-            return _processExprValue(expr, scope, func, context);
+            return _processExprValue(expr, func, context);
         }
         switch (expr.node) {
             case Node.NBlock(values):
@@ -741,13 +742,18 @@ class HaxeTypeBuilder {
                         default:
                     }
                 } else {
-                    var id = scope.getEntryByName(name);
-                    if (id != null) return id.getResult(context);
+                    var id = expr.getCompletion().getEntryByName(name);
+                    //trace(name, id);
+                    if (id != null) {
+                        return id.getResult(context);
+                    } else {
+                        //errors.add(new ParserError(expr.pos, 'TypeBuilder: Value not found $name'));
+                    }
                 }
             case Node.NArray(pp):
                 switch (pp[0].node) {
                     case Node.NList(items):
-                        return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) _processExprValue(item, scope, func, context).stype ])));
+                        return ExpressionResult.withoutValue(types.createArray(types.unify([for (item in items) _processExprValue(item, func, context).stype ])));
                     default:
                         trace('Invalid array $expr');
                 }
